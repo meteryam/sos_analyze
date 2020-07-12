@@ -60,6 +60,7 @@ main()
   sos_path=$base_dir
   final_name=$(echo $base_dir | sed -e 's#/$##g' | grep -o sos.* | awk -F"/" '{print $NF}')
 
+
   echo "The sosreport is: $base_dir"												| tee -a $FOREMAN_REPORT
 
   consolidate_differences
