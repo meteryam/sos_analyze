@@ -2433,7 +2433,7 @@ report()
   log "// cacheSize setting in custom hiera file"
   log "egrep 'mongodb::server::config_data|cacheSizeGB' $base_dir/etc/foreman-installer/custom-hiera.yaml"
   log "---"
-  log_cmd "egrep -A1 'mongodb::server::config_data|cacheSizeGB' $base_dir/etc/foreman-installer/custom-hiera.yaml"
+  log_cmd "egrep 'mongodb::server::config_data|cacheSizeGB' $base_dir/etc/foreman-installer/custom-hiera.yaml"
   log "---"
   log
 
