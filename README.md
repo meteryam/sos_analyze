@@ -20,42 +20,59 @@ drwx------. 14 root root     4096 Mar  7 15:56 sosreport-sat64test-123456-2019-0
 ```
 The output will be similar to below
 ```
-$ ./sos_analyze.sh sosreport-sat64test-123456-2019-03-07-obvjctv
-The sosreport is: sosreport-sat64test-123456-2019-03-07-obvjctv
+$ ./sos_analyze.sh sosreport-sat67test-02644260-2020-07-12-aaohkfx/
+The sosreport is: sosreport-sat67test-02644260-2020-07-12-aaohkfx/
+
+creating soft links for compatibility...
+
 ### Welcome to Report ###
 ### CEE/SysMGMT ###
-## Naming Resolution
-## Network Information
-## Selinux
-## Installed Packages (satellite)
-## Subscriptions
-## Repos
-## Upgrade
-## Disk
-## Memory
-## CPU
-## Messages
-## Foreman Tasks
-## Hammer Ping
-## Katello service status
-## MongoDB Storage
-## PostgreSQL Storage
-## Passenger
-## Qpidd
-## Foreman logs (error)
-## Foreman cron
-## Httpd
-## RHSM
-## Virt-who
-## Hypervisors tasks
-## Tomcat
-## Candlepin
-## Cron
-## Files in etc/cron*
-## Foreman Settings
-## PostgreSQL
 
-## Please check out the file /tmp/report-sosreport-sat64test-123456-2019-03-07-obvjctv.log
+## Date
+## Identity
+## Platform
+## Memory
+## Storage
+## Proxies
+## Network Information
+## Environment
+## SELinux
+## cron
+## /var/log/messages
+
+## Satellite Services
+
+## Repos and Packages
+## Upgrade
+## Subscriptions
+## /var/log/rhsm/rhsm.log
+
+## virt-who
+## httpd (Apache)
+## Tomcat
+## qpidd
+## qdrouterd
+## goferd
+## Passenger
+## Foreman
+## Subscription Watch
+## Dynflow
+## Katello
+## Pulp
+/home/remote/jrichards2/sos_analyze.sh: line 2176: grep pulp.agent sosreport-moya67-02644260-2020-07-12-aaohkfx//sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 | grep " 1.*1$": No such file or directory
+## Candlepin
+## Puppet Server
+## PostgreSQL
+## MongoDB
+
+Calling insights ...
+done.
+
+
+## The output has been saved in these locations:
+    report_sosreport-sat67test-02644260-2020-07-12-aaohkfx.log
+    /tmp/report_sosreport-sat67test-02644260-2020-07-12-aaohkfx.log
+
 ```
 3. Check the generated report file
 ```
