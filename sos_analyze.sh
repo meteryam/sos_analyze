@@ -1169,18 +1169,27 @@ report()
   log "---"
   log
 
-  log "// non-standard cron files in /etc"
+  log "// custom cron files in /etc"
   #log "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}'"
   log "---"
-  log_cmd "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}' | egrep -v \"cron.d\/foreman$|cron.d\/rubygem-smart_proxy_openscap$|cron.daily\/logrotate$|cron.daily\/rhsmd$|cron.daily\/man-db.cron$|cron.daily\/katello-repository-publish-check$|cron.deny$|cron.hourly\/0anacron$|crontab$|cron.weekly\/katello-clean-empty-puppet-environments$|cron.weekly\/katello-remove-orphans$|cron.d\/katello$|cron.d\/foreman-tasks$|cron.daily\/mlocate$|cron.weekly\/pulp-maintenance$|cron.d\/0hourly$|cron.daily\/rhsmd$|cron.allow$\" | grep ."
+  log_cmd "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}' | egrep -v \"cron.d\/foreman$|cron.d\/rubygem-smart_proxy_openscap$|cron.daily\/logrotate$|cron.daily\/rhsmd$|cron.daily\/man-db.cron$|cron.daily\/katello-repository-publish-check$|cron.deny$|cron.hourly\/0anacron$|crontab$|cron.weekly\/katello-clean-empty-puppet-environments$|cron.weekly\/katello-remove-orphans$|cron.d\/katello$|cron.d\/foreman-tasks$|cron.daily\/mlocate$|cron.weekly\/pulp-maintenance$|cron.d\/0hourly$|cron.daily\/rhsmd$|cron.allow$\|cron.d\/raid-check$|cron.d\/sysstat$|cron.daily\/schema-upgrade-notif$|cron.daily\/makewhatis.cron$|cron.daily\/certwatch$|cron.daily\/cups$|cron.daily\/check-database-space-usage.sh$|cron.daily\/prelink$|cron.daily\/mlocate.cron$|cron.daily\/tmpwatch$|cron.daily\/rhn-ssl-cert-check$|cron.daily\/readahead.cron$|cron.hourly\/mcelog.cron$|cron.monthly\/readahead-monthly.cron$\" | grep ."
   log "---"
   log
 
-  log "// standard cron files in /etc"
+  log "// standard Satellite 6 cron files in /etc"
   #log "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}'"
   log "---"
   export GREP_COLORS='ms=01;33'
   log_cmd "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}' | egrep \"cron.d\/foreman$|cron.d\/rubygem-smart_proxy_openscap$|cron.daily\/logrotate$|cron.daily\/rhsmd$|cron.daily\/man-db.cron$|cron.daily\/katello-repository-publish-check$|cron.deny$|cron.hourly\/0anacron$|crontab$|cron.weekly\/katello-clean-empty-puppet-environments$|cron.weekly\/katello-remove-orphans$|cron.d\/katello$|cron.d\/foreman-tasks$|cron.daily\/mlocate$|cron.weekly\/pulp-maintenance$|cron.d\/0hourly$|cron.daily\/rhsmd$|cron.allow$\" | grep . | egrep --color=always '^|foreman-tasks$'"
+  export GREP_COLORS='ms=01;31'
+  log "---"
+  log
+
+  log "// standard Satellite 5 cron files in /etc"
+  #log "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}'"
+  log "---"
+  export GREP_COLORS='ms=01;33'
+  log_cmd "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}' | egrep \"cron.d\/raid-check$|cron.d\/sysstat$|cron.daily\/schema-upgrade-notif$|cron.daily\/makewhatis.cron$|cron.daily\/certwatch$|cron.daily\/cups$|cron.daily\/check-database-space-usage.sh$|cron.daily\/prelink$|cron.daily\/mlocate.cron$|cron.daily\/tmpwatch$|cron.daily\/rhn-ssl-cert-check$|cron.daily\/readahead.cron$|cron.hourly\/mcelog.cron$|cron.monthly\/readahead-monthly.cron$\" | grep . | egrep --color=always '^|foreman-tasks$'"
   export GREP_COLORS='ms=01;31'
   log "---"
   log
@@ -1287,7 +1296,7 @@ report()
   log "---"
   log
 
-  log "Third party packages sometimes cause issues for Satellite servers.  The EPEL repositories are known to have newer versions of some Satellite packages (which will be signed in the above list by \"Fedora\"), as is the upstream Foreman project (which will be signed by \"Koji\").  Antivirus scanners can sometimes prevent RPM installations, causing satellite-installer to fail."
+  log "Note:  Third party packages sometimes cause issues for Satellite servers.  The EPEL repositories are known to have newer versions of some Satellite packages (which will be signed in the above list by \"Fedora\"), as is the upstream Foreman project (which will be signed by \"Koji\").  Antivirus scanners can sometimes prevent RPM installations, causing satellite-installer to fail."
 
   log
 
