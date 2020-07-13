@@ -54,9 +54,9 @@ main()
 
   if [ -d $base_dir/sos_commands/foreman/foreman-debug ]; then
     base_foreman="/sos_commands/foreman/foreman-debug/"
-    sos_version="old"
+    #sos_version="old"
   else
-    sos_version="new"
+    #sos_version="new"
     base_foreman=""
   fi
 
@@ -825,6 +825,13 @@ report()
   log "---"
   log
 
+  log "// facts stored in /var/lib/rhsm/facts/facts.json"
+  log "jq '. | \"hostname: \" + .\"network.hostname\",\"FQDN: \" + .\"network.fqdn\"' $base_dir/var/lib/rhsm/facts/facts.json"
+  log "---"
+  log_cmd "jq '. | \"hostname: \" + .\"network.hostname\",\"FQDN: \" + .\"network.fqdn\"' $base_dir/var/lib/rhsm/facts/facts.json"
+  log "---"
+  log
+
   if [ "$HOSTS_ENTRY" ]; then
     log "// hostname in /etc/hosts"
     #log "grep $HOSTNAME $base_dir/etc/hosts"
@@ -848,6 +855,21 @@ report()
   #log "cat $base_dir/etc/redhat-release || grep -A9 '^os =>' $base_dir/facts"
   log "---"
   log_cmd "cat $base_dir/etc/redhat-release 2>/dev/null || grep -A9 '^os =>' $base_dir/facts"
+  log "---"
+  log
+
+  log "// release version"
+  log "jq '.' $base_dir/var/lib/rhsm/cache/releasever.json"
+  log "---"
+  log_cmd "jq '.' $base_dir/var/lib/rhsm/cache/releasever.json"
+  log "---"
+  log
+
+  log "// release packages"
+  log "grep release $base_dir/installed-rpms | cut -d ' '"
+  log "---"
+  RELEASE_PACKAGE=`grep release $base_dir/installed-rpms | awk '{print $1}'`
+  log "$RELEASE_PACKAGE"
   log "---"
   log
 
@@ -1017,6 +1039,13 @@ report()
   log_tee "## Network Information"
   log
 
+  log "// facts stored in /var/lib/rhsm/facts/facts.json"
+  log "jq '. | \"IP address: \" + .\"network.ipv4_address\"' $base_dir/var/lib/rhsm/facts/facts.json"
+  log "---"
+  log_cmd "jq '. | \"IP address: \" + .\"network.ipv4_address\"' $base_dir/var/lib/rhsm/facts/facts.json"
+  log "---"
+  log
+
   log "// ip address"
   log "cat $base_dir/ip_addr"
   log "---"
@@ -1150,7 +1179,9 @@ report()
   log "// standard cron files in /etc"
   #log "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}'"
   log "---"
+  export GREP_COLORS='ms=01;33'
   log_cmd "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}' | egrep \"cron.d\/foreman$|cron.d\/rubygem-smart_proxy_openscap$|cron.daily\/logrotate$|cron.daily\/rhsmd$|cron.daily\/man-db.cron$|cron.daily\/katello-repository-publish-check$|cron.deny$|cron.hourly\/0anacron$|crontab$|cron.weekly\/katello-clean-empty-puppet-environments$|cron.weekly\/katello-remove-orphans$|cron.d\/katello$|cron.d\/foreman-tasks$|cron.daily\/mlocate$|cron.weekly\/pulp-maintenance$|cron.d\/0hourly$|cron.daily\/rhsmd$|cron.allow$\" | grep . | egrep --color=always '^|foreman-tasks$'"
+  export GREP_COLORS='ms=01;31'
   log "---"
   log
 
@@ -1424,116 +1455,6 @@ report()
   log
   log_cmd "echo ================================================ | grep --color=always \="
   log
-
-  log_tee "## virt-who"
-  log
-
-  log "The virt-who agent interrogates the hypervisor infrastructure and provides the host/guest mapping to the subscription service. It uses read-only commands to gather the host/guest associations for the subscription services. This way, the guest subscriptions offered by a subscription can be unlocked and available for the guests to use."
-
-  log
-
-  log "// service status"
-  log "grep virt-who $base_dir/sos_commands/systemd/systemctl_list-units"
-  log "---"
-  log_cmd "egrep 'virt-who' $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
-  log "---"
-  log
-
-  log "// duplicated hypervisors #"
-  log "grep \"is assigned to 2 different systems\" $base_dir/var/log/rhsm/rhsm.log | awk '{print \$9}' | sed -e \"s/'//g\" | sort -u | wc -l"
-  log "---"
-  log_cmd "grep \"is assigned to 2 different systems\" $base_dir/var/log/rhsm/rhsm.log | awk '{print \$9}' | sed -e \"s/'//g\" | sort -u | wc -l"
-  log "---"
-  log
-
-  log "// duplicated hypervisors list"
-  log "grep \"is assigned to 2 different systems\" $base_dir/var/log/rhsm/rhsm.log | awk '{print \$9}' | sed -e \"s/'//g\" | sort -u"
-  log "---"
-  log_cmd "grep \"is assigned to 2 different systems\" $base_dir/var/log/rhsm/rhsm.log | awk '{print \$9}' | sed -e \"s/'//g\" | sort -u"
-  log "---"
-  log
-
-  log "// Sending updated Host-to-guest"
-  log "grep \"Sending updated Host-to-guest\" $base_dir/var/log/rhsm/rhsm.log"
-  log "---"
-  log_cmd "grep \"Sending updated Host-to-guest\" $base_dir/var/log/rhsm/rhsm.log"
-  log "---"
-  log
-
-
-  log "// virt-who default configuration"
-  log "grep -v ^# $base_dir/etc/sysconfig/virt-who | grep -v ^$"
-  log "---"
-  log_cmd "grep -v ^# $base_dir/etc/sysconfig/virt-who | grep -v ^$"
-  log "---"
-  log
-
-  log "// virt-who configuration"
-  log "ls -l $base_dir/etc/virt-who.d"
-  log "---"
-  log_cmd "ls -l $base_dir/etc/virt-who.d"
-  log "---"
-  log
-
-  log "// duplicated server entries on virt-who configuration"
-  log "grep -h ^server $base_dir/etc/virt-who.d/*.conf | sort | uniq -c"
-  log "---"
-  log_cmd "grep -h ^server $base_dir/etc/virt-who.d/*.conf | sort | uniq -c"
-  log "---"
-  log
-
-#  log "// virt-who configuration content files"
-#  log "for b in \$(ls -1 \$base_dir/etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat \$b; echo \"===\"; done"
-#  log "---"
-#  log_cmd "for b in \$(ls -1 $base_dir/etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat \$b; echo \"===\"; done"
-#  log "---"
-#  log
-
-#  log "// virt-who configuration content files (hidden characters)"
-#  log "for b in \$(ls -1 \$base_dir/etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat -vet \$b; echo \"===\"; done"
-#  log "---"
-#  log_cmd "for b in \$(ls -1 $base_dir/etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat -vet \$b; echo \"===\"; done"
-#  log "---"
-#  log
-
-#  log "// virt-who server(s)"
-#  log "cat $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log  | grep \"cmd=virt-who\" | awk '{print \$1}' | sort | uniq -c"
-#  log "---"
-#  log_cmd "cat $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log  | grep \"cmd=virt-who\" | awk '{print \$1}' | sort | uniq -c"
-#  log "---"
-#  log
-
-  log "// RHSM Warnings - virt-who"
-  log "grep WARNING $base_dir/var/log/rhsm/rhsm.log"
-  log "---"
-  log_cmd "grep WARNING $base_dir/var/log/rhsm/rhsm.log | egrep 'virt-who'"
-  log "---"
-  log
-
-  if [ "`file $base_dir/etc/virt-who.d/*.conf | grep ASCII | grep CRLF | head -1`" ]; then
-    log "// virt-who files with DOS line endings"
-    log "file $base_dir/etc/virt-who.d/*.conf | grep ASCII | grep CRLF"
-    log "---"
-    log_cmd "file $base_dir/etc/virt-who.d/*.conf | grep ASCII | grep CRLF"
-    log "---"
-    log
-  fi
-
-
-
-  log "// Latest 30 hypervisors tasks"
-  #if [ "$sos_version" == "old" ];then
-    #cmd="grep -E '(^                  id|Hypervisors)' $base_foreman/foreman_tasks_tasks.csv | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7"
-  #else
-    #cmd="grep -E '(^                  id|Hypervisors)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7"
-  #fi
-  log "grep -E '(^                  id|Hypervisors)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7"
-  log "---"
-  log_cmd "grep -E '(^                  id|Hypervisors)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7 | egrep -i --color=always \"^|warning\""
-  log "---"
-  log
-
-
 
 
   log_tee "## httpd (Apache)"
@@ -2426,7 +2347,7 @@ report()
   #fi
   log "grep foreman-maintain_service_status for mongodb service"
   log "---"
-  log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep \"^$|\.service -|Active:|All services\" | egrep -A2 'mongod.service -' | egrep --color=always '^|failed|inactive|activating|deactivating'"
+  log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep \"^$|\.service -|Active:|All services\" | egrep -A1 'mongod.service -' | egrep --color=always '^|failed|inactive|activating|deactivating'"
   log "---"
   log
 
@@ -2453,6 +2374,118 @@ report()
 	  log "---"
 	  log
   fi
+
+
+  log_tee "## virt-who"
+  log
+
+  log "The virt-who agent interrogates the hypervisor infrastructure and provides the host/guest mapping to the subscription service. It uses read-only commands to gather the host/guest associations for the subscription services. This way, the guest subscriptions offered by a subscription can be unlocked and available for the guests to use."
+
+  log
+
+  log "// service status"
+  log "grep virt-who $base_dir/sos_commands/systemd/systemctl_list-units"
+  log "---"
+  log_cmd "egrep 'virt-who' $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+  log "---"
+  log
+
+  log "// duplicated hypervisors #"
+  log "grep \"is assigned to 2 different systems\" $base_dir/var/log/rhsm/rhsm.log | awk '{print \$9}' | sed -e \"s/'//g\" | sort -u | wc -l"
+  log "---"
+  log_cmd "grep \"is assigned to 2 different systems\" $base_dir/var/log/rhsm/rhsm.log | awk '{print \$9}' | sed -e \"s/'//g\" | sort -u | wc -l"
+  log "---"
+  log
+
+  log "// duplicated hypervisors list"
+  log "grep \"is assigned to 2 different systems\" $base_dir/var/log/rhsm/rhsm.log | awk '{print \$9}' | sed -e \"s/'//g\" | sort -u"
+  log "---"
+  log_cmd "grep \"is assigned to 2 different systems\" $base_dir/var/log/rhsm/rhsm.log | awk '{print \$9}' | sed -e \"s/'//g\" | sort -u"
+  log "---"
+  log
+
+  log "// Sending updated Host-to-guest"
+  log "grep \"Sending updated Host-to-guest\" $base_dir/var/log/rhsm/rhsm.log"
+  log "---"
+  log_cmd "grep \"Sending updated Host-to-guest\" $base_dir/var/log/rhsm/rhsm.log"
+  log "---"
+  log
+
+
+  log "// virt-who default configuration"
+  log "grep -v ^# $base_dir/etc/sysconfig/virt-who | grep -v ^$"
+  log "---"
+  log_cmd "grep -v ^# $base_dir/etc/sysconfig/virt-who | grep -v ^$"
+  log "---"
+  log
+
+  log "// virt-who configuration"
+  log "ls -l $base_dir/etc/virt-who.d"
+  log "---"
+  log_cmd "ls -l $base_dir/etc/virt-who.d"
+  log "---"
+  log
+
+  log "// duplicated server entries on virt-who configuration"
+  log "grep -h ^server $base_dir/etc/virt-who.d/*.conf | sort | uniq -c"
+  log "---"
+  log_cmd "grep -h ^server $base_dir/etc/virt-who.d/*.conf | sort | uniq -c"
+  log "---"
+  log
+
+#  log "// virt-who configuration content files"
+#  log "for b in \$(ls -1 \$base_dir/etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat \$b; echo \"===\"; done"
+#  log "---"
+#  log_cmd "for b in \$(ls -1 $base_dir/etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat \$b; echo \"===\"; done"
+#  log "---"
+#  log
+
+#  log "// virt-who configuration content files (hidden characters)"
+#  log "for b in \$(ls -1 \$base_dir/etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat -vet \$b; echo \"===\"; done"
+#  log "---"
+#  log_cmd "for b in \$(ls -1 $base_dir/etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat -vet \$b; echo \"===\"; done"
+#  log "---"
+#  log
+
+#  log "// virt-who server(s)"
+#  log "cat $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log  | grep \"cmd=virt-who\" | awk '{print \$1}' | sort | uniq -c"
+#  log "---"
+#  log_cmd "cat $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log  | grep \"cmd=virt-who\" | awk '{print \$1}' | sort | uniq -c"
+#  log "---"
+#  log
+
+  log "// RHSM Warnings - virt-who"
+  log "grep WARNING $base_dir/var/log/rhsm/rhsm.log"
+  log "---"
+  log_cmd "grep WARNING $base_dir/var/log/rhsm/rhsm.log | egrep 'virt-who'"
+  log "---"
+  log
+
+  if [ "`file $base_dir/etc/virt-who.d/*.conf | grep ASCII | grep CRLF | head -1`" ]; then
+    log "// virt-who files with DOS line endings"
+    log "file $base_dir/etc/virt-who.d/*.conf | grep ASCII | grep CRLF"
+    log "---"
+    log_cmd "file $base_dir/etc/virt-who.d/*.conf | grep ASCII | grep CRLF"
+    log "---"
+    log
+  fi
+
+
+
+  log "// Latest 30 hypervisors tasks"
+  #if [ "$sos_version" == "old" ];then
+    #cmd="grep -E '(^                  id|Hypervisors)' $base_foreman/foreman_tasks_tasks.csv | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7"
+  #else
+    #cmd="grep -E '(^                  id|Hypervisors)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7"
+  #fi
+  log "grep -E '(^                  id|Hypervisors)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7"
+  log "---"
+  log_cmd "grep -E '(^                  id|Hypervisors)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7 | egrep -i --color=always \"^|warning\""
+  log "---"
+  log
+
+
+
 
 
 ## TODO
