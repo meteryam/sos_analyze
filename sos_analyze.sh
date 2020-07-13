@@ -1503,6 +1503,13 @@ report()
 #  log "---"
 #  log
 
+  log "// RHSM Warnings - virt-who"
+  log "grep WARNING $base_dir/var/log/rhsm/rhsm.log"
+  log "---"
+  log_cmd "grep WARNING $base_dir/var/log/rhsm/rhsm.log | egrep 'virt-who'"
+  log "---"
+  log
+
   if [ "`file $base_dir/etc/virt-who.d/*.conf | grep ASCII | grep CRLF | head -1`" ]; then
     log "// virt-who files with DOS line endings"
     log "file $base_dir/etc/virt-who.d/*.conf | grep ASCII | grep CRLF"
@@ -2433,7 +2440,7 @@ report()
   log "// cacheSize setting in custom hiera file"
   log "egrep 'mongodb::server::config_data|cacheSizeGB' $base_dir/etc/foreman-installer/custom-hiera.yaml"
   log "---"
-  log_cmd "egrep 'mongodb::server::config_data|cacheSizeGB' $base_dir/etc/foreman-installer/custom-hiera.yaml"
+  log_cmd "egrep '/var/log/messages::config_data|cacheSizeGB' $base_dir/etc/foreman-installer/custom-hiera.yaml"
   log "---"
   log
 
