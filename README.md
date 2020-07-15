@@ -47,7 +47,6 @@ creating soft links for compatibility...
 ## Subscriptions
 ## /var/log/rhsm/rhsm.log
 
-## virt-who
 ## httpd (Apache)
 ## Tomcat
 ## qpidd
@@ -64,6 +63,7 @@ creating soft links for compatibility...
 ## Puppet Server
 ## PostgreSQL
 ## MongoDB
+## virt-who
 
 Calling insights ...
 done.
