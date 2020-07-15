@@ -742,19 +742,20 @@ consolidate_differences()
 	for i in "${MYARRAY[@]}"; do
 		let count=$count+1
 
+		MYFILE=`basename $i`
+
 		if [ "$count" -eq 1 ]; then
-			#MYFILE=`basename $i`
 			MYDIR=`dirname $i`
 			MATCH=`find $base_dir -type f -name $MYFILE 2>/dev/null | egrep -v '\./containers/ps'`	# containers/ps contains podman processes, not normal processes
 		else
 			MATCH=`find $base_dir -type f -name $i 2>/dev/null`
 		fi
 
-			if [ -f "$MATCH" ] && [ ! -L "$MATCH" ] && [ ! -f "$base_dir/$i" ]; then
-				mkdir -p $base_dir/$MYDIR
-				ln -s -r $MATCH $base_dir/$i 2>/dev/null
-				break	# if the first attempt fails, so will subsequent finds; we might as well break here
-			fi
+		if [ -f "$MATCH" ] && [ ! -L "$MATCH" ] && [ ! -f "$base_dir/$i" ]; then
+			mkdir -p $base_dir/$MYDIR
+			ln -s -r $MATCH $base_dir/$MYDIR/$MYFILE 2>/dev/null
+			break
+		fi
 
 	done
   done
