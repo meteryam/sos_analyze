@@ -288,7 +288,6 @@ sos_commands/java/alternatives_--display_java
 sos_commands/java/readlink_-f_.usr.bin.java
 sos_commands/katello/db_table_size
 sos_commands/katello/katello_repositories
-sos_commands/katello/qpid-stat_-c_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671
 sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671,qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671,qpid-stat-q
 sos_commands/katello/qpid-stat_-u_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671
 sos_commands/katello/rpm_-V_katello
@@ -651,7 +650,7 @@ hostname,hostname_-f
 installed-rpms,rpm-manifest
 ip_addr,ip_address,ip_a
 last
-lsb_release
+lsb-release,lsb_release
 lsmod
 lsof,lsof_-b_M_-n_-l,lsof_-b_M_-n_-l_-c
 lspci,lspci_-nvv,lspci_-nnvv
@@ -738,22 +737,26 @@ consolidate_differences()
 	count=0
 	MYDIR=""
 	MATCH=""
-	#MYFILE=""
+	FIRSTFILE=`basename "${MYARRAY[0]}"`
+	MYDIR=`dirname "${MYARRAY[0]}"`
 	for i in "${MYARRAY[@]}"; do
 		let count=$count+1
 
 		MYFILE=`basename $i`
+		MATCH=`find $base_dir -type f -name $MYFILE 2>/dev/null | egrep -v '\./containers/ps'`	# containers/ps contains podman processes, not normal processes
 
-		if [ "$count" -eq 1 ]; then
-			MYDIR=`dirname $i`
-			MATCH=`find $base_dir -type f -name $MYFILE 2>/dev/null | egrep -v '\./containers/ps'`	# containers/ps contains podman processes, not normal processes
-		else
-			MATCH=`find $base_dir -type f -name $i 2>/dev/null`
-		fi
+		#if [ "$count" -eq 1 ]; then
+			#MYDIR=`dirname $i`
+			#MATCH=`find $base_dir -type f -name $MYFILE 2>/dev/null | egrep -v '\./containers/ps'`	# containers/ps contains podman processes, not normal processes
+		#else
+			#MATCH=`find $base_dir -type f -name $i 2>/dev/null`
+		#fi
 
-		if [ -f "$MATCH" ] && [ ! -L "$MATCH" ] && [ ! -f "$base_dir/$i" ]; then
-			mkdir -p $base_dir/$MYDIR
-			ln -s -r $MATCH $base_dir/$MYDIR/$MYFILE 2>/dev/null
+		if [ -f "$MATCH" ] && [ ! -L "$MATCH" ]; then
+			if [ ! -f "$base_dir/$MYDIR/$FIRSTFILE" ]; then
+				mkdir -p "$base_dir/$MYDIR"
+				ln -s -r "$MATCH" "$base_dir/$MYDIR/$FIRSTFILE" 2>/dev/null
+			fi
 			break
 		fi
 
@@ -804,6 +807,7 @@ report()
   log "---"
   log
 
+
   log "// facts stored in /var/lib/rhsm/facts/facts.json"
   log "jq '. | \"hostname: \" + .\"network.hostname\",\"FQDN: \" + .\"network.fqdn\"' $base_dir/var/lib/rhsm/facts/facts.json"
   log "---"
@@ -835,7 +839,7 @@ report()
   log "---"
   log
 
-  log "// release version"
+  log "// release version (for version locking)"
   log "jq '.' $base_dir/var/lib/rhsm/cache/releasever.json"
   log "---"
   log_cmd "jq '.' $base_dir/var/lib/rhsm/cache/releasever.json"
@@ -984,19 +988,19 @@ report()
   log_tee "## Network Information"
   log
 
-  log "// facts stored in /var/lib/rhsm/facts/facts.json"
-  log "jq '. | \"IP address: \" + .\"network.ipv4_address\"' $base_dir/var/lib/rhsm/facts/facts.json"
-  log "---"
-  log_cmd "jq '. | \"IP address: \" + .\"network.ipv4_address\"' $base_dir/var/lib/rhsm/facts/facts.json"
-  log "---"
-  log
-
   log "// ip address"
   log "cat $base_dir/ip_addr"
   log "---"
   log_cmd "cat $base_dir/ip_addr"
   log "---"
   log
+
+  #log "// ip address stored in /var/lib/rhsm/facts/facts.json"
+  #log "jq '. | \"IP address: \" + .\"network.ipv4_address\"' $base_dir/var/lib/rhsm/facts/facts.json"
+  #log "---"
+  #log_cmd "jq '. | \"IP address: \" + .\"network.ipv4_address\"' $base_dir/var/lib/rhsm/facts/facts.json"
+  #log "---"
+  #log
 
   if [ -f "$base_dir/ping_hostname" ] || [ -f "$base_dir/ping_hostname_full" ]; then
 	log "// ping hostname"
@@ -1051,17 +1055,25 @@ report()
   log
 
   log_tee "## Environment"
-  log "egrep \"LANG|PATH\" $base_dir/sos_commands/systemd/systemctl_show-environment"
+
+  log "// LANG and PATH
+  log "egrep 'LANG|PATH' $base_dir/sos_commands/systemd/systemctl_show-environment"
   log
-  log_cmd "egrep \"LANG|PATH\" $base_dir/sos_commands/systemd/systemctl_show-environment"
+  log_cmd "egrep 'LANG|PATH' $base_dir/sos_commands/systemd/systemctl_show-environment"
   log
 
-  if [ -f "$base_dir/facts" ]; then
-	log "grep path $base_dir/facts"
-	log "---"
-	log_cmd "grep path $base_dir/facts"
-	log "---"
-  fi
+  log "// contents of /etc/environment
+  log "cat $base_dir/etc/environment"
+  log
+  log_cmd "cat $base_dir/etc/environment"
+  log
+
+  #if [ -f "$base_dir/facts" ]; then
+	#log "grep path $base_dir/facts"
+	#log "---"
+	#log_cmd "grep path $base_dir/facts"
+	#log "---"
+  #fi
 
   log_tee "## SELinux"
   log
@@ -1115,7 +1127,7 @@ report()
 
   log "// custom cron files in /etc"
   log "---"
-  log_cmd "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}' | egrep -v 'cron.d\/foreman$|cron.d\/rubygem-smart_proxy_openscap$|cron.daily\/logrotate$|cron.daily\/rhsmd$|cron.daily\/man-db.cron$|cron.daily\/katello-repository-publish-check$|cron.deny$|cron.hourly\/0anacron$|crontab$|cron.weekly\/katello-clean-empty-puppet-environments$|cron.weekly\/katello-remove-orphans$|cron.d\/katello$|cron.d\/foreman-tasks$|cron.daily\/mlocate$|cron.weekly\/pulp-maintenance$|cron.d\/0hourly$|cron.daily\/rhsmd$|cron.allow$|cron.d\/raid-check$|cron.d\/sysstat$|cron.daily\/schema-upgrade-notif$|cron.daily\/makewhatis.cron$|cron.daily\/certwatch$|cron.daily\/cups$|cron.daily\/check-database-space-usage.sh$|cron.daily\/prelink$|cron.daily\/mlocate.cron$|cron.daily\/tmpwatch$|cron.daily\/rhn-ssl-cert-check$|cron.daily\/readahead.cron$|cron.hourly\/mcelog.cron$|cron.monthly\/readahead-monthly.cron$|cron.d\/katello-host-tools$' | grep ."
+  log_cmd "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}' | egrep -v 'cron.d\/foreman$|cron.d\/rubygem-smart_proxy_openscap$|cron.daily\/logrotate$|cron.daily\/rhsmd$|cron.daily\/man-db.cron$|cron.daily\/katello-repository-publish-check$|cron.deny$|cron.hourly\/0anacron$|crontab$|cron.weekly\/katello-clean-empty-puppet-environments$|cron.weekly\/katello-remove-orphans$|cron.d\/katello$|cron.d\/foreman-tasks$|cron.daily\/mlocate$|cron.weekly\/pulp-maintenance$|cron.d\/0hourly$|cron.daily\/rhsmd$|cron.allow$|cron.d\/raid-check$|cron.d\/sysstat$|cron.daily\/schema-upgrade-notif$|cron.daily\/makewhatis.cron$|cron.daily\/certwatch$|cron.daily\/cups$|cron.daily\/check-database-space-usage.sh$|cron.daily\/prelink$|cron.daily\/mlocate.cron$|cron.daily\/tmpwatch$|cron.daily\/rhn-ssl-cert-check$|cron.daily\/readahead.cron$|cron.hourly\/mcelog.cron$|cron.monthly\/readahead-monthly.cron$|cron.d\/katello-host-tools$|cron.daily\/rpm$|cron.daily\/rhsmd$' | grep ."
   log "---"
   log
 
@@ -1130,7 +1142,7 @@ report()
   log "// standard Satellite 5 cron files in /etc"
   log "---"
   export GREP_COLORS='ms=01;33'
-  log_cmd "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}' | egrep 'cron.d\/raid-check$|cron.d\/sysstat$|cron.daily\/schema-upgrade-notif$|cron.daily\/makewhatis.cron$|cron.daily\/certwatch$|cron.daily\/cups$|cron.daily\/check-database-space-usage.sh$|cron.daily\/prelink$|cron.daily\/mlocate.cron$|cron.daily\/tmpwatch$|cron.daily\/rhn-ssl-cert-check$|cron.daily\/readahead.cron$|cron.hourly\/mcelog.cron$|cron.monthly\/readahead-monthly.cron$' | grep . | egrep --color=always '^|foreman-tasks$'"
+  log_cmd "find $base_dir/etc/cron* -type f | awk 'FS=\"/etc/\" {print \$2}' | egrep 'cron.d\/raid-check$|cron.d\/sysstat$|cron.daily\/schema-upgrade-notif$|cron.daily\/makewhatis.cron$|cron.daily\/certwatch$|cron.daily\/cups$|cron.daily\/check-database-space-usage.sh$|cron.daily\/prelink$|cron.daily\/mlocate.cron$|cron.daily\/tmpwatch$|cron.daily\/rhn-ssl-cert-check$|cron.daily\/readahead.cron$|cron.hourly\/mcelog.cron$|cron.monthly\/readahead-monthly.cron$|cron.daily\/rpm$|cron.daily\/rhsmd$' | grep . | egrep --color=always '^|foreman-tasks$'"
   export GREP_COLORS='ms=01;31'
   log "---"
   log
@@ -1240,7 +1252,7 @@ report()
   log "---"
 
   export GREP_COLORS='ms=01;33'
-  cmd_output=`egrep -i "Exit with status code|--upgrade|Upgrade completed|Running installer with args" $base_dir/var/log/foreman-installer/{satellite*,capsule*} $base_dir/var/log/foreman-maintain/{satellite*,capsule*} $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-installer/{satellite*,capsule*} $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-maintain/{satellite*,capsule*} $base_dir/var/log/katello-installer/* 2>/dev/null | egrep -v "Hook" | sed s'/\[\[//'g | awk -F"[" '{print $2}' | sort -k 2 | tail | egrep --color=always "^|tuning|upgrade"`
+  cmd_output=`egrep -i "Exit with status code|--upgrade|Upgrade completed|Running installer with args|ASCII" $base_dir/var/log/foreman-installer/{satellite*,capsule*} $base_dir/var/log/foreman-maintain/{satellite*,capsule*} $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-installer/{satellite*,capsule*} $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-maintain/{satellite*,capsule*} $base_dir/var/log/katello-installer/* 2>/dev/null | egrep -v "Hook" | sed s'/\[\[//'g | awk -F"[" '{print $2}' | sort -k 2 | tail | egrep --color=always "^|tuning|upgrade"`
 
   log "$cmd_output"
   export GREP_COLORS='ms=01;31'
@@ -1590,9 +1602,12 @@ report()
 
   log "Passenger is configured within the Apache HTTP Server configuration files. It can be used to control the performance, scaling, and behavior of Foreman and Puppet."
 
-  if [ ! "`egrep -i 'passenger' $base_dir/sos_commands/foreman/passenger-status_--show_pool $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ]; then
+  log
+
+  if [ ! "`egrep -i passenger $base_dir/sos_commands/foreman/passenger-status_--show_pool $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ]; then
 
 	log "passenger not found"
+	log
 
   else
 
@@ -1656,7 +1671,7 @@ report()
 	log "---"
 	log
 
-  if [ ! "`egrep -i 'passenger' $base_dir/sos_commands/foreman/passenger-status_--show_pool $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests 2>/dev/null | head -1`" ]; then
+  if [ ! "`egrep -i passenger $base_dir/sos_commands/foreman/passenger-status_--show_pool $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests 2>/dev/null | head -1`" ]; then
 
 	log "passenger not found"
 
@@ -1694,7 +1709,7 @@ report()
 
   log
 
-  if [ ! "`egrep -i 'foreman' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps $base_foreman/var/log/foreman/production.log* 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/foreman-proxy" ] && [ ! -d "$base_dir/var/log/foreman" ] && [ ! -d "$base_dir/var/log/foreman-installer" ] && [ ! -d "$base_dir/var/log/foreman-maintain" ] && [ ! -d "$base_dir/var/log/katello-installer" ]; then
+  if [ ! "`egrep -i foreman $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps $base_foreman/var/log/foreman/production.log* 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/foreman-proxy" ] && [ ! -d "$base_dir/var/log/foreman" ] && [ ! -d "$base_dir/var/log/foreman-installer" ] && [ ! -d "$base_dir/var/log/foreman-maintain" ] && [ ! -d "$base_dir/var/log/katello-installer" ]; then
 
 	log "foreman not found"
 
@@ -1782,7 +1797,7 @@ report()
 
   log
 
-  if [ ! "`egrep -i 'dynflow' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps $base_dir/sos_commands/foreman/foreman_tasks_tasks 2>/dev/null | head -1`" ] && [ ! -f "$base_dir/etc/sysconfig/dynflowd" ]; then
+  if [ ! "`egrep -i dynflow $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps $base_dir/sos_commands/foreman/foreman_tasks_tasks 2>/dev/null | head -1`" ] && [ ! -f "$base_dir/etc/sysconfig/dynflowd" ]; then
 
 	log "dynflow not found"
 
@@ -1892,7 +1907,7 @@ report()
 
   log
 
-  if [ ! "`egrep -i 'pulp' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ]; then
+  if [ ! "`egrep -i pulp $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ]; then
 
 	log "pulp not found"
 
@@ -1952,7 +1967,7 @@ report()
 
   log
 
-  if [ ! "`egrep -i 'candlepin' $base_dir/sos_commands/foreman/hammer_ping $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_foreman/var/log/candlepin" ]; then
+  if [ ! "`egrep -i candlepin $base_dir/sos_commands/foreman/hammer_ping $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_foreman/var/log/candlepin" ]; then
 
 	log "candlepin not found"
 
@@ -2292,11 +2307,14 @@ report()
 # cat tomcat/rpm_-V_tomcat
 # cat virtwho/rpm_-V_virt-who
 
-
+  echo
+  echo "Calling xsos..."
+  xsos --mem $sos_path >> $FOREMAN_REPORT
+  log
 
   if [ -f "/tmp/script/ins_check.sh" ] && [ /tmp/script/ins_check.sh ]; then
 	log_tee
-    echo "Calling insights ..."
+    echo "Calling insights..."
 	insights run -p shared_rules -F $sos_path >> $FOREMAN_REPORT
 	log
 	insights run -p telemetry -F $sos_path >> $FOREMAN_REPORT
@@ -2312,9 +2330,6 @@ report()
   echo "    /tmp/report_${USER}_$final_name.log"
   echo ""
 }
-
-
-
 
 
 # Main
