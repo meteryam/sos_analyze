@@ -1503,7 +1503,7 @@ report()
 	log
 
 	log "// goferd service"
-	log "from file $base_dir/sos_commands/systemd/ystemctl_show_service_--all
+	log "from file $base_dir/sos_commands/systemd/ystemctl_show_service_--all"
 	log "---"
 	log_cmd "grep goferd $base_dir/sos_commands/systemd/systemctl_show_service_--all"
 	log "---"
