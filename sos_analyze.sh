@@ -2682,6 +2682,7 @@ report()
   echo
   echo "## The output has been saved in these locations:"
   echo "    report_${USER}_$final_name.log"
+  echo "    report_color_${USER}.log"
   echo "    /tmp/report_${USER}_$final_name.log"
   echo ""
 
