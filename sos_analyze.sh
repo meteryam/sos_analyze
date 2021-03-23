@@ -89,27 +89,15 @@ log_cmd()
 
 # ref: https://unix.stackexchange.com/questions/44040/a-standard-tool-to-convert-a-byte-count-into-human-kib-mib-etc-like-du-ls1
 # Converts bytes value to human-readable string [$1: bytes value]
-bytesToHumanReadable() {
-    local i=${1:-0} d="" s=0 S=("Bytes" "KiB" "MiB" "GiB" "TiB" "PiB" "EiB" "YiB" "ZiB")
-    while ((i > 1024 && s < ${#S[@]}-1)); do
-        printf -v d ".%02d" $((i % 1024 * 100 / 1024))
-        i=$((i / 1024))
-        s=$((s + 1))
-    done
-    echo "$i$d ${S[$s]}"
-}
-
-# ref: https://unix.stackexchange.com/questions/44040/a-standard-tool-to-convert-a-byte-count-into-human-kib-mib-etc-like-du-ls1
-# Converts bytes value to human-readable string [$1: bytes value]
-bytesToHumanReadable() {
-    local i=${1:-0} d="" s=0 S=("Bytes" "KiB" "MiB" "GiB" "TiB" "PiB" "EiB" "YiB" "ZiB")
-    while ((i > 1024 && s < ${#S[@]}-1)); do
-        printf -v d ".%02d" $((i % 1024 * 100 / 1024))
-        i=$((i / 1024))
-        s=$((s + 1))
-    done
-    echo "$i$d ${S[$s]}"
-}
+#bytesToHumanReadable() {
+#    local i=${1:-0} d="" s=0 S=("Bytes" "KiB" "MiB" "GiB" "TiB" "PiB" "EiB" "YiB" "ZiB")
+#    while ((i > 1024 && s < ${#S[@]}-1)); do
+#        printf -v d ".%02d" $((i % 1024 * 100 / 1024))
+#        i=$((i / 1024))
+#        s=$((s + 1))
+#    done
+#    echo "$i$d ${S[$s]}"
+#}
 
 
 # The CSVLINKS variable contains files to which we want to link, along with alternate filenames found in older sosreport versions, foreman-debug files and satellite-debug files.
@@ -736,8 +724,9 @@ consolidate_differences()
 
 
   # this section populates the sos_commands directory and various links in the root directory of the sosreport
-
    FINDRESULTS=`find $base_dir -mount -type f \( -path $base_dir/run -prune -o -path $base_dir/sy -prune -o -path $base_dir/sos_strings -prune -o -path $base_dir/sos_reports -prune -o -path $base_dir/sos_logs -prune -o -path $base_dir/container -prune -o -path "$base_dir/proc/[0-9]*" -prune \)  -o -print 2>/dev/null | sort -u | egrep -v "$base_dir\/container\/"`
+   
+
 
    for MYENTRY in `echo -e "$CSVLINKS"`; do
 
@@ -781,14 +770,6 @@ consolidate_differences()
 
   done
 
-  #if [ -d "$base_dir/sos_commands/foreman/foreman-debug" ]; then
-  #      if [ ! -d "$base_dir/sos_commands/foreman/foreman-debug/var" ] && [ -d "$base_dir/var" ]; then
-  #              ln -s -r $base_dir/var $base_dir/sos_commands/foreman/foreman-debug/var
-  #      fi
-  #      if [ ! -d "$base_dir/sos_commands/foreman/foreman-debug/etc" ] && [ -d "$base_dir/etc" ]; then
-  #              ln -s -r $base_dir/etc $base_dir/sos_commands/foreman/foreman-debug/etc
-  #      fi
-  #fi
 
 }
 
@@ -800,6 +781,7 @@ SATPACKAGES="dynflow|foreman|gofer|katello|mongo|passenger|pulp|qpid|satellite|^
 
 report()
 {
+
 
   # define variables to be used later
 
@@ -1395,7 +1377,7 @@ report()
   log
 
   log "// number of sockets"
-  log "grep 'Socket.Designation:' \$base_dir/dmidecode | grep -vi CPU | wc -l"
+  log "grep 'Socket.Designation:' \$base_dir/dmidecode | grep -i CPU | wc -l"
   log "---"
   log_cmd "grep 'Socket.Designation:' $base_dir/dmidecode | grep -i CPU | wc -l"
   log "---"
@@ -1517,7 +1499,7 @@ report()
 
 
 
-  if [ ! "`egrep -i 'gofer|katello-agent' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/installed_rpms $base_dir/var/log/messages 2>/dev/null | head -1`" ]; then
+  if [ ! "`egrep -i 'gofer|katello-agent' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/installed_rpms $base_dir/var/log/messages* 2>/dev/null | head -1`" ] && [ ! "`zcat $base_dir/var/log/messages* 2>/dev/null | egrep -i 'gofer|katello-agent'`" ]; then
 
 	nop=1
 
@@ -1554,7 +1536,7 @@ report()
   log_tee "## PostgreSQL"
   log
 
-  if [ ! "`egrep -i 'postgres' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_foreman/var/lib/pgsql" ] && [ ! -d "$base_foreman/var/opt/rh/rh-postgresql12" ] && [ ! -d "$base_dir/sos_commands/postgresql" ]; then
+  if [ ! "`egrep -i postgres $base_dir/sos_commands/systemd/systemctl_list-units $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_foreman/var/lib/pgsql" ] && [ ! -d "$base_foreman/var/opt/rh/rh-postgresql12" ] && [ ! -d "$base_dir/sos_commands/postgresql" ]; then
 
 	log "postgres not found"
 	log
@@ -1564,13 +1546,20 @@ report()
     log "PostgreSQL is used by Foreman and Candlepin to store records related to registered content hosts, subscriptions, jobs, and tasks. Over time, PostgreSQL accumulates enough data to cause queries to slow relative to the speeds achievable in a fresh installation."
     log
 
-	log "// service status"
-	log "from file $base_dir/sos_commands/systemd/systemctl_list-units"
-	log "---"
+	#log "// service status"
+	#log "from file $base_dir/sos_commands/systemd/systemctl_list-units"
+	#log "---"
 	#log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep \"^$|\.service -|Active:|All services\" | egrep -A2 'postgresql.service -' | egrep --color=always '^|failed|inactive|activating|deactivating'"
-	log_cmd "grep postgres $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
-	log "---"
-	log
+	#log_cmd "grep postgres $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+	#log "---"
+	#log
+
+        log "// service status"
+        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_list-units"
+        log "---"
+        log_cmd "grep -h postgres $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log "---"
+        log
 
         log "// postgres idle process (everything)"
         log "grep ^postgres \$base_dir/ps | grep idle$ | wc -l"
@@ -1705,10 +1694,10 @@ report()
         log "---"
         log
 
-        log "// ERRORs"
-        log "grep -h -i ERROR \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log"
+        log "// ERRORs (without json)"
+        log "grep -h -i ERROR \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | egrep -v '{|}'"
         log "---"
-        log_cmd "grep -h -i ERROR $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | tail -100 | sort -n"
+        log_cmd "grep -h -i ERROR $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | egrep -v '{|}' | tail -100 | sort -n"
         log "---"
         log
 
@@ -1719,7 +1708,9 @@ report()
   log_tee "## MongoDB"
   log
 
-  if [ ! "`egrep -i 'mongo' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/etc/mongodb" ] && [ ! -d "$base_dir/var/log/mongodb" ]; then
+
+  #if [ ! "`egrep -i mongo $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/etc/mongodb" ] && [ ! -d "$base_dir/var/log/mongodb" ]; then
+   if [ ! "`egrep -i mongo $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/etc/mongodb" ] && [ ! -d "$base_dir/var/log/mongodb" ]; then
 
 	log "mongodb not found"
 	log
@@ -1737,9 +1728,9 @@ report()
 	#log
 
         log "// service status"
-        log "from file $base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_list-units"
         log "---"
-        log_cmd "grep rh-mongo $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+        log_cmd "grep -h mongo $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
         log "---"
         log
 
@@ -1789,7 +1780,9 @@ report()
   log_tee "## httpd (Apache)"
   log
 
-  if [ ! "`egrep -i 'httpd' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/httpd" ]; then
+
+  #if [ ! "`egrep -i httpd $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/httpd" ]; then
+   if [ ! "`egrep -i httpd $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/httpd" ]; then
 
 	log "httpd not found"
 	log
@@ -1807,9 +1800,9 @@ report()
 	#log
 
         log "// service status"
-        log "from file $base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_list-units"
         log "---"
-        log_cmd "grep httpd $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+        log_cmd "grep -h httpd $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
         log "---"
         log
 
@@ -1921,13 +1914,19 @@ report()
 		log
 	  fi
 
-	log "// current passenger status"
+	log "// passenger pool status"
 	log "head -7 \$base_dir/sos_commands/foreman/passenger-status_--show_pool"
 	log "---"
 	log_cmd "head -7 $base_dir/sos_commands/foreman/passenger-status_--show_pool"
 	log "---"
 	log
 
+        log "// passenger memory usage"
+        log "egrep 'Passenger processes' -A 100 \$base_dir/sos_commands/foreman/passenger-memory-stats"
+        log "---"
+        log_cmd "egrep 'Passenger processes' -A 100 $base_dir/sos_commands/foreman/passenger-memory-stats"
+        log "---"
+        log
 
 
 	log "// total # of foreman tasks"
@@ -1983,10 +1982,12 @@ report()
 
 
 
-  log_tee "## Puppet Server"
+  log_tee "## Puppet"
   log
 
-  if [ ! "`egrep -i 'puppet' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/puppetlabs" ] && [ ! -d "$base_dir/var/log/puppet" ] && [ ! -d "$base_dir/etc/puppet" ] && [ ! -d "$base_dir/etc/puppetlabs" ]; then
+
+  #if [ ! "`egrep -i 'puppet' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/puppetlabs" ] && [ ! -d "$base_dir/var/log/puppet" ] && [ ! -d "$base_dir/etc/puppet" ] && [ ! -d "$base_dir/etc/puppetlabs" ]; then
+   if [ ! "`egrep puppet $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/puppetlabs" ] && [ ! -d "$base_dir/var/log/puppet" ] && [ ! -d "$base_dir/etc/puppet" ] && [ ! -d "$base_dir/etc/puppetlabs" ]; then
 
 	log "puppet not found"
 	log
@@ -1996,12 +1997,19 @@ report()
     log "Puppet 3 is a Ruby application and runs inside the Passenger application server, whereas Puppet 4 runs as a standalone Java-based application. Puppet 3 came with Satellite 6.3, Puppet 4 and 5 came with Satellite 6.4, and Puppet 6 came with Satellite 6.8."
     log
 
-	log "// service status"
-	log "grep systemctl_list-units for puppet services"
-	log "---"
-	log_cmd "grep puppet $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
-	log "---"
-	log
+	#log "// service status"
+	#log "grep systemctl_list-units for puppet services"
+	#log "---"
+	#log_cmd "grep puppet $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+	#log "---"
+	#log
+
+        log "// service status"
+        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_list-units"
+        log "---"
+        log_cmd "grep -h puppet $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log "---"
+        log
 
 	log "// Puppet Server Error"
 	log "grep ERROR \$base_dir/var/log/puppetlabs/puppetserver/puppetserver.log $base_dir/var/log/puppet/puppetserver/puppetserver.log 2>/dev/null"
@@ -2092,7 +2100,7 @@ report()
 
   if [ ! -d "$base_dir/sos_commands/katello" ] && [ ! -f "$base_dir/etc/httpd/conf.d/05-foreman-ssl.d/katello.conf" ]; then
 
-	log "katello server not found"
+	log "katello not found"
 	log
 
   else
@@ -2579,15 +2587,20 @@ report()
 	fi
 
 	log "// qpidd disk usage"
-	log "grep files from ls_-lanR_.var.lib.qpidd, add up the disk usage with awk and convert to Mb"
+	#log "grep files from ls_-lanR_.var.lib.qpidd, add up the disk usage with awk and convert to Mb"
+	log "grep \"^-\" \$base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=\$5 } END {printf \"\%d\", s}' | numfmt --to=iec"
 	log "---"
-	QPIDD_DISK_USAGE=`grep "^-" $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=$5 } END {printf "%d", s}'`
-	if [ "$QPIDD_DISK_USAGE" ]; then
-		QPIDD_DISK_USAGE_MB=`echo $(($QPIDD_DISK_USAGE / 1024 )) Mb 2>/dev/null`
-	else
-	QPIDD_DISK_USAGE_MB=''
-	fi
-	log "$QPIDD_DISK_USAGE_MB"
+	#QPIDD_DISK_USAGE=`grep "^-" $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=$5 } END {printf "%d", s}'`
+	#if [ "$QPIDD_DISK_USAGE" ]; then
+	#	QPIDD_DISK_USAGE_MB=`echo $(($QPIDD_DISK_USAGE / 1024 )) Mb 2>/dev/null`
+	#	QPIDD_DISK_USAGE_MB=`numfmt $QPIDD_DISK_USAGE --to=iec`
+	#else
+	#QPIDD_DISK_USAGE_MB=''
+	#fi
+	#log "$QPIDD_DISK_USAGE_MB"
+	QPIDD_DISK_USAGE=`grep "^-" $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=$5 } END {printf "%d", s}' | numfmt --to=iec`
+	#log_cmd "grep \"^-\" $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=$5 } END {printf \"%d\", s}' | numfmt --to=iec"
+	log "$QPIDD_DISK_USAGE"
 	log "---"
 	log
 
@@ -2598,15 +2611,15 @@ report()
 	log "---"
 	log
 
-	log "// Insert qpidd information"
-	log "cat $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd | egrep \" [A-Z][a-z]{2} [0-9]{2} [0-9]{2}:[0-9]{2} \" | awk '{print \$5}' | paste -s -d+ | bc"
-	log "---"
-	log_cmd "cat $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd | egrep \" [A-Z][a-z]{2} [0-9]{2} [0-9]{2}:[0-9]{2} \" | awk '{print \$5}' | paste -s -d+ | bc | awk '{print \"bytes: \"\$1}'"
-	fullsize_var_lib_qpid=$(cat $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd | egrep " [A-Z][a-z]{2} [0-9]{2} [0-9]{2}:[0-9]{2} " | awk '{print $5}' | paste -s -d+ | bc)
-	size_var_lib_qpid=$(bytesToHumanReadable ${fullsize_var_lib_qpid})
-	log "size: ${size_var_lib_qpid}"
-	log "---"
-	log
+	#log "// Insert qpidd information"
+	#log "cat $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd | egrep \" [A-Z][a-z]{2} [0-9]{2} [0-9]{2}:[0-9]{2} \" | awk '{print \$5}' | paste -s -d+ | bc"
+	#log "---"
+	#log_cmd "cat $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd | egrep \" [A-Z][a-z]{2} [0-9]{2} [0-9]{2}:[0-9]{2} \" | awk '{print \$5}' | paste -s -d+ | bc | awk '{print \"bytes: \"\$1}'"
+	#fullsize_var_lib_qpid=$(cat $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd | egrep " [A-Z][a-z]{2} [0-9]{2} [0-9]{2}:[0-9]{2} " | awk '{print $5}' | paste -s -d+ | bc)
+	#size_var_lib_qpid=$(bytesToHumanReadable ${fullsize_var_lib_qpid})
+	#log "size: ${size_var_lib_qpid}"
+	#log "---"
+	#log
 
 	log "// qpidd limits"
 	log "grep LimitNOFILE \$base_dir/etc/systemd/system/qpidd.service.d/90-limits.conf"
@@ -2662,7 +2675,7 @@ report()
   log_tee "## Subscription Watch"
   log
 
-  if [ ! -f "$base_dir/etc/foreman-installer/scenarios.d/satellite.migrations/*-add-inventory-upload.rb" ] || [ ! "`egrep \"tfm-rubygem-foreman_rh_cloud|tfm-rubygem-foreman_inventory_upload\" $base_dir/installed-rpms`" ]; then
+  if [ ! -f "$base_dir/etc/foreman-installer/scenarios.d/satellite.migrations/*-add-inventory-upload.rb" ] || [ ! "`egrep \"tfm-rubygem-foreman_rh_cloud|tfm-rubygem-foreman_inventory_upload\" $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V`" ]; then
 
 	log "subscription watch not found"
 	log
