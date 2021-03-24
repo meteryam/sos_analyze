@@ -21,57 +21,41 @@ drwx------. 14 root root     4096 Mar  7 15:56 sosreport-sat64test-123456-2019-0
 The output will be similar to below
 ```
 $ ./sos_analyze.sh sosreport-sat64test-123456-2019-03-07-obvjctv
-The sosreport is: sosreport-sat64test-123456-2019-03-07-obvjctv/
-creating soft links for compatibility...
-
+The sosreport is: sosreport-sat64test-123456-2019-03-07-obvjctv
 ### Welcome to Report ###
 ### CEE/SysMGMT ###
-
-## Date
-## Case Summary
-## Platform
-## Memory
-## Storage
-## Proxies
+## Naming Resolution
 ## Network Information
-## Environment
-## SELinux
-## cron
-## /var/log/messages
-
-## Repos and Packages
-## Satellite Upgrade
+## Selinux
+## Installed Packages (satellite)
 ## Subscriptions
-## /var/log/rhsm/rhsm.log
-## Satellite Services
-
-## goferd
-## PostgreSQL
-## MongoDB
-## httpd (Apache)
+## Repos
+## Upgrade
+## Disk
+## Memory
+## CPU
+## Messages
+## Foreman Tasks
+## Hammer Ping
+## Katello service status
+## MongoDB Storage
+## PostgreSQL Storage
 ## Passenger
-## Puppet Server
-## Foreman
-## Katello
-## Dynflow
-## Pulp
+## Qpidd
+## Foreman logs (error)
+## Foreman cron
+## Httpd
+## RHSM
+## Virt-who
+## Hypervisors tasks
 ## Tomcat
 ## Candlepin
-## virt-who
-## qpidd
-## qdrouterd
-## Subscription Watch
+## Cron
+## Files in etc/cron*
+## Foreman Settings
+## PostgreSQL
 
-Calling xsos...
-
-
-Calling insights...
-done.
-
-
-## The output has been saved in these locations:
-    report_jrichards2_sosreport-sat64test-123456-2019-03-07-obvjctv.log
-    /tmp/report_jrichards2_sosreport-sat64test-123456-2019-03-07-obvjctv.log
+## Please check out the file /tmp/report-sosreport-sat64test-123456-2019-03-07-obvjctv.log
 ```
 3. Check the generated report file
 ```
@@ -79,9 +63,9 @@ $ less /tmp/report-sosreport-sat64test-123456-2019-03-07-obvjctv.log
 ```
 
 
-#Note. You will see the file as below. The content is all the commands executed by this script.
-#```
-#internals_help/executed_commands.txt
-#```
+Note. You will see the file as below. The content is all the commands executed by this script.
+```
+internals_help/executed_commands.txt
+```
 
 Hope you enjoy it.
