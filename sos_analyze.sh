@@ -1377,9 +1377,11 @@ report()
   log
 
   log "// number of sockets"
-  log "grep 'Socket.Designation:' \$base_dir/dmidecode | grep -i CPU | wc -l"
+  #log "grep 'Socket.Designation:' \$base_dir/dmidecode | grep -i CPU | wc -l"
+  log "grep ^Socket \$base_dir/sos_commands/processor/lscpu"
   log "---"
-  log_cmd "grep 'Socket.Designation:' $base_dir/dmidecode | grep -i CPU | wc -l"
+  #log_cmd "grep 'Socket.Designation:' $base_dir/dmidecode | grep -i CPU | wc -l"
+  log "grep ^Socket $base_dir/sos_commands/processor/lscpu"
   log "---"
   log
 
