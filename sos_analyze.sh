@@ -1302,6 +1302,12 @@ report()
   log "---"
   log
 
+  log "// yum activity from lvmdump messages"
+  log "grep yum \$base_dir/sos_commands/lvm2/lvmdump/messages"
+  log "---"
+  log_cmd "grep yum $base_dir/sos_commands/lvm2/lvmdump/messages"
+  log "---"
+  log
 
 
   log_tee "## Satellite Upgrade"
@@ -1404,6 +1410,20 @@ report()
   log "---"
   log
 
+  log "// Available repositories listed in rhsm.log"
+  log "egrep '\[id:' \$base_dir/var/log/rhsm/rhsm.log | sort -u"
+  log "---"
+  log_cmd "egrep '\[id:' $base_dir/var/log/rhsm/rhsm.log | sort -u"
+  log "---"
+  log
+
+  log "// subscription-manager activity from lvmdump messages"
+  log "grep subscription-manager \$base_dir/sos_commands/lvm2/lvmdump/messages"
+  log "---"
+  log_cmd "grep subscription-manager $base_dir/sos_commands/lvm2/lvmdump/messages"
+  log "---"
+  log
+
   log_tee " "
   log
 
@@ -1421,7 +1441,7 @@ report()
   log "  |           |          |           |"
   log "  \-pulp -----/----------/-----------/"
   log "  |"
-  log "  \-passenger"
+  log "  \-passenger/puma"
   log "        |"
   log "        \-puppet3       postgreSQL                 tomcat"
   log "        |                |   |                       |"
@@ -1450,11 +1470,11 @@ report()
   if [ -f "$base_dir/sos_commands/foreman/foreman-maintain_service_status" ]; then
 
     log "// condensed satellite service status"
-    log "grepping files foreman-maintain_service_status and systemctl_list-units"
+    log "grepping files foreman-maintain_service_status and systemctl_status_--all"
     log "---"
     log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep \"^$|\.service -|Active:|All services\" | egrep --color=always '^|failed|inactive|activating|deactivating|\[OK\]'"
     log
-    log_cmd "egrep 'puppet|virt-who' $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+    log_cmd "egrep 'puppet|virt-who' $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating'"
     log "---"
     log
 
@@ -1469,21 +1489,21 @@ report()
 
     log_tee " "
 
-  elif [ "`egrep \"dynflow|foreman\" $base_dir/sos_commands/systemd/systemctl_list-units 2>/dev/null | head -1`" ]; then
+  elif [ "`egrep \"dynflow|foreman\" $base_dir/sos_commands/systemd/systemctl_status_--all 2>/dev/null | head -1`" ]; then
 
 	#log_cmd "egrep \"rh-mongo|postgres|qdrouterd|qpidd|squid|celery|pulp|dynflow|tomcat|goferd|httpd|puppet|foreman-proxy\" $base_dir/sos_commands/systemd/systemctl_list-units | grep service"
 
     log "// condensed satellite service status"
-    log "grepping files foreman-maintain_service_status and systemctl_list-units"
+    log "grepping files foreman-maintain_service_status and systemctl_status_--all"
     log "---"
-    log "egrep \"mongo|postgres|qdrouterd|qpidd|squid|celery|pulp|dynflow|tomcat|goferd|httpd|puppet|foreman\" $base_dir/sos_commands/systemd/systemctl_list-units | grep service"
+    log "egrep \"mongo|postgres|qdrouterd|qpidd|squid|celery|pulp|dynflow|tomcat|goferd|httpd|puppet|foreman\" \$base_dir/sos_commands/systemd/systemctl_status_--all | grep service"
     log
-    log_cmd "egrep \"mongo|postgres|qdrouterd|qpidd|squid|celery|pulp|dynflow|tomcat|goferd|httpd|puppet|foreman\" $base_dir/sos_commands/systemd/systemctl_list-units | grep service"
+    log_cmd "egrep \"mongo|postgres|qdrouterd|qpidd|squid|celery|pulp|dynflow|tomcat|goferd|httpd|puppet|foreman\" $base_dir/sos_commands/systemd/systemctl_status_--all | grep service"
     log "---"
     log
 
     log "// condensed satellite service status"
-    log "grepping files foreman-maintain_service_status and systemctl_list-units"
+    log "grepping files foreman-maintain_service_status and systemctl_status_--all"
     log "---"
     log_cmd "egrep -A 10 \"foreman-proxy.service -|goferd.service -|httpd.service -|pulp_streamer.service -|puppet.service -|puppetserver.service -|qdrouterd.service -|qpidd.service -|rh-mongodb34-mongod.service -|smart_proxy_dynflow_core.service -|squid.service -|mongod.service -|postgresql.service -|pulp_celerybeat.service -|foreman-tasks.service -\" \$/base_dir/sos_commands/systemd/systemctl_status_--all"
     log
@@ -1501,7 +1521,8 @@ report()
 
 
 
-  if [ ! "`egrep -i 'gofer|katello-agent' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/installed_rpms $base_dir/var/log/messages* 2>/dev/null | head -1`" ] && [ ! "`zcat $base_dir/var/log/messages* 2>/dev/null | egrep -i 'gofer|katello-agent'`" ]; then
+  #if [ ! "`egrep -i gofer $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/installed_rpms $base_dir/var/log/messages* 2>/dev/null | head -1`" ] && [ ! "`zcat $base_dir/var/log/messages* 2>/dev/null | egrep -i 'gofer'`" ]; then
+  if [ ! "`egrep -i gofer $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_status_--all`" ]; then
 
 	nop=1
 
@@ -1511,7 +1532,7 @@ report()
 	log
 
 	log "// goferd service"
-	log "from file $base_dir/sos_commands/systemd/ystemctl_show_service_--all"
+	log "from file $base_dir/sos_commands/systemd/systemctl_show_service_--all"
 	log "---"
 	log_cmd "grep goferd $base_dir/sos_commands/systemd/systemctl_show_service_--all"
 	log "---"
@@ -1538,7 +1559,7 @@ report()
   log_tee "## PostgreSQL"
   log
 
-  if [ ! "`egrep -i postgres $base_dir/sos_commands/systemd/systemctl_list-units $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_foreman/var/lib/pgsql" ] && [ ! -d "$base_foreman/var/opt/rh/rh-postgresql12" ] && [ ! -d "$base_dir/sos_commands/postgresql" ]; then
+  if [ ! "`egrep -i postgres $base_dir/sos_commands/systemd/systemctl_status_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_foreman/var/lib/pgsql" ] && [ ! -d "$base_foreman/var/opt/rh/rh-postgresql12" ] && [ ! -d "$base_dir/sos_commands/postgresql" ]; then
 
 	log "postgres not found"
 	log
@@ -1557,9 +1578,18 @@ report()
 	#log
 
         log "// service status"
-        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
         log "---"
-        log_cmd "grep -h postgres $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log_cmd "grep -h postgres $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+	log
+	log_cmd "egrep -h -A 3 'postgres.service -' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log "---"
+        log
+
+        log "// postgres storage consumption"
+        log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql"
+        log "---"
+	log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null"
         log "---"
         log
 
@@ -1576,133 +1606,125 @@ report()
         log "---"
         log
 
-	log "// pre-Satellite 6.8"
-	log
 
-        log "// Current Configuration"
-        log "grep -v -h \# \$base_foreman/var/lib/pgsql/data/postgresql.conf | grep -v ^$ | grep -v -P ^\"\\t\\t\".*#"
-        log "---"
-        log_cmd "grep -v -h \# $base_foreman/var/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v ^$ | grep -v -P ^\"\\t\\t\".*#"
-        log "---"
-        log
+	if [ ! -f "$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql" ]; then
 
-        log "// postgres configuration"
-        log "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target' \$base_dir/var/lib/pgsql/data/postgresql.conf | grep -v '^#'"
-        log "---"
-        log_cmd "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target' $base_dir/var/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v '^#'"
-        log
-        log "---"
-        log
+		log "// pre-Satellite 6.8"
+		log
 
-        log "// postgres storage consumption"
-        log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql"
-        log "---"
-        log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql"
-        log "---"
-        log
+        	log "// Current Configuration"
+        	log "grep -v -h \# \$base_foreman/var/lib/pgsql/data/postgresql.conf | grep -v ^$ | grep -v -P ^\"\\t\\t\".*#"
+        	log "---"
+        	log_cmd "grep -v -h \# $base_foreman/var/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v ^$ | grep -v -P ^\"\\t\\t\".*#"
+        	log "---"
+        	log
 
-        log "// top foreman tables consumption"
-        log "head -n30 \$base_dir/sos_commands/katello/db_table_size"
-        log "---"
-        log_cmd "head -n30 $base_dir/sos_commands/katello/db_table_size 2>/dev/null"
-        log "---"
-        log
+        	log "// postgres configuration"
+        	log "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target' \$base_dir/var/lib/pgsql/data/postgresql.conf | grep -v '^#'"
+        	log "---"
+        	log_cmd "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target' $base_dir/var/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v '^#'"
+        	log
+        	log "---"
+        	log
 
-        log "// deadlocks"
-        log "grep -h -i deadlock \$base_foreman/var/lib/pgsql/data/pg_log/*.log"
-        log "---"
-        log_cmd "grep -h -i deadlock $base_foreman/var/lib/pgsql/data/pg_log/*.log"
-        log "---"
-        log
+        	log "// top foreman tables consumption"
+        	log "head -n30 \$base_dir/sos_commands/katello/db_table_size"
+        	log "---"
+        	log_cmd "head -n30 $base_dir/sos_commands/katello/db_table_size 2>/dev/null"
+        	log "---"
+        	log
 
-        log "// deadlock count"
-        log "grep -h -i deadlock \$base_foreman/var/lib/pgsql/data/pg_log/*.log | wc -l"
-        log "---"
-        log_cmd "grep -h -i deadlock $base_foreman/var/lib/pgsql/data/pg_log/*.log | wc -l"
-        log "---"
-        log
+        	log "// deadlocks"
+        	log "grep -h -i deadlock \$base_foreman/var/lib/pgsql/data/pg_log/*.log"
+        	log "---"
+        	log_cmd "grep -h -i deadlock $base_foreman/var/lib/pgsql/data/pg_log/*.log"
+        	log "---"
+        	log
 
-        log "// ERROR count"
-        log "grep -h -i ERROR \$base_foreman/var/lib/pgsql/data/pg_log/*.log | wc -l"
-        log "---"
-        log_cmd "grep ERROR $base_foreman/var/lib/pgsql/data/pg_log/*.log | wc -l"
-        log "---"
-        log
+        	log "// deadlock count"
+        	log "grep -h -i deadlock \$base_foreman/var/lib/pgsql/data/pg_log/*.log | wc -l"
+        	log "---"
+       		log_cmd "grep -h -i deadlock $base_foreman/var/lib/pgsql/data/pg_log/*.log | wc -l"
+        	log "---"
+        	log
 
-        log "// ERRORs"
-        log "grep -h -i ERROR \$base_foreman/var/lib/pgsql/data/pg_log/*.log"
-        log "---"
-        log_cmd "grep -h ERROR $base_foreman/var/lib/pgsql/data/pg_log/*.log | tail -100 | sort -n"
-        log "---"
-        log
+        	log "// ERROR count"
+        	log "grep -h -i ERROR \$base_foreman/var/lib/pgsql/data/pg_log/*.log | wc -l"
+        	log "---"
+        	log_cmd "grep ERROR $base_foreman/var/lib/pgsql/data/pg_log/*.log | wc -l"
+        	log "---"
+        	log
 
-	log
-        log "// Satellite 6.8 or later"
-        log
+        	log "// ERRORs"
+        	log "grep -h -i ERROR \$base_foreman/var/lib/pgsql/data/pg_log/*.log"
+        	log "---"
+        	log_cmd "grep -h ERROR $base_foreman/var/lib/pgsql/data/pg_log/*.log | tail -100 | sort -n"
+        	log "---"
+        	log
 
-        log "// Current Configuration"
-        log "grep -v -h \# \$base_dir/var/opt/rh/rh-postgresql12/data/postgresql.conf | grep -v ^$ | grep -v -P ^\"\\t\\t\".*#"
-        log "---"
-        log_cmd "grep -v -h \# $base_dir/var/opt/rh/rh-postgresql12/data/postgresql.conf 2>/dev/null | grep -v ^$ | grep -v -P ^\"\\t\\t\".*#"
-        log "---"
-        log
+	else
 
-        log "// postgres configuration"
-        log "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target' \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/postgresql.conf | grep -v '^#'"
-        log "---"
-        log_cmd "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target' $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v '^#'"
-        log "---"
-        log
+		log
+		log "// Satellite 6.8 or later"
+		log
 
-        log "// postgres storage consumption"
-        log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql"
-        log "---"
-        log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql"
-        log "---"
-        log
+        	log "// Current Configuration"
+        	log "grep -v -h \# \$base_dir/var/opt/rh/rh-postgresql12/data/postgresql.conf | grep -v ^$ | grep -v -P ^\"\\t\\t\".*#"
+        	log "---"
+        	log_cmd "grep -v -h \# $base_dir/var/opt/rh/rh-postgresql12/data/postgresql.conf 2>/dev/null | grep -v ^$ | grep -v -P ^\"\\t\\t\".*#"
+        	log "---"
+        	log
 
-        log "// top foreman tables consumption"
-        log "head -n30 \$base_dir/sos_commands/foreman/foreman_db_tables_sizes"
-        log "---"
-        log_cmd "head -n30 $base_dir/sos_commands/foreman/foreman_db_tables_sizes 2>/dev/null"
-        log "---"
-        log
+        	log "// postgres configuration"
+        	log "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target' \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/postgresql.conf | grep -v '^#'"
+        	log "---"
+        	log_cmd "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target' $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v '^#'"
+        	log "---"
+        	log
 
-        log "// top candlepin tables consumption"
-        log "head -n30 \$base_dir/sos_commands/candlepin/candlepin_db_tables_sizes"
-        log "---"
-        log_cmd "head -n30 $base_dir/sos_commands/candlepin/candlepin_db_tables_sizes 2>/dev/null"
-        log "---"
-        log
+        	log "// top foreman tables consumption"
+        	log "head -n30 \$base_dir/sos_commands/foreman/foreman_db_tables_sizes"
+        	log "---"
+        	log_cmd "head -n30 $base_dir/sos_commands/foreman/foreman_db_tables_sizes 2>/dev/null"
+        	log "---"
+        	log
 
-        log "// deadlocks"
-        log "grep -h -i deadlock \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log"
-        log "---"
-        log_cmd "grep -h -i deadlock $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log"
-        log "---"
-        log
+        	log "// top candlepin tables consumption"
+        	log "head -n30 \$base_dir/sos_commands/candlepin/candlepin_db_tables_sizes"
+        	log "---"
+        	log_cmd "head -n30 $base_dir/sos_commands/candlepin/candlepin_db_tables_sizes 2>/dev/null"
+        	log "---"
+        	log
 
-        log "// deadlock count"
-        log "grep -h -i deadlock \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | wc -l"
-        log "---"
-        log_cmd "grep -h -i deadlock $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | wc -l"
-        log "---"
-        log
+        	log "// deadlocks"
+        	log "grep -h -i deadlock \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log"
+        	log "---"
+        	log_cmd "grep -h -i deadlock $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log"
+        	log "---"
+        	log
 
-        log "// ERROR count"
-        log "grep -h -i ERROR \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | wc -l"
-        log "---"
-        log_cmd "grep -h -i ERROR $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | wc -l"
-        log "---"
-        log
+        	log "// deadlock count"
+        	log "grep -h -i deadlock \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | wc -l"
+        	log "---"
+        	log_cmd "grep -h -i deadlock $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | wc -l"
+        	log "---"
+        	log
 
-        log "// ERRORs (without json)"
-        log "grep -h -i ERROR \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | egrep -v '{|}'"
-        log "---"
-        log_cmd "grep -h -i ERROR $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | egrep -v '{|}' | tail -100 | sort -n"
-        log "---"
-        log
+        	log "// ERROR count"
+        	log "grep -h -i ERROR \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | wc -l"
+        	log "---"
+        	log_cmd "grep -h -i ERROR $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | wc -l"
+        	log "---"
+        	log
 
+        	log "// ERRORs (without json)"
+        	log "grep -h -i ERROR \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | egrep -v '{|}'"
+        	log "---"
+        	log_cmd "grep -h -i ERROR $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | egrep -v '{|}' | tail -100 | sort -n"
+        	log "---"
+        	log
+
+	fi
 
 
   fi
@@ -1730,9 +1752,11 @@ report()
 	#log
 
         log "// service status"
-        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
         log "---"
-        log_cmd "grep -h mongo $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log_cmd "grep -h mongo $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+	log
+	log_cmd "grep -h mongo $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
         log "---"
         log
 
@@ -1802,9 +1826,11 @@ report()
 	#log
 
         log "// service status"
-        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
         log "---"
-        log_cmd "grep -h httpd $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log_cmd "grep -h httpd $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+	log
+	log_cmd "grep -h httpd $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
         log "---"
         log
 
@@ -1945,7 +1971,7 @@ report()
 	log "---"
 	log
 
-	log "// passenger.conf configuration - 6.3 or less"
+	log "// passenger.conf configuration - 6.3 or earlier"
 	log "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' \$base_dir/etc/httpd/conf.d/passenger.conf"
 	log "---"
 	log_cmd "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' $base_dir/etc/httpd/conf.d/passenger.conf"
@@ -1982,6 +2008,47 @@ report()
 
   fi
 
+  log_tee "## Puma"
+  log
+
+  if [ ! "`egrep -i puma $base_dir/ps $base_dir/systemd/system/foreman.serice.d/installer.conf $base_dir/installed-rpms 2>/dev/null | head -1`" ]; then
+
+        log "puma not found"
+        log
+
+  else
+
+    log "Puma is a web server and a core component of Red Hat Satellite. Satellite uses Puma to run Ruby applications such as Foreman. Puma integrates with Apache HTTP Server to capture incoming requests and redirects them to the respective components that handle them."
+    log
+
+    log "Puma is involved in Satellite when the GUI is accessed, when the APIs are accessed, and when content hosts are registered. Each request that is serviced by Puma consumes an Apache HTTP Server process. Puma queues requests into an application-specific wait queue. The maximum number of requests that can be queued by Puma is defined in the Foreman service configuration. When running at scale, it might be desirable to increase the number of requests that Puma can handle concurrently. It might also be desirable to increase the size of the wait queue to accommodate bursts of requests."
+    log
+
+    log "Puma is a drop-in replacement for Passenger, and was introduced in Satellite 6.9."
+    log
+
+    log "// installed puma packages"
+    log "grep puma \$base_dir/installed-rpms"
+    log "---"
+    log_cmd "grep puma $base_dir/installed-rpms"
+    log "---"
+    log
+
+    log "// running puma processes"
+    log "grep puma \$base_dir/ps"
+    log "---"
+    log_cmd "grep puma $base_dir/ps"
+    log "---"
+    log
+
+    log "// puma performance settings"
+    log "grep -i puma \$base_dir/etc/systemd/system/foreman.service.d/installer.conf"
+    log "---"
+    log_cmd "grep -i puma $base_dir/etc/systemd/system/foreman.service.d/installer.conf"
+    log "---"
+    log
+
+  fi
 
 
   log_tee "## Puppet"
@@ -2007,9 +2074,11 @@ report()
 	#log
 
         log "// service status"
-        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
         log "---"
-        log_cmd "grep -h puppet $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log_cmd "grep -h puppet $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+	log
+	log_cmd "grep -h puppet $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
         log "---"
         log
 
@@ -2044,9 +2113,11 @@ report()
 	#log
 
         log "// service status"
-        log "from file $base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files systemctl_list-unit-files and systemctl_status_--all"
         log "---"
-        log_cmd "grep foreman-proxy $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+        log_cmd "grep -h foreman-proxy $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log
+        log_cmd "grep -h foreman-proxy $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
         log "---"
         log
 
@@ -2148,9 +2219,11 @@ report()
 	#log
 
         log "// service status"
-        log "from file $base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files systemctl_list-unit-files and systemctl_status_--all"
         log "---"
-        log_cmd "grep dynflow $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+        log_cmd "grep -h dynflow $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log
+        log_cmd "grep -h dynflow $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
         log "---"
         log
 
@@ -2254,9 +2327,11 @@ report()
 	#log
 
         log "// service status"
-        log "from file $base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files systemctl_list-unit-files and systemctl_status_--all"
         log "---"
-        log_cmd "grep pulp $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+        log_cmd "grep -h pulp $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log
+        log_cmd "grep -h pulp $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
         log "---"
         log
 
@@ -2331,9 +2406,11 @@ report()
 	#log
 
         log "// service status"
-        log "from file $base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files systemctl_list-unit-files and systemctl_status_--all"
         log "---"
-        log_cmd "grep tomcat $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+        log_cmd "grep -h tomcat $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log
+        log_cmd "grep -h tomcat $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
         log "---"
         log
 
@@ -2454,12 +2531,14 @@ report()
     log "The virt-who agent interrogates the hypervisor infrastructure and provides the host/guest mapping to the subscription service. It uses read-only commands to gather the host/guest associations for the subscription services. This way, the guest subscriptions offered by a subscription can be unlocked and available for the guests to use."
     log
 
-	log "// service status"
-	log "grep virt-who \$base_dir/sos_commands/systemd/systemctl_list-units"
-	log "---"
-	log_cmd "egrep 'virt-who' $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
-	log "---"
-	log
+        log "// service status"
+        log "from files systemctl_list-unit-files and systemctl_status_--all"
+        log "---"
+        log_cmd "grep -h virt-who $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log
+        log_cmd "grep -h virt-who $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log "---"
+        log
 
 	log "// duplicated hypervisors #"
 	log "grep \"is assigned to 2 different systems\" \$base_dir/var/log/rhsm/rhsm.log | awk '{print \$9}' | sed -e \"s/'//g\" | sort -u | wc -l"
@@ -2573,9 +2652,11 @@ report()
 	#log
 
         log "// service status"
-        log "grep qpidd \$base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files systemctl_list-unit-files and systemctl_status_--all"
         log "---"
-        log_cmd "egrep qpidd $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+        log_cmd "grep -h qpidd $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log
+        log_cmd "grep -h qpidd $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
         log "---"
         log
 
@@ -2657,9 +2738,11 @@ report()
 	#log
 
         log "// service status"
-        log "grep qdrouterd \$base_dir/sos_commands/systemd/systemctl_list-units"
+        log "from files systemctl_list-unit-files and systemctl_status_--all"
         log "---"
-        log_cmd "egrep qdrouterd $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
+        log_cmd "grep -h qdrouterd $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+        log
+        log_cmd "grep -h qdrouterd $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
         log "---"
         log
 
