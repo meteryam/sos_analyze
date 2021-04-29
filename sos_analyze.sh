@@ -891,7 +891,7 @@ report()
 # cat virtwho/rpm_-V_virt-who 
 
 
-  if [ $COPY_TO_CURRENT_DIR ]; then
+  if [ $COPY_TO_CURRENT_DIR ] || [ $OPEN_IN_VIM_RO_LOCAL_DIR ]; then
     cp -v $FOREMAN_REPORT $MYPWD/report_${USER}_$final_name.log
   fi
 
@@ -914,12 +914,15 @@ fi
 main $1
 
 
+  if [ ! "$EDITOR" ]; then
+	EDITOR=`which vi`
+  fi
 
   if [ $OPEN_IN_VIM_RO_LOCAL_DIR ]; then
     $EDITOR -R $MYPWD/report_${USER}_$final_name.log
   fi
 
   if [ $OPEN_IN_EDITOR_TMP_DIR ]; then
-   echo placeholder 
- #  $EDITOR /tmp/report_${USER}_$final_name.log
+   #echo placeholder 
+   $EDITOR /tmp/report_${USER}_$final_name.log
   fi
