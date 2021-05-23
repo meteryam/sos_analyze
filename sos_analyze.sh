@@ -9,9 +9,11 @@
 FOREMAN_REPORT="/tmp/$$.log"
 
 # the following while block captures three flags from the command line
+# -a enables ANSI color codes in the current directory, but not the copy in /tmp (has no effect unless -c or -l is also used)
 # -c copies the output file from the /tmp directory to the current directory
-# -l opens the output file from the current directory
+# -l opens the output file from the current directory (implies -c by default)
 # -t opens the output file from the /tmp directory
+# -x generates a separate xsos report in the current directory, but not in /tmp
 
 ANSI_COLOR_CODES=false
 COPY_TO_CURRENT_DIR=false
@@ -893,12 +895,9 @@ main()
 	  log
 	  SSL_CERT=`openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -text -noout | grep -A 1 'Authority Key Identifier' | tail -1 | awk '{print $1}' | sed s'/keyid://'g`
 	  PROXY_CA=`openssl x509 -in $base_dir/etc/foreman/proxy_ca.pem -text -noout | grep -A 1 'Subject Key Identifier' | tail -1 | awk '{print $1}'`
-	  #log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -text -noout | grep -A 1 'Authority Key Identifier' | tail -1 | awk '{print $1}' | sed s'/keyid://'g"
-	  #log_cmd "openssl x509 -in $base_dir/etc/foreman/proxy_ca.pem -text -noout | grep -A 1 'Subject Key Identifier' | tail -1 | awk '{print $1}'"
-	  #diff <(echo `openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -text -noout | grep -A 1 'Authority Key Identifier' | tail -1 | awk '{print $1}' | sed s'/keyid://'g`) <(echo `openssl x509 -in $base_dir/etc/foreman/proxy_ca.pem -text -noout | grep -A 1 'Subject Key Identifier' | tail -1 | awk '{print $1}'`);if [ "$?" -eq 0 ]; then log "certificates match"; fi
 	  log "$SSL_CERT"
 	  log "$PROXY_CA"
-	  diff <(echo $SSL_CERT) <(echo $PROXY_CA);if [ "$?" -eq 0 ]; then log "certificates match"; fi
+	  diff <(echo $SSL_CERT) <(echo $PROXY_CA);if [ "$?" -eq 0 ]; then log "certificates match"; else log "certificates differ"; fi
 	  log "---"
 	  log
 	  fi
@@ -949,7 +948,6 @@ main()
 	  log "// baremetal or vm?"
 	  log "grep dmidecode and facts files for vendor and manufacturer"
 	  log "---"
-	#  log_cmd "{ grep -E '(Vendor|Manufacture|Product Name:|Description:)' $base_dir/dmidecode | head -n3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; } || { grep virtual $base_dir/facts 2>/dev/null | egrep \"vendor|version|manufacturer|name\" | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; }"
 	  log_cmd "grep -E '(Vendor|Manufacture|Product Name:|Description:)' $base_dir/dmidecode 2>/dev/null | head -n3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u"
 	  log_cmd "grep virtual $base_dir/facts 2>/dev/null | egrep \"vendor|version|manufacturer|name\" | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u"
 	  log "---"
@@ -1020,15 +1018,9 @@ main()
 	  log
 
 	  log "// no space left on device"
-	  #log "echo -e \"`egrep -hir \"no space left on device\" \$base_dir 2>/dev/null` | egrep -v '{|}'\""
-	  #log "egrep -hir \"no space left on device\" \$base_dir 2>/dev/null | egrep -v '{|}'"
 	  log "'no space left on device' errors in \$base_dir"
 	  log "---"
-	  #log_cmd "echo -e \"`egrep -hir \"no space left on device\" $base_dir 2>/dev/null` | egrep -v '{|}'\""
-	  #log_cmd "egrep -hir \"no space left on device\" $base_dir 2>/dev/null | egrep -v '{|}' | sed 's/\\n/\n/g'"
-	  #NOSPACE_RAW=`egrep -hir 'no space left on device' $base_dir/var/log 2>/dev/null | egrep -v '{|}' | grep -v 'Binary file'`
-	  #log_cmd "echo -e \"$NOSPACE_RAW\""
-	  log_cmd "egrep -hir 'no space left on device' $base_dir 2>/dev/null | egrep -v '{|}'"
+	  log_cmd "egrep -hir 'no space left on device' $base_dir 2>/dev/null | egrep -v '{|}' | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\""
 	  log "---"
 	  log
 
@@ -1211,7 +1203,9 @@ main()
 	  log "// SELinux denials"
 	  log "grep for selinux denials"
 	  log "---"
-	  log_cmd "tail -30 $base_dir/selinux_denials.log 2>/dev/null || grep -o denied.* $base_dir/var/log/audit/audit.log | sort -u | tail -100"
+	  #log_cmd "tail -30 $base_dir/selinux_denials.log 2>/dev/null || grep -o denied.* $base_dir/var/log/audit/audit.log | sort -u | tail -100"
+	  SE_DENIALS=`cat $base_dir/var/log/audit/* | sort -u | egrep '^type=(AVC|SELINUX)' | while read line; do time=\`echo $line | sed 's/.*audit(\([0-9]*\).*/\1/'\`; echo \`date -d @$time +'%Y-%m-%d.%H:%M'\` $line; done | awk '{$2=""; $3=""; $4=""; print $0}'`
+	  log_cmd "echo -E \"$SE_DENIALS\" | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | tail -30"
 	  log "---"
 	  log
 
@@ -1237,7 +1231,6 @@ main()
 	  log "// checking the contents of crontabs in /var/spool/cron"
 	  log "for b in \$(ls -1 \$base_dir/var/spool/cron/*); do echo; echo \$b; echo \"===\"; cat \$b; echo \"===\"; done"
 	  log "---"
-	  #log_cmd "for b in $(ls -1 \"$base_dir/var/spool/cron/*\" 2>/dev/null); do echo; echo $b; echo \"===\"; cat $b; echo \"===\"; done"
 	  CRONRESULTS=`for b in $(ls -1 $base_dir/var/spool/cron/* 2>/dev/null); do echo; echo $b; echo "==="; cat $b; echo "==="; done`
 	  log "$CRONRESULTS"
 	  log "---"
@@ -1291,7 +1284,7 @@ main()
 	  log "// errors in messages file"
 	  log "grep messages files for errors"
 	  log "---"
-	  { for mylog in `ls -rt $base_dir/var/log/messages* 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep ERROR | grep -v 'goferd:' | tail -300 &>> $FOREMAN_REPORT
+	  { for mylog in `ls -rt $base_dir/var/log/messages* 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep ERROR | grep -v 'goferd:' | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | tail -300 &>> $FOREMAN_REPORT
 	  log "---"
 	  log
 
@@ -1338,9 +1331,9 @@ main()
 	  log
 
 	  log "// yum.log info"
-	  log "cat \$base_dir/var/log/yum.log"
+	  log "tail -300 \$base_dir/var/log/yum.log"
 	  log "---"
-	  log_cmd "cat $base_dir/var/log/yum.log | egrep -i --color=always \"^|$SATPACKAGES\""
+	  log_cmd "tail -300 $base_dir/var/log/yum.log | egrep -i --color=always \"^|$SATPACKAGES\""
 	  log "---"
 	  log
 
@@ -1361,7 +1354,6 @@ main()
 	  log "---"
 
 	  export GREP_COLORS='ms=01;33'
-	  #cmd_output=`egrep -i "Exit with status code|--upgrade|Upgrade completed|Running installer with args|ASCII" $base_dir/var/log/foreman-installer/{satellite*,capsule*} $base_dir/var/log/foreman-maintain/{satellite*,capsule*,foreman-maintain*} $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-installer/{satellite*,capsule*} $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-maintain/{satellite*,capsule*} $base_dir/var/log/katello-installer/* 2>/dev/null | egrep -v "Hook" | sed s'/\[\[//'g | awk -F"[" '{print $2}' | sort -k 2 | tail | egrep --color=always "^|tuning|upgrade"`
 	  cmd_output=`egrep -i "Exit with status code|--upgrade|Upgrade completed|Running installer with args|ASCII" $base_foreman/var/log/foreman-installer/{satellite*,capsule*} $base_dir/var/log/foreman-maintain/{satellite*,capsule*,foreman-maintain*} $base_dir/var/log/katello-installer/* 2>/dev/null | egrep -v "Hook" | sed s'/\[\[//'g | awk -F"[" '{print $2}' | sort -k 2 | tail | egrep --color=always "^|tuning|upgrade"`
 
 	  log "$cmd_output"
@@ -1452,7 +1444,7 @@ main()
 	  log "---"
 	  log
 
-	  log "// Available repositories listed in rhsm.log"
+	  log "// available repositories listed in rhsm.log"
 	  log "egrep '\[id:' \$base_dir/var/log/rhsm/rhsm.log | sort -u"
 	  log "---"
 	  log_cmd "egrep '\[id:' $base_dir/var/log/rhsm/rhsm.log | sort -u"
@@ -1563,7 +1555,6 @@ main()
 
 
 
-	  #if [ ! "`egrep -i gofer $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/installed_rpms $base_dir/var/log/messages* 2>/dev/null | head -1`" ] && [ ! "`zcat $base_dir/var/log/messages* 2>/dev/null | egrep -i 'gofer'`" ]; then
 	  if [ ! "`egrep -i gofer $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_status_--all`" ]; then
 
 		nop=1
@@ -1614,21 +1605,13 @@ main()
 	    log "PostgreSQL is used by Foreman and Candlepin to store records related to registered content hosts, subscriptions, jobs, and tasks. Over time, PostgreSQL accumulates enough data to cause queries to slow relative to the speeds achievable in a fresh installation."
 	    log
 
-		#log "// service status"
-		#log "from file $base_dir/sos_commands/systemd/systemctl_list-units"
-		#log "---"
-		#log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep \"^$|\.service -|Active:|All services\" | egrep -A2 'postgresql.service -' | egrep --color=always '^|failed|inactive|activating|deactivating'"
-		#log_cmd "grep postgres $base_dir/sos_commands/systemd/systemctl_list-units | egrep --color=always '^|failed|inactive|activating|deactivating'"
-		#log "---"
-		#log
 
 		log "// service status"
 		log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
 		log "---"
-		log_cmd "grep -h postgres $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+		log_cmd "grep -h postgresql.service $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
 		log
-		#log_cmd "egrep -h -A 3 'postgres.service -' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
-		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 postgres | egrep --color=always '^|failed|inactive|activating|deactivating'"
+		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 postgresql.service | egrep --color=always '^|failed|inactive|activating|deactivating'"
 		log "---"
 		log
 
@@ -1881,6 +1864,29 @@ main()
 		log "---"
 		log
 
+                log "// sysctl configuration"
+                log "grep 'fs.aio-max-nr' \$base_dir/etc/sysctl.conf"
+                log "---"
+                log_cmd "grep 'fs.aio-max-nr' $base_dir/etc/sysctl.conf"
+                log "---"
+                log
+
+                log "// httpd|apache limits"
+                log "grep LimitNOFILE \$base_dir/etc/systemd/system/httpd.service.d/limits.conf"
+                log "---"
+                log_cmd "grep LimitNOFILE $base_dir/etc/systemd/system/httpd.service.d/limits.conf"
+                log "---"
+                log
+
+                log "// prefork.conf configuration"
+                log "egrep 'ServerLimit|StartServers' \$base_dir/etc/httpd/conf.modules.d/prefork.conf"
+                log "---"
+                log_cmd "egrep 'ServerLimit|StartServers' $base_dir/etc/httpd/conf.modules.d/prefork.conf"
+                log "---"
+                log
+
+		if [ -f "$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log" ]; then
+
 		log "// TOP 20 of ip address requesting the satellite via https"
 		log "awk '{print \$1}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | sort | uniq -c | sort -nr | head -n20"
 		log "---"
@@ -1922,27 +1928,8 @@ main()
 		log "---"
 		log
 
-		log "// sysctl configuration"
-		log "grep 'fs.aio-max-nr' \$base_dir/etc/sysctl.conf"
-		log "---"
-		log_cmd "grep 'fs.aio-max-nr' $base_dir/etc/sysctl.conf"
-		log "---"
-		log
+		fi
 
-		log "// httpd|apache limits"
-		log "grep LimitNOFILE \$base_dir/etc/systemd/system/httpd.service.d/limits.conf"
-		log "---"
-		log_cmd "grep LimitNOFILE $base_dir/etc/systemd/system/httpd.service.d/limits.conf"
-		log "---"
-		log
-
-
-		log "// prefork.conf configuration"
-		log "egrep 'ServerLimit|StartServers' \$base_dir/etc/httpd/conf.modules.d/prefork.conf"
-		log "---"
-		log_cmd "egrep 'ServerLimit|StartServers' $base_dir/etc/httpd/conf.modules.d/prefork.conf"
-		log "---"
-		log
 
 	  fi
 
@@ -1950,7 +1937,7 @@ main()
 	  log_tee "## Passenger"
 	  log
 
-	  if [ ! "`egrep . $base_dir/sos_commands/foreman/passenger-status_--show_pool $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ]; then
+	  if [ ! "`egrep . $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ] && [ ! "`egrep 'ERROR: Phusion Passenger doesn' $base_dir/sos_commands/foreman/passenger-status_--show_pool | head -1`" ]; then
 
 		log "passenger not found"
 		log
@@ -2178,22 +2165,25 @@ main()
 	    log "Foreman is a Ruby application that runs inside the Passenger application server and does a number of things, among them providing a UI, providing remote execution, running Foreman SCAP scans on content hosts. Foreman is also involved in Content Host Registrations.  Foreman’s performance and scalability are affected directly by the configurations of httpd and Passenger."
 	    log
 
-		#log "// service status"
-		#log "grep foreman-maintain_service_status for foreman services"
-		#log "---"
-		#log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep \"^$|\.service -|Active:|All services\" | egrep -A2 'foreman-proxy.service -|foreman-tasks.service -' | egrep --color=always '^|failed|inactive|activating|deactivating'"
-		#log "---"
-		#log
 
 		log "// service status"
 		log "from files systemctl_list-unit-files and systemctl_status_--all"
 		log "---"
 		log_cmd "grep -h foreman-proxy $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
 		log
-		#log_cmd "grep -h foreman-proxy $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
 		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 foreman-proxy | egrep --color=always '^|failed|inactive|activating|deactivating'"
 		log "---"
 		log
+
+                log "// postgres idle processes (foreman)"
+                log "grep ^postgres \$base_dir/ps | grep idle$ | grep \"foreman foreman\" | wc -l"
+                log "---"
+                log_cmd "grep ^postgres $base_dir/ps | grep idle$ | grep \"foreman foreman\" | wc -l"
+                log "---"
+                log
+
+		# exclude satellite-specific entries on capsule servers
+		if [ -f "$base_dir/etc/cron.d/foreman-tasks" ] || [ -f "$base_foreman/etc/foreman/settings.yaml" ] || [ -d "$base_foreman/var/log/foreman" ]; then
 
 
 		log "// foreman tasks cleanup script"
@@ -2218,13 +2208,6 @@ main()
 		log "---"
 		log
 
-		log "// postgres idle processes (foreman)"
-		log "grep ^postgres \$base_dir/ps | grep idle$ | grep \"foreman foreman\" | wc -l"
-		log "---"
-		log_cmd "grep ^postgres $base_dir/ps | grep idle$ | grep \"foreman foreman\" | wc -l"
-		log "---"
-		log
-
 		log "// Tasks TOP"
 		log "grep Actions \$base_dir/sos_commands/foreman/foreman_tasks_tasks  | cut -d, -f3 | sort | uniq -c | sort -nr | tail -100"
 		log "---"
@@ -2239,7 +2222,47 @@ main()
 		log "---"
 		log
 
+		fi
+
 	  fi
+
+          log_tee "## Cockpit"
+          log
+
+          log "Cockpit is a web-based server administration tool sponsored by Red Hat.  It was included in Fedora 21 by default, and later in RHEL 8 (although it can be installed in RHEL 7).  Cockpit listens on port 9090 by default, and therefore it conflicts with the foreman-proxy service.  Cockpit can be reconfigured to use another port to prevent this conflict."
+          log
+
+          if [ ! "`egrep -i cockpit $base_dir/installed-rpms $base_dir/sos_commands/systemd/systemctl_status_--all $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot $base_dir/var/log/messages*`" ]; then
+
+                log "cockpit not found"
+                log
+
+          else
+
+                log "// service status"
+                log "from files systemctl_list-unit-files and systemctl_status_--all"
+                log "---"
+                log_cmd "grep -h cockpit $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+                log
+                log_cmd "egrep 'Active:|^$|Loaded:|Listen:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep -A 2 'cockpit\.service \-|cockpit\-motd\.service \-' | egrep --color=always '^|failed|inactive|activating|deactivating'"
+		log_cmd "egrep 'Active:|^$|Loaded:|Listen:|\.socket \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 'cockpit\.socket \-' | egrep --color=always '^|failed|inactive|activating|deactivating'"
+                log "---"
+                log
+
+                log "// log errors for cockpit-ws"
+                log "from journalctl_--no-pager_--catalog_--boot and messages"
+                log "---"
+		if [ -f "$base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot" ]; then
+			log_cmd "grep cockpit-ws $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | tail -30"
+		elif [ -f "$base_dir/var/log/messages" ]; then
+			log_cmd "grep cockpit-ws $base_dir/var/log/messages | tail -30"
+		else
+			log "neither journalctl_--no-pager_--catalog_--boot nor /var/log/messages found"
+		fi
+                log "---"
+                log
+
+          fi
 
 
 	  log_tee "## Katello"
@@ -2309,9 +2332,10 @@ main()
 		log "---"
 		log
 
+                log "// 6.3 or lower"
+                log
 
-		log "// 6.3 or lower"
-		log
+		if [ -f "$base_dir/etc/sysconfig/foreman-tasks" ]; then
 
 		log "// dynflow optimizations"
 		log "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" \$base_dir/etc/sysconfig/foreman-tasks"
@@ -2327,8 +2351,25 @@ main()
 		log "---"
 		log
 
-		log "// 6.4 through 6.7"
-		log
+                log "Notes:"
+                log "    EXECUTOR_MEMORY_LIMIT defines the amount of memory that a single dynFlow executor process can consume before the executor is recycled."
+                log
+                log "    EXECUTOR_MEMORY_MONITOR_DELAY defines when the first polling attempt to check the executor memory is made after the initialization of the executor."
+                log
+                log "    EXECUTOR_MEMORY_MONITOR_INTERVAL defines how frequently the memory usage of executor is polled."
+                log
+
+		else
+
+			log "didn't find config file sos_report/etc/sysconfig/foreman-tasks for 6.3 and below."
+			log
+
+		fi
+
+                log "// 6.4 through 6.7"
+                log
+
+		if [ -f "$base_dir/etc/sysconfig/dynflowd" ]; then
 
 		log "// dynflow optimizations"
 		log "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" \$base_dir/etc/sysconfig/dynflowd"
@@ -2344,14 +2385,32 @@ main()
 		log "---"
 		log
 
-		log "// 6.8 or higher"
-		log
+                log "Notes:"
+                log "    EXECUTOR_MEMORY_LIMIT defines the amount of memory that a single dynFlow executor process can consume before the executor is recycled."
+                log
+                log "    EXECUTOR_MEMORY_MONITOR_DELAY defines when the first polling attempt to check the executor memory is made after the initialization of the executor."
+                log
+                log "    EXECUTOR_MEMORY_MONITOR_INTERVAL defines how frequently the memory usage of executor is polled."
+                log
+
+		else
+
+			log "6.4-6.7 config file sos_report/etc/sysconfig/dynflowd not found"
+			log
+
+		fi
+
+                log "// 6.8 or higher"
+                log
+
+		if [ -d "$base_dir/etc/foreman/dynflow" ]; then
 
 		log "// dynflow configuration"
 		log "cat \$base_dir/etc/foreman/dynflow/worker.yml"
 		log "cat \$base_dir/etc/foreman/dynflow/worker-hosts-queue.yml"
 		log "---"
 		log_cmd "cat $base_dir/etc/foreman/dynflow/worker.yml"
+		log
 		log_cmd "cat $base_dir/etc/foreman/dynflow/worker-hosts-queue.yml"
 		log "---"
 		log
@@ -2359,18 +2418,17 @@ main()
 		log "// number of dynflow workers"
 		log "list workers in \$base_dir/etc/foreman/dynflow/"
 		log "---"
-		log_cmd "find $base_dir/etc/foreman/dynflow/ -type f | grep worker | grep -v hosts"
 		log_cmd "echo `ls $base_dir/etc/foreman/dynflow/worker* | grep -v hosts | wc -l` workers"
+		log_cmd "find $base_dir/etc/foreman/dynflow/ -type f | grep worker | grep -v hosts"
 		log "---"
 		log
 
-		log "Notes:"
-		log "    EXECUTOR_MEMORY_LIMIT defines the amount of memory that a single dynFlow executor process can consume before the executor is recycled."
-		log
-		log "    EXECUTOR_MEMORY_MONITOR_DELAY defines when the first polling attempt to check the executor memory is made after the initialization of the executor."
-		log
-		log "    EXECUTOR_MEMORY_MONITOR_INTERVAL defines how frequently the memory usage of executor is polled."
-		log
+		else
+
+			log "6.8+ directory sos_report/etc/foreman/dynflow not found"
+			log
+		fi
+
 
 	  fi
 
@@ -2596,10 +2654,16 @@ main()
 		log "---"
 		log_cmd "grep -h virt-who $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
 		log
-		#log_cmd "grep -h virt-who $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
 		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 virt-who | egrep --color=always '^|failed|inactive|activating|deactivating'"
 		log "---"
 		log
+
+                log "// virt-who update sources"
+                log "grep cmd=virt-who \$base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print $1}' | sort -u -n"
+                log "---"
+                log_cmd "grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print $1}' | sort -u -n | egrep --color=always '^|$IPADDRLIST'"
+                log "---"
+                log
 
 		log "// duplicated hypervisors #"
 		log "grep \"is assigned to 2 different systems\" \$base_dir/var/log/rhsm/rhsm.log | awk '{print \$9}' | sed -e \"s/'//g\" | sort -u | wc -l"
@@ -2618,7 +2682,7 @@ main()
 		log "// Sending updated Host-to-guest"
 		log "grep \"Sending updated Host-to-guest\" \$base_dir/var/log/rhsm/rhsm.log"
 		log "---"
-		log_cmd "grep \"Sending updated Host-to-guest\" $base_dir/var/log/rhsm/rhsm.log"
+		log_cmd "grep \"Sending updated Host-to-guest\" $base_dir/var/log/rhsm/rhsm.log | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\""
 		log "---"
 		log
 
@@ -2705,19 +2769,12 @@ main()
 		log "The messaging broker functions as a decoupling layer, providing exchanges that distribute messages, the ability for consumers and producers to create public and private queues and subscribe them to exchanges, and buffering messages that are sent at-will by producer applications, and delivered on-demand to interested consumers."
 		log
 
-		#log "// service status"
-		#log "grep foreman-maintain_service_status for qpidd.service"
-		#log "---"
-		#log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep \"^$|\.service -|Active:|All services\" | egrep -A2 'qpidd.service -' | egrep --color=always '^|failed|inactive|activating|deactivating'"
-		#log "---"
-		#log
 
 		log "// service status"
 		log "from files systemctl_list-unit-files and systemctl_status_--all"
 		log "---"
 		log_cmd "grep -h qpidd $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
 		log
-		#log_cmd "grep -h qpidd $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
 		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 qpidd | egrep --color=always '^|failed|inactive|activating|deactivating'"
 		log "---"
 		log
@@ -2732,19 +2789,9 @@ main()
 		fi
 
 		log "// qpidd disk usage"
-		#log "grep files from ls_-lanR_.var.lib.qpidd, add up the disk usage with awk and convert to Mb"
 		log "grep \"^-\" \$base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=\$5 } END {printf \"\%d\", s}' | numfmt --to=iec"
 		log "---"
-		#QPIDD_DISK_USAGE=`grep "^-" $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=$5 } END {printf "%d", s}'`
-		#if [ "$QPIDD_DISK_USAGE" ]; then
-		#	QPIDD_DISK_USAGE_MB=`echo $(($QPIDD_DISK_USAGE / 1024 )) Mb 2>/dev/null`
-		#	QPIDD_DISK_USAGE_MB=`numfmt $QPIDD_DISK_USAGE --to=iec`
-		#else
-		#QPIDD_DISK_USAGE_MB=''
-		#fi
-		#log "$QPIDD_DISK_USAGE_MB"
 		QPIDD_DISK_USAGE=`grep "^-" $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=$5 } END {printf "%d", s}' | numfmt --to=iec`
-		#log_cmd "grep \"^-\" $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=$5 } END {printf \"%d\", s}' | numfmt --to=iec"
 		log "$QPIDD_DISK_USAGE"
 		log "---"
 		log
@@ -2755,16 +2802,6 @@ main()
 		log_cmd "grep mgmt_pub_interval $base_dir/etc/qpid/qpidd.conf"
 		log "---"
 		log
-
-		#log "// Insert qpidd information"
-		#log "cat $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd | egrep \" [A-Z][a-z]{2} [0-9]{2} [0-9]{2}:[0-9]{2} \" | awk '{print \$5}' | paste -s -d+ | bc"
-		#log "---"
-		#log_cmd "cat $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd | egrep \" [A-Z][a-z]{2} [0-9]{2} [0-9]{2}:[0-9]{2} \" | awk '{print \$5}' | paste -s -d+ | bc | awk '{print \"bytes: \"\$1}'"
-		#fullsize_var_lib_qpid=$(cat $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd | egrep " [A-Z][a-z]{2} [0-9]{2} [0-9]{2}:[0-9]{2} " | awk '{print $5}' | paste -s -d+ | bc)
-		#size_var_lib_qpid=$(bytesToHumanReadable ${fullsize_var_lib_qpid})
-		#log "size: ${size_var_lib_qpid}"
-		#log "---"
-		#log
 
 		log "// qpidd limits"
 		log "grep LimitNOFILE \$base_dir/etc/systemd/system/qpidd.service.d/90-limits.conf"
@@ -2792,19 +2829,12 @@ main()
 	    log "The qdrouterd service communicates with goferd, which is expected to run on the host servers (including capsule servers)."
 	    log
 
-		#log "// service status"
-		#log "grep foreman-maintain_service_status for qdrouterd"
-		#log "---"
-		#log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep \"^$|\.service -|Active:|All services\" | egrep -A2 'qdrouterd.service -' | egrep --color=always '^|failed|inactive|activating|deactivating'"
-		#log "---"
-		#log
 
 		log "// service status"
 		log "from files systemctl_list-unit-files and systemctl_status_--all"
 		log "---"
 		log_cmd "grep -h qdrouterd $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
 		log
-		#log_cmd "grep -h qdrouterd $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 3 '.service -' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
 		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 qdrouterd | egrep --color=always '^|failed|inactive|activating|deactivating'"
 		log "---"
 		log
@@ -2886,7 +2916,8 @@ main()
   # generate local copy with or without ansi color codes
   if [ "$ANSI_COLOR_CODES" == "false" ]; then
 	#sed -i -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g' $FOREMAN_REPORT
-	cat $FOREMAN_REPORT | perl -pe 's/\e\[[0-9;]*m(?:\e\[K)?//g' > ./report_${USER}_$final_name.log
+	#cat $FOREMAN_REPORT | perl -pe 's/\e\[[0-9;]*m(?:\e\[K)?//g' | sed "/^[[:cntrl:]]/d" > ./report_${USER}_$final_name.log
+	cat $FOREMAN_REPORT | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' > ./report_${USER}_$final_name.log
 	rm -f $FOREMAN_REPORT 2>/dev/null
 	#mv $FOREMAN_REPORT ./report_${USER}_$final_name.log
 	#cat $FOREMAN_REPORT | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g' > ./report_${USER}_$final_name.log
