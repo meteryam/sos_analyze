@@ -879,7 +879,7 @@ main()
 	    log
 
 	  if [ -f "$base_dir/sos_commands/foreman/smart_proxies" ]; then
-	  if [ "`grep satellite-6 $base_dir/installed-rpms`" != '' ] || [ "`grep capsule $base_dir/installed-rpms`" == '' ]; then
+	  if [ "`grep satellite-6 $base_dir/installed-rpms 2>&1`" != '' ] || [ "`grep capsule $base_dir/installed-rpms 2>&1`" == '' ]; then
 		log "// capsule servers"
 		log "grep -v row \$base_dir/sos_commands/foreman/smart_proxies"
 		log "---"
@@ -887,6 +887,15 @@ main()
 		log "---"
 		log
 	  fi
+	  fi
+
+	  if [ -f "$base_dir/etc/sysconfig/networking/profiles/default/network" ]; then
+                log "// hostname in RHEL5 network profiles file"
+                log "grep -i ^hostname \$base_dir/etc/sysconfig/networking/profiles/default/network"
+                log "---"
+                log_cmd "grep -i ^hostname $base_dir/etc/sysconfig/networking/profiles/default/network | egrep --color=always '^|$HOSTNAME'"
+                log "---"
+                log
 	  fi
 
 	  if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ] && [ -f "$base_dir/etc/foreman/proxy_ca.pem" ]; then
@@ -911,7 +920,7 @@ main()
 	  log "ENVIRONMENT:"
 	  log
 	  log_cmd "egrep 'satellite-6|capsule-6|spacewalk|^rhui|^rh-rhua' $base_dir/installed-rpms | awk '{print \$1}' | egrep -v 'tfm-rubygem'"
-	  log_cmd "grep release $base_dir/installed-rpms | awk '{print \$1}' | egrep -i 'redhat|oracle|centos|suse|fedora' | egrep -v 'eula|base'"
+	  log_cmd "grep release $base_dir/installed-rpms 2>&1 | awk '{print \$1}' | egrep -i 'redhat|oracle|centos|suse|fedora' | egrep -v 'eula|base'"
 	  log
 	  log "HW platform:"
 	  log
@@ -934,14 +943,14 @@ main()
 	  log "// release version (for version locking)"
 	  log "jq '.' \$base_dir/var/lib/rhsm/cache/releasever.json"
 	  log "---"
-	  log_cmd "jq '.' $base_dir/var/lib/rhsm/cache/releasever.json"
+	  log_cmd "jq '.' $base_dir/var/lib/rhsm/cache/releasever.json 2>&1"
 	  log "---"
 	  log
 
 	  log "// release packages"
-	  log "grep release $base_dir/installed-rpms | awk '{print $1}'"
+	  log "grep release \$base_dir/installed-rpms | awk '{print $1}'"
 	  log "---"
-	  RELEASE_PACKAGE=`grep release $base_dir/installed-rpms | awk '{print $1}' | egrep -v "eula"`
+	  RELEASE_PACKAGE=`grep release $base_dir/installed-rpms 2>&1 | awk '{print $1}' | egrep -v "eula|No such file or directory"`
 	  log "$RELEASE_PACKAGE"
 	  log "---"
 	  log
@@ -967,17 +976,17 @@ main()
 	  log "// top 5 memory consumers by process"
 	  log "cat \$base_dir/ps | sort -nrk6 | head -n5"
 	  log "---"
-	  log_cmd "cat $base_dir/ps | sort -nrk6 | head -n5"
+	  log_cmd "cat $base_dir/ps 2>&1 | sort -nrk6 | head -n5"
 	  log "---"
 	  log
 
 	  log "// top memory consumers by user"
-	  log "from $base_dir/ps"
+	  log "from \$base_dir/ps"
 	  log "---"
 	  log "Total Memory Consumed in KiB: $memory_usage"
 	  log "Total Memory Consumed in GiB: $memory_usage_gb"
 	  log
-	  log_cmd "cat $base_dir/ps | sort -nr | awk '{print \$1, \$6}' | grep -v ^USER | grep -v ^COMMAND | grep -v \"^ $\" | awk  '{a[\$1] += \$2} END{for (i in a) print i, a[i]}' | sort -nrk2"
+	  log_cmd "cat $base_dir/ps 2>&1 | sort -nr | awk '{print \$1, \$6}' | grep -v ^USER | grep -v ^COMMAND | grep -v \"^ $\" | awk  '{a[\$1] += \$2} END{for (i in a) print i, a[i]}' | sort -nrk2"
 	  log "---"
 	  log
 
@@ -986,7 +995,7 @@ main()
 	  log "---"
 	  log_cmd "cat $base_dir/free"
 	  log " "
-	  memory_usage=$(cat $base_dir/ps | sort -nr | awk '{print $6}' | grep -v ^RSS | grep -v ^$ | paste -s -d+ | bc)
+	  memory_usage=$(cat $base_dir/ps 2>&1 | sort -nr | awk '{print $6}' | grep -v ^RSS | grep -v ^$ | paste -s -d+ | bc)
 	  memory_usage_gb=$(echo "scale=2;$memory_usage/1024/1024" | bc)
 	  log "Total Memory Consumed in GiB: $memory_usage_gb"
 	  log "---"
@@ -1002,7 +1011,7 @@ main()
 	  log "// custom hiera"
 	  log "cat \$base_foreman/etc/foreman-installer/custom-hiera.yaml"
 	  log "---"
-	  log_cmd "cat $base_foreman/etc/foreman-installer/custom-hiera.yaml | egrep -v '\#|---' | egrep --color=always '^|checkpoint_segments'"
+	  log_cmd "cat $base_foreman/etc/foreman-installer/custom-hiera.yaml 2>&1 | egrep -v '\#|---' | egrep --color=always '^|checkpoint_segments'"
 	  log "---"
 	  log
 
@@ -1011,7 +1020,7 @@ main()
                 log "// passenger.conf configuration - 6.3 or earlier"
                 log "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' \$base_dir/etc/httpd/conf.d/passenger.conf"
                 log "---"
-                log_cmd "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' $base_dir/etc/httpd/conf.d/passenger.conf"
+                log_cmd "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' $base_dir/etc/httpd/conf.d/passenger.conf | grep -v \#"
                 log "---"
                 log
 
@@ -1042,14 +1051,14 @@ main()
 	  log "// number of CPUs"
 	  log "grep processor \$base_dir/proc/cpuinfo | wc -l"
 	  log "---"
-	  log_cmd "grep processor $base_dir/proc/cpuinfo | wc -l"
+	  log_cmd "if [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
 	  log "---"
 	  log
 
           log "// pulp_workers configuration"
           log "grep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY' \$base_dir/etc/default/pulp_workers"
           log "---"
-          log_cmd "grep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY' $base_dir/etc/default/pulp_workers"
+          log_cmd "grep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY' $base_dir/etc/default/pulp_workers 2>&1"
           log "---"
           log
 
@@ -1084,7 +1093,7 @@ main()
 	  log "// logrotate entry for dynflow_executor.output"
 	  log "grep dynflow_executor.output \$base_dir/etc/logrotate.d/foreman*"
 	  log "---"
-	  log_cmd "grep dynflow_executor.output $base_dir/etc/logrotate.d/foreman*"
+	  log_cmd "grep dynflow_executor.output $base_dir/etc/logrotate.d/foreman* 2>&1"
 	  log "---"
 	  log
 
@@ -1118,16 +1127,16 @@ main()
 	  log "// Satellite Proxy"
 	  log "from files /etc/foreman-installer/scenarios.d/satellite-answers.yaml and \$base_dir/sos_commands/foreman/foreman_settings_table"
 	  log "---"
-	  log_cmd "grep -E '(^  proxy_url|^  proxy_port|^  proxy_username|^  proxy_password)' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml"
+	  log_cmd "grep -E '(^  proxy_url|^  proxy_port|^  proxy_username|^  proxy_password)' $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml} 2>/dev/null"
 	  log
-	  log_cmd "grep http_proxy $base_dir/sos_commands/foreman/foreman_settings_table | tr -d '+' | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -n"
+	  log_cmd "grep http_proxy $base_dir/sos_commands/foreman/foreman_settings_table 2>&1 | tr -d '+' | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -n"
 	  log "---"
 	  log
 
 	  log "// Virt-who Proxy"
 	  log "grep -i proxy \$base_dir/etc/sysconfig/virt-who"
 	  log "---"
-	  log_cmd "grep -i proxy $base_dir/etc/sysconfig/virt-who"
+	  log_cmd "grep -i proxy $base_dir/etc/sysconfig/virt-who 2>&1"
 	  log "---"
 	  log
 
@@ -1184,9 +1193,9 @@ main()
 	  log
 
 	  log "// iptables extra line count"
-	  log "egrep -v \"^$|^COMMAND|Chain|pkts\" \$base_dir/sos_commands/networking/iptables_-vnxL | wc -l"
+	  log "egrep -v '^$|^COMMAND|Chain|pkts' \$base_dir/sos_commands/networking/iptables_-vnxL | wc -l"
 	  log "---"
-	  log_cmd "egrep -v \"^$|^COMMAND|Chain|pkts\" $base_dir/sos_commands/networking/iptables_-vnxL | wc -l"
+	  log_cmd "if [ -f $base_dir/sos_commands/networking/iptables_-vnxL ]; then egrep -v '^$|^COMMAND|Chain|pkts' $base_dir/sos_commands/networking/iptables_-vnxL | wc -l; fi"
 	  log "---"
 	  log
 
@@ -1204,10 +1213,10 @@ main()
 	  log_tee "## Environment"
 	  log
 
-	  log "// LANG and PATH"
-	  log "egrep 'LANG|PATH' \$base_dir/sos_commands/systemd/systemctl_show-environment"
+	  log "// systemctl environment"
+	  log "cat \$base_dir/sos_commands/systemd/systemctl_show-environment"
 	  log
-	  log_cmd "egrep 'LANG|PATH' $base_dir/sos_commands/systemd/systemctl_show-environment"
+	  log_cmd "cat $base_dir/sos_commands/systemd/systemctl_show-environment"
 	  log
 
 	  log "// contents of /etc/environment"
@@ -1236,7 +1245,7 @@ main()
 	  log "// setroubleshoot package"
 	  log "grep setroubleshoot \$base_dir/installed-rpms"
 	  log "---"
-	  log_cmd "grep setroubleshoot $base_dir/installed-rpms"
+	  log_cmd "grep setroubleshoot $base_dir/installed-rpms 2>&1"
 	  log "---"
 	  log
 
@@ -1285,7 +1294,7 @@ main()
 	  log "// last 20 entries from foreman/cron.log"
 	  log "tail -20 \$base_foreman/var/log/foreman/cron.log"
 	  log "---"
-	  log_cmd "tail -20 $base_foreman/var/log/foreman/cron.log | tail -100"
+	  log_cmd "tail -20 $base_foreman/var/log/foreman/cron.log 2>&1"
 	  log "---"
 	  log
 
@@ -1338,7 +1347,7 @@ main()
 	  log "// all installed satellite packages"
 	  log "egrep \"satellite|spacewalk|spacecmd\" \$base_dir/installed-rpms"
 	  log "---"
-	  log_cmd "egrep \"satellite|spacewalk|spacecmd\" $base_dir/installed-rpms"
+	  log_cmd "egrep \"satellite|spacewalk|spacecmd\" $base_dir/installed-rpms 2>&1"
 	  log "---"
 	  log
 
@@ -1346,7 +1355,7 @@ main()
 
 	  log "grep -v \"Red Hat\" \$base_dir/sos_commands/rpm/package-data | egrep -v ^\$HOSTNAME | cut -f1,4 | sort -k2"
 	  log "---"
-	  log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | egrep -v ^$HOSTNAME | cut -f1,4 | sort -k2 | egrep -i --color=always \"^|$SATPACKAGES|Fedora|Kojii|CentOS\""
+	  log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | egrep -v ^$HOSTNAME | cut -f1,4 | sort -k2 | egrep -i --color=always '^|$SATPACKAGES|Fedora|Kojii|CentOS|syslog-ng'"
 	  log "---"
 	  log
 
@@ -1372,7 +1381,7 @@ main()
 	  log "// yum activity from lvmdump messages"
 	  log "grep yum \$base_dir/sos_commands/lvm2/lvmdump/messages"
 	  log "---"
-	  log_cmd "grep yum $base_dir/sos_commands/lvm2/lvmdump/messages"
+	  log_cmd "grep yum $base_dir/sos_commands/lvm2/lvmdump/messages 2>&1"
 	  log "---"
 	  log
 
@@ -1387,7 +1396,9 @@ main()
 
 	  export GREP_COLORS='ms=01;33'
 	  #cmd_output=`egrep -i "Exit with status code|--upgrade|Upgrade completed|Running installer with args|ASCII" $base_foreman/var/log/foreman-installer/{satellite*,capsule*} $base_dir/var/log/foreman-maintain/{satellite*,capsule*,foreman-maintain*} $base_dir/var/log/katello-installer/* 2>/dev/null | egrep -v "Hook" | sed s'/\[\[//'g | awk -F"[" '{print $2}' | sort -k 2 | tail | egrep --color=always "^|tuning|upgrade"`
-	  cmd_output=`{ for i in \`ls -l --time-style=+'%Y%m%d.%H%M' $base_dir/var/log/foreman-installer/{satellite*,capsule*} 2>/dev/null | grep -v gz$ | sort -k 6 | awk '{print $NF}'\`; do egrep -h '^\[' $i  | sed s'/^\[/\[ /'g | egrep 'Exit with status code|Upgrade completed|installer with args' | egrep -i -A 2 '\-\-upgrade'; done; } | sort -k 3 | uniq -f 2 | tail -30 | egrep --color=always "^|tuning|upgrade"`
+	  #cmd_output=`{ for i in \`ls -l --time-style=+'%Y%m%d.%H%M' $base_dir/var/log/foreman-installer/{satellite*,capsule*} 2>/dev/null | grep -v gz$ | sort -k 6 | awk '{print $NF}'\`; do egrep -h '^\[' $i  | sed s'/^\[/\[ /'g | egrep 'Exit with status code|Upgrade completed|installer with args' | egrep -i -A 2 '\-\-upgrade'; done; } | sort -k 3 | tail -30 | egrep --color=always "^|tuning|upgrade"`
+
+	  cmd_output=`{ for i in $(ls -l --time-style=+'%Y%m%d.%H%M' $base_dir/var/log/foreman-installer/{satellite*,capsule*} 2>/dev/null | grep -v gz$ | sort -k 6 | awk '{print $NF}'); do egrep -h '^\[' $i  | sed s'/^\[/\[ /'g | egrep 'Exit with status code|Upgrade completed|installer with args|Complete'; done; } | sort -k 3 | uniq -f 3 | tail -30 | egrep --color=always "^|tuning|upgrade"`
 
 
 	  log "$cmd_output"
@@ -1399,16 +1410,20 @@ main()
 	  log "Note:  Exit codes of 0 indicate success, and exit codes of 2 indicate success accompanied by changes to Satellite."
 	  log
 
-	  log "// Number of ERROR lines in the foreman-installer/satellite.log"
+	  #if [ -f "$base_foreman/var/log/foreman-installer/satellite.log" ]; then
+	  log "// Number of ERROR lines in foreman-installer/satellite.log"
 	  log "---"
-	  log_cmd "grep '^\[ERROR' $base_foreman/var/log/foreman-installer/satellite.log | wc -l"
+	  log_cmd "if [ -f $base_foreman/var/log/foreman-installer/satellite.log ]; then grep '^\[ERROR' $base_foreman/var/log/foreman-installer/satellite.log 2>/dev/null | wc -l; fi"
 	  log "---"
 	  log
+	  #fi
 
 	  log "// Last 20 lines from upgrade log"
 	  log "egrep -v \"\/opt|\]$|\.rb\:\" \$base_foreman/var/log/foreman-installer/satellite.log | tail -20"
 	  log "---"
-	  log_cmd "egrep -v \"\/opt|\]$|\.rb\:\" $base_foreman/var/log/foreman-installer/satellite.log | tail -20"
+	  export GREP_COLORS='ms=01;33'
+	  log_cmd "egrep -v \"\/opt|\]$|\.rb\:\" $base_foreman/var/log/foreman-installer/satellite.log 2>&1 | tail -20 | egrep --color=always '^|Exit with status code|Complete'"
+	  export GREP_COLORS='ms=01;31'
 	  log "---"
 	  log
 
@@ -1457,7 +1472,7 @@ main()
 	  log "// number of CPUs"
 	  log "grep processor \$base_dir/proc/cpuinfo | wc -l"
 	  log "---"
-	  log_cmd "grep processor $base_dir/proc/cpuinfo | wc -l"
+	  log_cmd "if [ \"`grep processor $base_dir/proc/cpuinfo`\" ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
 	  log "---"
 	  log
 
@@ -1498,7 +1513,7 @@ main()
 	  log "// subscription-manager activity from lvmdump messages"
 	  log "grep subscription-manager \$base_dir/sos_commands/lvm2/lvmdump/messages"
 	  log "---"
-	  log_cmd "grep subscription-manager $base_dir/sos_commands/lvm2/lvmdump/messages"
+	  log_cmd "grep subscription-manager $base_dir/sos_commands/lvm2/lvmdump/messages 2>&1"
 	  log "---"
 	  log
 
@@ -1526,7 +1541,7 @@ main()
 	  log "        \-foreman -------/   \---------candlepin-----/"
 	  log "            |"
 	  log "            \-katello, dynflow, virt-who, subscription watch"
-	  log "puppet4"
+	  log "puppet4+"
 	  log
 	  log
 
@@ -1621,7 +1636,7 @@ main()
 		log "// installed katello-agent and/or gofer"
 		log "from file $base_dir/installed-rpms"
 		log "---"
-		log_cmd "grep -E '(^katello-agent|^gofer)' $base_dir/installed-rpms"
+		log_cmd "grep -E '(^katello-agent|^gofer)' $base_dir/installed-rpms 2>&1"
 		log "---"
 		log
 
@@ -1662,14 +1677,14 @@ main()
 		log "// postgres storage consumption"
 		log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql"
 		log "---"
-		log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null"
+		log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/lib\/pgsql    # pre-6.8/'g | sed s'/\/rh-postgresql12\/lib\/pgsql/\/lib\/pgsql    # post-6.8/'g"
 		log "---"
 		log
 
 		log "// postgres idle process (everything)"
 		log "grep ^postgres \$base_dir/ps | grep idle$ | wc -l"
 		log "---"
-		log_cmd "grep ^postgres $base_dir/ps | grep idle$ | wc -l"
+		log_cmd "if [ -f $base_dir/ps ]; then grep ^postgres $base_dir/ps 2>&1 | grep idle$ | wc -l; fi"
 		log "---"
 		log
 
@@ -1678,6 +1693,33 @@ main()
 		log_cmd "grep hugepages $base_dir/etc/default/grub;if [ \"`grep hugepages $base_dir/etc/tuned/* 2>/dev/null`\"]; then echo; grep hugepages $base_dir/etc/tuned/* 2>/dev/null; echo active tuned profile; cat $base_dir/sos_commands/tuned/tuned-adm_active; fi"
 		log "---"
 		log
+
+		if [ -f "$base_dir/sos_commands/katello/db_table_size" ]; then
+
+                        log "// top foreman tables consumption"
+                        log "head -n30 \$base_dir/sos_commands/katello/db_table_size"
+                        log "---"
+                        log_cmd "head -n30 $base_dir/sos_commands/katello/db_table_size 2>/dev/null"
+                        log "---"
+                        log
+
+		elif [ -f "$base_dir/sos_commands/foreman/foreman_db_tables_sizes" ] || [ -f "$base_dir/sos_commands/candlepin/candlepin_db_tables_sizes" ]; then
+
+                        log "// top foreman tables consumption"
+                        log "head -n30 \$base_dir/sos_commands/foreman/foreman_db_tables_sizes"
+                        log "---"
+                        log_cmd "head -n30 $base_dir/sos_commands/foreman/foreman_db_tables_sizes 2>/dev/null"
+                        log "---"
+                        log
+
+                        log "// top candlepin tables consumption"
+                        log "head -n30 \$base_dir/sos_commands/candlepin/candlepin_db_tables_sizes"
+                        log "---"
+                        log_cmd "head -n30 $base_dir/sos_commands/candlepin/candlepin_db_tables_sizes 2>/dev/null"
+                        log "---"
+                        log
+
+		fi
 
 
 		if [ ! -f "$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql" ] && [ -d "$base_foreman/var/lib/pgsql/data" ] ; then
@@ -1702,12 +1744,6 @@ main()
 			log "---"
 			log
 
-			log "// top foreman tables consumption"
-			log "head -n30 \$base_dir/sos_commands/katello/db_table_size"
-			log "---"
-			log_cmd "head -n30 $base_dir/sos_commands/katello/db_table_size 2>/dev/null"
-			log "---"
-			log
 
 			if [ -d $base_foreman/var/lib/pgsql/data/pg_log ]; then
 
@@ -1761,20 +1797,6 @@ main()
 			log "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target' \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/postgresql.conf | grep -v '^#'"
 			log "---"
 			log_cmd "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target' $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v '^#'"
-			log "---"
-			log
-
-			log "// top foreman tables consumption"
-			log "head -n30 \$base_dir/sos_commands/foreman/foreman_db_tables_sizes"
-			log "---"
-			log_cmd "head -n30 $base_dir/sos_commands/foreman/foreman_db_tables_sizes 2>/dev/null"
-			log "---"
-			log
-
-			log "// top candlepin tables consumption"
-			log "head -n30 \$base_dir/sos_commands/candlepin/candlepin_db_tables_sizes"
-			log "---"
-			log_cmd "head -n30 $base_dir/sos_commands/candlepin/candlepin_db_tables_sizes 2>/dev/null"
 			log "---"
 			log
 
@@ -1838,14 +1860,14 @@ main()
 		log "// mongodb memory consumption"
 		log "from $base_dir/ps"
 		log "---"
-		log_cmd "grep -i mongo $base_dir/ps | sort -nr | awk '{print \$1, \$6}' | grep -v ^USER | grep -v ^COMMAND | grep -v \"^ $\" | awk  '{a[\$1] += \$2} END{for (i in a) print i, a[i]}' | sort -nrk2"
+		log_cmd "grep -i mongo $base_dir/ps 2>&1 | sort -nr | awk '{print \$1, \$6}' | grep -v ^USER | grep -v ^COMMAND | grep -v \"^ $\" | awk  '{a[\$1] += \$2} END{for (i in a) print i, a[i]}' | sort -nrk2"
 		log "---"
 		log
 
 		log "// cacheSize setting in custom hiera file"
 		log "egrep 'mongodb::server::config_data|cacheSizeGB' \$base_dir/etc/foreman-installer/custom-hiera.yaml"
 		log "---"
-		log_cmd "egrep 'mongodb::server::config_data|cacheSizeGB' $base_dir/etc/foreman-installer/custom-hiera.yaml"
+		log_cmd "egrep 'mongodb::server::config_data|cacheSizeGB' $base_dir/etc/foreman-installer/custom-hiera.yaml 2>&1"
 		log "---"
 		log
 
@@ -1989,7 +2011,7 @@ main()
 	  log_tee "## Passenger"
 	  log
 
-	  if [ ! "`egrep . $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ] && [ "`egrep -vi general $base_dir/sos_commands/foreman/passenger-status_--show_pool`" ]; then
+	  if [ ! "`egrep . $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ] && [ ! "`egrep -i general $base_dir/sos_commands/foreman/passenger-status_--show_pool 2>/dev/null | head -1`" ]; then
 
 		log "passenger not found"
 		log
@@ -2015,64 +2037,65 @@ main()
 		log "// passenger pool status"
 		log "head -7 \$base_dir/sos_commands/foreman/passenger-status_--show_pool"
 		log "---"
-		log_cmd "head -7 $base_dir/sos_commands/foreman/passenger-status_--show_pool"
+		log_cmd "head -7 $base_dir/sos_commands/foreman/passenger-status_--show_pool 2>&1"
 		log "---"
 		log
 
 		log "// passenger memory usage"
 		log "egrep 'Passenger processes' -A 100 \$base_dir/sos_commands/foreman/passenger-memory-stats"
 		log "---"
-		log_cmd "egrep 'Passenger processes' -A 100 $base_dir/sos_commands/foreman/passenger-memory-stats"
+		log_cmd "egrep 'Passenger processes' -A 100 $base_dir/sos_commands/foreman/passenger-memory-stats 2>&1"
 		log "---"
 		log
 
-
+		if [ -f "$base_dir/sos_commands/foreman/foreman_tasks_tasks" ]; then
 		log "// total # of foreman tasks"
 		log "cat \$base_dir/sos_commands/foreman/foreman_tasks_tasks | wc -l"
 		log "---"
 		log_cmd "cat $base_dir/sos_commands/foreman/foreman_tasks_tasks | wc -l"
 		log "---"
 		log
+		fi
 
 		log "// max_pool_size in custom hiera"
-		log "grep passenger_max_pool_size \$foreman_dir/etc/foreman-installer/custom-hiera.yaml \$base_dir/etc/foreman-installer/custom-hiera.yaml"
+		log "grep passenger_max_pool_size \$base_dir/etc/foreman-installer/custom-hiera.yaml"
 		log "---"
-		log_cmd "grep passenger_max_pool_size $foreman_dir/etc/foreman-installer/custom-hiera.yaml $base_dir/etc/foreman-installer/custom-hiera.yaml"
+		log_cmd "grep passenger_max_pool_size $base_dir/etc/foreman-installer/custom-hiera.yaml 2>&1"
 		log "---"
 		log
 
 		log "// passenger.conf configuration - 6.3 or earlier"
 		log "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' \$base_dir/etc/httpd/conf.d/passenger.conf"
 		log "---"
-		log_cmd "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' $base_dir/etc/httpd/conf.d/passenger.conf"
+		log_cmd "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' $base_dir/etc/httpd/conf.d/passenger.conf 2>&1"
 		log "---"
 		log
 
 		log "// passenger-extra.conf configuration - 6.4+"
 		log "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' \$base_dir/etc/httpd/conf.modules.d/passenger_extra.conf"
 		log "---"
-		log_cmd "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf"
+		log_cmd "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf 2>&1"
 		log "---"
 		log
 
 		log "// 05-foreman.conf configuration"
 		log "grep 'KeepAlive\b\|MaxKeepAliveRequests\|KeepAliveTimeout\|PassengerMinInstances' \$base_dir/etc/httpd/conf.d/05-foreman.conf"
 		log "---"
-		log_cmd "grep 'KeepAlive\b\|MaxKeepAliveRequests\|KeepAliveTimeout\|PassengerMinInstances' $base_dir/etc/httpd/conf.d/05-foreman.conf"
+		log_cmd "grep 'KeepAlive\b\|MaxKeepAliveRequests\|KeepAliveTimeout\|PassengerMinInstances' $base_dir/etc/httpd/conf.d/05-foreman.conf 2>&1"
 		log "---"
 		log
 
 		log "// 05-foreman-ssl.conf configuration"
 		log "grep 'KeepAlive\b\|MaxKeepAliveRequests\|KeepAliveTimeout\|PassengerMinInstances' \$base_dir/etc/httpd/conf.d/05-foreman-ssl.conf"
 		log "---"
-		log_cmd "grep 'KeepAlive\b\|MaxKeepAliveRequests\|KeepAliveTimeout\|PassengerMinInstances' $base_dir/etc/httpd/conf.d/05-foreman-ssl.conf"
+		log_cmd "grep 'KeepAlive\b\|MaxKeepAliveRequests\|KeepAliveTimeout\|PassengerMinInstances' $base_dir/etc/httpd/conf.d/05-foreman-ssl.conf 2>&1"
 		log "---"
 		log
 
 		log "// URI requests"
 		log "grep uri \$base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests | sort -k3 | uniq -c"
 		log "---"
-		log_cmd "grep uri $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests | sort -k3 | uniq -c"
+		log_cmd "grep uri $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests 2>&1 | sort -k3 | uniq -c"
 		log "---"
 		log
 
@@ -2094,7 +2117,7 @@ main()
 	    log "// installed puma packages"
 	    log "grep puma \$base_dir/installed-rpms"
 	    log "---"
-	    log_cmd "grep puma $base_dir/installed-rpms"
+	    log_cmd "grep puma $base_dir/installed-rpms 2>&1"
 	    log "---"
 	    log
 
@@ -2112,14 +2135,14 @@ main()
 	    log "// installed puma packages"
 	    log "grep puma \$base_dir/installed-rpms"
 	    log "---"
-	    log_cmd "grep puma $base_dir/installed-rpms"
+	    log_cmd "grep puma $base_dir/installed-rpms 2>&1"
 	    log "---"
 	    log
 
 	    log "// running puma processes"
 	    log "grep puma \$base_dir/ps"
 	    log "---"
-	    log_cmd "grep puma $base_dir/ps"
+	    log_cmd "grep puma $base_dir/ps 2>&1"
 	    log "---"
 	    log
 
@@ -2225,7 +2248,7 @@ main()
                 log "// postgres idle processes (foreman)"
                 log "grep ^postgres \$base_dir/ps | grep idle$ | grep \"foreman foreman\" | wc -l"
                 log "---"
-                log_cmd "grep ^postgres $base_dir/ps | grep idle$ | grep \"foreman foreman\" | wc -l"
+                log_cmd "grep ^postgres $base_dir/ps 2>&1 | grep idle$ | grep \"foreman foreman\" | wc -l"
                 log "---"
                 log
 
@@ -2279,7 +2302,7 @@ main()
           log "Cockpit is a web-based server administration tool sponsored by Red Hat.  It was included in Fedora 21 by default, and later in RHEL 8 (although it can be installed in RHEL 7).  Cockpit listens on port 9090 by default, and therefore it conflicts with the foreman-proxy service.  Cockpit can be reconfigured to use another port to prevent this conflict."
           log
 
-          if [ ! "`egrep -i cockpit $base_dir/installed-rpms $base_dir/sos_commands/systemd/systemctl_status_--all $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot $base_dir/var/log/messages*`" ]; then
+          if [ ! "`egrep -i cockpit $base_dir/installed-rpms $base_dir/sos_commands/systemd/systemctl_status_--all $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot $base_dir/var/log/messages* 2>/dev/null | grep -v units_rpm`" ]; then
 
                 log "cockpit not found"
                 log
@@ -2300,9 +2323,9 @@ main()
                 log "from journalctl_--no-pager_--catalog_--boot and messages"
                 log "---"
 		if [ -f "$base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot" ]; then
-			log_cmd "grep 'cockpit-ws' $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | tail -30 | cut -c -10240"
+			log_cmd "grep 'cockpit-ws' $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | grep -v 'units_rpm command' | tail -30 | cut -c -10240"
 		elif [ -f "$base_dir/var/log/messages" ]; then
-			log_cmd "grep 'cockpit-ws' $base_dir/var/log/messages | tail -30 | cut -c 10240"
+			log_cmd "grep 'cockpit-ws' $base_dir/var/log/messages | grep -v 'units_rpm command' | tail -30 | cut -c 10240"
 		else
 			log "neither journalctl_--no-pager_--catalog_--boot nor /var/log/messages found"
 		fi
@@ -2368,7 +2391,7 @@ main()
 		log "// number of running dynflow executors (pre-6.8)"
 		log "grep dynflow_executor\$ \$base_dir/ps"
 		log "---"
-		log_cmd "grep dynflow_executor\$ $base_dir/ps"
+		log_cmd "grep dynflow_executor\$ $base_dir/ps 2>&1"
 		log "---"
 		log
 
@@ -2585,12 +2608,12 @@ main()
 		log "// Memory (Xms and Xmx)"
 		log "grep tomcat \$base_dir/ps"
 		log "---"
-		log_cmd "grep tomcat $base_dir/ps"
+		log_cmd "grep tomcat $base_dir/ps 2>&1"
 		log
-		tomcat_mem=`grep tomcat $base_dir/ps | awk '{print $6}'`
+		tomcat_mem=`grep tomcat $base_dir/ps 2>&1 | awk '{print $6}'`
 		tomcat_mem_mb=`echo current memory consumption: $(($tomcat_mem / 1024 )) Mb 2>/dev/null`
 		log "$tomcat_mem_mb"
-		log_cmd "echo java heap memory maximum: `grep tomcat $base_dir/ps | tr ' ' '\n' | grep Xmx`"
+		log_cmd "echo java heap memory maximum: `grep tomcat $base_dir/ps 2>&1 | tr ' ' '\n' | grep Xmx`"
 
 		log
 		log "grep 'JAVA_OPTS' \$base_dir/etc/tomcat/tomcat.conf"
@@ -2622,10 +2645,10 @@ main()
 		log "---"
 		log
 
-                log "// is candlepin listening\?"
-                log "egrep 8443 \$base_dir/sos_commands/networking/netstat_-W_-neopa"
+                log "// is candlepin listening?"
+                log "egrep :8443 \$base_dir/sos_commands/networking/netstat_-W_-neopa"
                 log "---"
-		log_cmd "egrep 8443 $base_dir/sos_commands/networking/netstat_-W_-neopa"
+		log_cmd "egrep :8443 $base_dir/sos_commands/networking/netstat_-W_-neopa"
                 log "---"
                 log
 
@@ -2696,7 +2719,7 @@ main()
 	  log_tee "## virt-who"
 	  log
 
-	  if [ ! "`egrep -i 'virt-who|hypervisors' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/installed_rpms $base_dir/ps $base_dir/var/log/rhsm/rhsm.log $base_dir/sos_commands/foreman/foreman_tasks_tasks 2>/dev/null | head -1`" ] && [ ! -f "$base_dir/etc/sysconfig/virt-who" ] && [ ! -d "$base_dir/etc/virt-who.d" ]; then
+	  if [ ! "`egrep -i 'virt-who' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/installed_rpms $base_dir/ps $base_dir/var/log/rhsm/rhsm.log $base_dir/sos_commands/foreman/foreman_tasks_tasks 2>/dev/null | head -1`" ] && [ ! -f "$base_dir/etc/sysconfig/virt-who" ] && [ ! -d "$base_dir/etc/virt-who.d" ]; then
 
 		log "virt-who not found"
 		log
@@ -2929,7 +2952,7 @@ main()
 
 	    log "// is the subscription watch foreman plugin installed?"
 	    log "---"
-	    log_cmd "egrep \"tfm-rubygem-foreman_rh_cloud|tfm-rubygem-foreman_inventory_upload\" $base_dir/installed-rpms"
+	    log_cmd "egrep \"tfm-rubygem-foreman_rh_cloud|tfm-rubygem-foreman_inventory_upload\" $base_dir/installed-rpms 2>&1"
 	    log_cmd "cat $base_dir/etc/foreman-installer/scenarios.d/satellite.migrations/*-add-inventory-upload.rb"
 	    log "---"
 	    log
