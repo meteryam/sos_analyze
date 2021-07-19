@@ -117,7 +117,7 @@ main()
 
 	log()
 	{
-	  echo -e "$1" >> $FOREMAN_REPORT
+	  echo -e "$1" | cut -b1-5120 >> $FOREMAN_REPORT
 	}
 
 	log_cmd()
@@ -822,7 +822,7 @@ main()
 
 
 	  # define variables to be used later
-
+CAPSULE_IPS=""
 	  base_dir=$1
 	  #base_foreman=$base_dir/$2
 	  base_foreman=$2
@@ -830,7 +830,7 @@ main()
 
 	  HOSTNAME=""
 	  if [ -f "$base_dir/hostname" ]; then HOSTNAME=`cat $base_dir/hostname`; fi
-
+CAPSULE_IPS=""
 	  HOSTS_ENTRY=""
 	  if [ -f "$base_dir/etc/hosts" ] && [ "$HOSTNAME" ]; then HOSTS_ENTRY=`grep $HOSTNAME $base_dir/etc/hosts | egrep --color=always '^|$IPADDRLIST'`; fi
 
@@ -878,6 +878,7 @@ main()
 	    log "---"
 	    log
 
+	  CAPSULE_IPS=""
 	  if [ -f "$base_dir/sos_commands/foreman/smart_proxies" ]; then
 	  if [ "`grep satellite-6 $base_dir/installed-rpms 2>&1`" != '' ] || [ "`grep capsule $base_dir/installed-rpms 2>&1`" == '' ]; then
 		log "// capsule servers"
@@ -886,7 +887,13 @@ main()
 		log_cmd "grep -v row $base_dir/sos_commands/foreman/smart_proxies | egrep --color=always '^|$HOSTNAME|$IPADDRLIST'"
 		log "---"
 		log
+
+		CAPSULE_IPS=`egrep https: $base_dir/sos_commands/foreman/smart_proxies | awk '{print $7}' | grep . | tr '\n' '|' | rev | cut -c2- | rev`
+	  else
+		CAPSULE_IPS=$IPADDRLIST
 	  fi
+	  else
+		CAPSULE_IPS=$IPADDRLIST
 	  fi
 
 	  if [ -f "$base_dir/etc/sysconfig/networking/profiles/default/network" ]; then
@@ -921,11 +928,13 @@ main()
 	  log
 	  log_cmd "egrep 'satellite-6|capsule-6|spacewalk|^rhui|^rh-rhua' $base_dir/installed-rpms | awk '{print \$1}' | egrep -v 'tfm-rubygem'"
 	  log_cmd "grep release $base_dir/installed-rpms 2>&1 | awk '{print \$1}' | egrep -i 'redhat|oracle|centos|suse|fedora' | egrep -v 'eula|base'"
+	  if [ "`grep :scenario: $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | sed s'/:scenario://'g  | awk -F\":\" '{print $2}'`" ]; then
+		log_cmd "grep :scenario: $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml"
+	  fi
 	  log
 	  log "HW platform:"
 	  log
 	  log_cmd "{ grep -E '(Vendor|Manufacture|Product Name:|Description:)' $base_dir/dmidecode | head -n3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; } || { grep virtual $base_dir/facts 2>/dev/null | egrep \"vendor|version|manufacturer|name\" | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; }"
-	  log
 	  log "---"
 	  log
 
@@ -1015,12 +1024,20 @@ main()
 	  log "---"
 	  log
 
-	  if [ "`egrep . $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ] || [ -f "$base_dir/sos_commands/foreman/passenger-status_--show_pool" ]; then
+	  #if [ "`egrep . $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ] || [ -f "$base_dir/sos_commands/foreman/passenger-status_--show_pool" ]; then
+	  if [ "`egrep . $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ] || [ "`egrep -i general $base_dir/sos_commands/foreman/passenger-status_--show_pool 2>/dev/null | head -1`" ]; then
 
                 log "// passenger.conf configuration - 6.3 or earlier"
                 log "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' \$base_dir/etc/httpd/conf.d/passenger.conf"
                 log "---"
                 log_cmd "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' $base_dir/etc/httpd/conf.d/passenger.conf | grep -v \#"
+                log "---"
+                log
+
+                log "// passenger pool status"
+                log "egrep -A 3 'General information' \$base_dir/sos_commands/foreman/passenger-status_--show_pool"
+                log "---"
+                log_cmd "egrep -A 3 'General information' $base_dir/sos_commands/foreman/passenger-status_--show_pool"
                 log "---"
                 log
 
@@ -1032,17 +1049,6 @@ main()
                 log "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" \$base_dir/etc/sysconfig/dynflowd"
                 log "---"
                 log_cmd "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" $base_dir/etc/sysconfig/dynflowd"
-                log "---"
-                log
-
-	  fi
-
-	  if [ "`egrep . $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ] || [ -f "$base_dir/sos_commands/foreman/passenger-status_--show_pool" ]; then
-
-                log "// passenger pool status"
-                log "egrep -A 3 'General information' \$base_dir/sos_commands/foreman/passenger-status_--show_pool"
-                log "---"
-                log_cmd "egrep -A 3 'General information' $base_dir/sos_commands/foreman/passenger-status_--show_pool"
                 log "---"
                 log
 
@@ -1202,6 +1208,16 @@ main()
 	  log "Note:  If firewalld is running, then the iptables output should contain rules (roughly 30-40 on a Satellite 6.7 server).  If firewalld is not running and iptables still has rules defined, then the customer is likely using hand-crafted rules."
 
 	  log
+
+          log "// maintenance mode check"
+	  log "egrep 'maintenance_mode' \$base_dir/var/log/foreman-maintain/foreman-maintain.log"
+	  log "egrep 443 \$base_dir/sos_commands/networking/iptables_-vnxL"
+          log "---"
+	  log_cmd "egrep 'maintenance_mode' $base_dir/var/log/foreman-maintain/foreman-maintain.log"
+	  log
+	  log_cmd "egrep 443 $base_dir/sos_commands/networking/iptables_-vnxL"
+          log "---"
+          log
 
 	  log "// current route"
 	  log "cat \$base_dir/route"
@@ -1523,16 +1539,19 @@ main()
 	  log_cmd "echo ================================================ | grep --color=always \="
 	  log
 	  log "Satellite Components"
+	  log "(capsule components are in green)"
 	  log
 	  log_cmd "echo ================================================ | grep --color=always \="
 	  log
 
-
-	  log "httpd                            qdrouterd"
-	  log "  |                                  |"
-	  log "  |      celery     mongodb       qpidd"
-	  log "  |           |          |           |"
-	  log "  \-pulp -----/----------/-----------/"
+	  export GREP_COLORS='ms=01;32'
+	  log_cmd "echo 'httpd                            qdrouterd' | egrep --color=always '^|.'"
+	  log_cmd "echo '  |                                  |' | egrep --color=always '^|.'"
+	  log_cmd "echo '  |      celery     mongodb       qpidd' | egrep --color=always '^|.'"
+	  log_cmd "echo '  |           |          |           |' | egrep --color=always '^|.'"
+	  log_cmd "echo '  \-pulp -----/----------/-----------/' | egrep --color=always '^|.'"
+	  log_cmd "echo '  |' | egrep --color=always '^|.'"
+          log_cmd "echo '  \-smart_proxy_dynflow_core' | egrep --color=always '^|.'"
 	  log "  |"
 	  log "  \-passenger/puma"
 	  log "        |"
@@ -1541,9 +1560,11 @@ main()
 	  log "        \-foreman -------/   \---------candlepin-----/"
 	  log "            |"
 	  log "            \-katello, dynflow, virt-who, subscription watch"
-	  log "puppet4+"
+	  log
+	  log_cmd "echo 'puppet4+' | egrep --color=always '^|.'"
 	  log
 	  log
+	  export GREP_COLORS='ms=01;31'
 
 
 	  log_tee "## Satellite Services"
@@ -1614,7 +1635,7 @@ main()
 
 
 
-	  if [ ! "`egrep -i gofer $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_status_--all`" ]; then
+	  if [ ! "`egrep -i goferd $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_status_--all`" ]; then
 
 		nop=1
 
@@ -1677,7 +1698,7 @@ main()
 		log "// postgres storage consumption"
 		log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql"
 		log "---"
-		log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/lib\/pgsql    # pre-6.8/'g | sed s'/\/rh-postgresql12\/lib\/pgsql/\/lib\/pgsql    # post-6.8/'g"
+		log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8/'g | sed s'/\/rh-postgresql12\/lib\/pgsql/\/lib\/pgsql    # post-6.8/'g"
 		log "---"
 		log
 
@@ -1739,9 +1760,9 @@ main()
 			log "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target\|autovacuum_cost_limit' \$base_dir/var/lib/pgsql/data/postgresql.conf | grep -v '^#'"
 			log "---"
 			log_cmd "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target\|autovacuum_cost_limit' $base_dir/var/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v '^#' | egrep --color=always '^|autovacuum_cost_limit'"
+			log "---"
 			log
 			log "Note:  The parameters checkpoint_segment and autovacuum_cost_limit can cause errors upgrading to Satellite 6.7"
-			log "---"
 			log
 
 
@@ -1964,28 +1985,34 @@ main()
 		log "// TOP 20 of ip address requesting the satellite via https"
 		log "awk '{print \$1}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | sort | uniq -c | sort -nr | head -n20"
 		log "---"
-		log_cmd "awk '{print \$1}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | sort | uniq -c | sort -nr | head -n20 | egrep --color=always \"^|$SATELLITE_IP\""
+		log_cmd "awk '{print \$1}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | sort | uniq -c | sort -nr | head -n20 | egrep --color=always \"^|$IPADDRLIST|$CAPSULE_IPS\""
 		log "---"
 		log
 
 		log "// TOP 20 of ip address requesting the satellite via https (detailed) - not from Satellite server"
-		log "egrep -v \"\$HOST_IPS\" \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1,\$4}' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
+		#log "egrep -v \"\$HOST_IPS\" \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1,\$4}' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
+		log "awk '{print \$1,\$4}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v \"\$IPADDRLIST\" | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
 		log "---"
-		log_cmd "egrep -v \"$HOST_IPS\" $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1,\$4}' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
+		#log_cmd "egrep -v \"$HOST_IPS\" $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1,\$4}' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
+		log_cmd "awk '{print \$1,\$4}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v \"\$IPADDRLIST\" | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20 | egrep --color=always \"^|$CAPSULE_IPS\""
 		log "---"
 		log
 
 		log "// TOP 50 of uri requesting the satellite via https - not from Satellite server"
-		log "egrep -v \"\$HOST_IPS\" \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
+		#log "egrep -v \"\$HOST_IPS\" \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
+		log "awk '{print \$1, \$6, \$7}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v \"\$IPADDRLIST\" | sort | uniq -c | sort -nr | head -n 50"
 		log "---"
-		log_cmd "egrep -v \"$HOST_IPS\" $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
+		#log_cmd "egrep -v \"$HOST_IPS\" $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
+		log_cmd "awk '{print \$1, \$6, \$7}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v \"\$IPADDRLIST\" | sort | uniq -c | sort -nr | head -n 50 | egrep --color=always \"^|$CAPSULE_IPS\""
 		log "---"
 		log
 
 		log "// TOP 50 of uri requesting the satellite via https - from Satellite server"
-		log "egrep \"\$HOST_IPS\" \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
+		#log "egrep \"\$HOST_IPS\" \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
+		log "awk '{print \$1, \$6, \$7}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep \"\$IPADDRLIST\" | sort | uniq -c | sort -nr | head -n 50"
 		log "---"
-		log_cmd "egrep \"$HOST_IPS\" $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
+		#log_cmd "egrep \"$HOST_IPS\" $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
+		log_cmd "awk '{print \$1, \$6, \$7}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep \"\$IPADDRLIST\" | sort | uniq -c | sort -nr | head -n 50"
 		log "---"
 		log
 
@@ -2123,13 +2150,10 @@ main()
 
 	  else
 
-	    log "Puma is a web server and a core component of Red Hat Satellite. Satellite uses Puma to run Ruby applications such as Foreman. Puma integrates with Apache HTTP Server to capture incoming requests and redirects them to the respective components that handle them."
+	    log "Puma is a drop-in replacement for Passenger, and was introduced in Satellite 6.9.  It's a web server and a core component of Red Hat Satellite. Satellite uses Puma to run Ruby applications such as Foreman. Puma integrates with Apache HTTP Server to capture incoming requests and redirects them to the respective components that handle them."
 	    log
 
 	    log "Puma is involved in Satellite when the GUI is accessed, when the APIs are accessed, and when content hosts are registered. Each request that is serviced by Puma consumes an Apache HTTP Server process. Puma queues requests into an application-specific wait queue. The maximum number of requests that can be queued by Puma is defined in the Foreman service configuration. When running at scale, it might be desirable to increase the number of requests that Puma can handle concurrently. It might also be desirable to increase the size of the wait queue to accommodate bursts of requests."
-	    log
-
-	    log "Puma is a drop-in replacement for Passenger, and was introduced in Satellite 6.9."
 	    log
 
 	    log "// installed puma packages"
@@ -2138,6 +2162,13 @@ main()
 	    log_cmd "grep puma $base_dir/installed-rpms 2>&1"
 	    log "---"
 	    log
+
+            log "// puma status"
+            log "from file systemctl_status_--all"
+            log "---"
+            log_cmd "egrep 'foreman\.service -|Status:' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep -A 1 'foreman\.service -' | grep Status:"
+            log "---"
+            log
 
 	    log "// running puma processes"
 	    log "grep puma \$base_dir/ps"
@@ -2214,7 +2245,7 @@ main()
 		log_cmd "grep 'JAVA_ARGS=' $base_dir/etc/sysconfig/puppetserver"
 		log "---"
 		log
-		log "If too little memory is allocated to puppetserver, the puppetserver service can over-use the CPU."
+		log "Note: If too little memory is allocated to puppetserver, the puppetserver service can over-use the CPU."
 		log
 
 
@@ -2719,15 +2750,30 @@ main()
 	  log_tee "## virt-who"
 	  log
 
+          log "The virt-who agent interrogates the hypervisor infrastructure and provides the host/guest mapping to the subscription service. It uses read-only commands to gather the host/guest associations for the subscription services. This way, the guest subscriptions offered by a subscription can be unlocked and available for the guests to use."
+          log
+
+          if [ "`grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log`" ]; then
+                log "// virt-who update sources"
+                log "grep cmd=virt-who \$base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u -n"
+                log "---"
+                export GREP_COLORS='ms=01;33'   # temporarily change hilight color to yellow
+                log_cmd "grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u -n | egrep --color=always '^|$IPADDRLIST'"
+                export GREP_COLORS='ms=01;31'
+                log "---"
+                log
+          fi
+
 	  if [ ! "`egrep -i 'virt-who' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/installed_rpms $base_dir/ps $base_dir/var/log/rhsm/rhsm.log $base_dir/sos_commands/foreman/foreman_tasks_tasks 2>/dev/null | head -1`" ] && [ ! -f "$base_dir/etc/sysconfig/virt-who" ] && [ ! -d "$base_dir/etc/virt-who.d" ]; then
+
 
 		log "virt-who not found"
 		log
 
 	  else
 
-	    log "The virt-who agent interrogates the hypervisor infrastructure and provides the host/guest mapping to the subscription service. It uses read-only commands to gather the host/guest associations for the subscription services. This way, the guest subscriptions offered by a subscription can be unlocked and available for the guests to use."
-	    log
+	    #log "The virt-who agent interrogates the hypervisor infrastructure and provides the host/guest mapping to the subscription service. It uses read-only commands to gather the host/guest associations for the subscription services. This way, the guest subscriptions offered by a subscription can be unlocked and available for the guests to use."
+	    #log
 
 		log "// service status"
 		log "from files systemctl_list-unit-files and systemctl_status_--all"
@@ -2738,16 +2784,16 @@ main()
 		log "---"
 		log
 
-		if [ "`grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log`" ]; then
-                log "// virt-who update sources"
-                log "grep cmd=virt-who \$base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u -n"
-                log "---"
-		export GREP_COLORS='ms=01;33'	# temporarily change hilight color to yellow
-               	log_cmd "grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u -n | egrep --color=always '^|$IPADDRLIST'"
-		export GREP_COLORS='ms=01;31'
-                log "---"
-                log
-		fi
+		#if [ "`grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log`" ]; then
+                #log "// virt-who update sources"
+                #log "grep cmd=virt-who \$base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u -n"
+                #log "---"
+		#export GREP_COLORS='ms=01;33'	# temporarily change hilight color to yellow
+               	#log_cmd "grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u -n | egrep --color=always '^|$IPADDRLIST'"
+		#export GREP_COLORS='ms=01;31'
+                #log "---"
+                #log
+		#fi
 
 		log "// duplicated hypervisors #"
 		log "grep \"is assigned to 2 different systems\" \$base_dir/var/log/rhsm/rhsm.log | awk '{print \$9}' | sed -e \"s/'//g\" | sort -u | wc -l"
