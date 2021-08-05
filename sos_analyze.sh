@@ -1017,6 +1017,13 @@ CAPSULE_IPS=""
 	  log "---"
 	  log
 
+          log "// tuning profile"
+          log "egrep -ir '\-\-tuning' \$base_foreman/var/log/foreman-installer | grep 'Running installer with args'"
+          log "---"
+          log_cmd "egrep -ir '\-\-tuning' $base_foreman/var/log/foreman-installer | grep 'Running installer with args'"
+          log "---"
+          log
+
 	  log "// custom hiera"
 	  log "cat \$base_foreman/etc/foreman-installer/custom-hiera.yaml"
 	  log "---"
@@ -1054,12 +1061,19 @@ CAPSULE_IPS=""
 
 	  fi
 
-	  log "// number of CPUs"
-	  log "grep processor \$base_dir/proc/cpuinfo | wc -l"
-	  log "---"
-	  log_cmd "if [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
-	  log "---"
-	  log
+	  #log "// number of CPUs"
+	  #log "grep processor \$base_dir/proc/cpuinfo | wc -l"
+	  #log "---"
+	  #log_cmd "if [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
+	  #log "---"
+	  #log
+
+          log "// number of CPUs"
+          log "grep processor \$base_dir/proc/cpuinfo | wc -l"
+          log "---"
+          log_cmd "if [ -f $base_dir/sos_commands/processor/lscpu ]; then egrep '^CPU\(s\):' $base_dir/sos_commands/processor/lscpu; elif [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
+          log "---"
+          log
 
           log "// pulp_workers configuration"
           log "grep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY' \$base_dir/etc/default/pulp_workers"
@@ -1104,9 +1118,9 @@ CAPSULE_IPS=""
 	  log
 
 	  log "// read-only volumes"
-	  log "egrep \"\/dev\/sd|\/dev\/mapper\" \$base_dir/mount | grep -v rw"
+	  log "egrep \"/dev/sd|/dev/mapper\" \$base_dir/mount | grep -v rw"
 	  log "---"
-	  log_cmd "egrep \"\/dev\/sd|\/dev\/mapper\" $base_dir/mount | grep -v rw | egrep --color=always \"^|\/tmp\""
+	  log_cmd "egrep \"/dev/sd|/dev/mapper\" $base_dir/mount | grep -v rw | egrep --color=always \"^|\/tmp\""
 	  log "---"
 
 	  log "Note:  The satellite-installer tool can fail when /tmp and/or /var/tmp are mounted read-only, so look for that."
@@ -1485,12 +1499,19 @@ CAPSULE_IPS=""
 	  log "---"
 	  log
 
-	  log "// number of CPUs"
-	  log "grep processor \$base_dir/proc/cpuinfo | wc -l"
-	  log "---"
-	  log_cmd "if [ \"`grep processor $base_dir/proc/cpuinfo`\" ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
-	  log "---"
-	  log
+	  #log "// number of CPUs"
+	  #log "grep processor \$base_dir/proc/cpuinfo | wc -l"
+	  #log "---"
+	  #log_cmd "if [ \"`grep processor $base_dir/proc/cpuinfo`\" ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
+	  #log "---"
+	  #log
+
+          log "// number of CPUs"
+          log "grep processor \$base_dir/proc/cpuinfo | wc -l"
+          log "---"
+          log_cmd "if [ -f $base_dir/sos_commands/processor/lscpu ]; then egrep '^CPU\(s\):' $base_dir/sos_commands/processor/lscpu; elif [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
+          log "---"
+          log
 
 	  log "// number of sockets"
 	  #log "grep 'Socket.Designation:' \$base_dir/dmidecode | grep -i CPU | wc -l"
@@ -1610,9 +1631,9 @@ CAPSULE_IPS=""
 	    log "// condensed satellite service status"
 	    log "grepping files foreman-maintain_service_status and systemctl_status_--all"
 	    log "---"
-	    log "egrep \"mongo|postgres|qdrouterd|qpidd|squid|celery|pulp|dynflow|tomcat|goferd|httpd|puppet|foreman\" \$base_dir/sos_commands/systemd/systemctl_status_--all | grep service"
+	    log "egrep \"mongo|postgres|qdrouterd|qpidd|squid|celery|pulp|dynflow|tomcat|goferd|httpd|puppet|foreman\" \$base_dir/sos_commands/systemd/systemctl_status_--all | grep service | egrep -v '\|'"
 	    log
-	    log_cmd "egrep \"mongo|postgres|qdrouterd|qpidd|squid|celery|pulp|dynflow|tomcat|goferd|httpd|puppet|foreman\" $base_dir/sos_commands/systemd/systemctl_status_--all | grep service"
+	    log_cmd "egrep \"mongo|postgres|qdrouterd|qpidd|squid|celery|pulp|dynflow|tomcat|goferd|httpd|puppet|foreman\" $base_dir/sos_commands/systemd/systemctl_status_--all | grep service | egrep -v '\|'"
 	    log "---"
 	    log
 
@@ -1757,9 +1778,9 @@ CAPSULE_IPS=""
 			log
 
 			log "// postgres configuration"
-			log "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target\|autovacuum_cost_limit' \$base_dir/var/lib/pgsql/data/postgresql.conf | grep -v '^#'"
+			log "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target\|autovacuum_cost_limit\|effective_cache_size' \$base_dir/var/lib/pgsql/data/postgresql.conf | grep -v '^#'"
 			log "---"
-			log_cmd "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target\|autovacuum_cost_limit' $base_dir/var/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v '^#' | egrep --color=always '^|autovacuum_cost_limit'"
+			log_cmd "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target\|autovacuum_cost_limit\|effective_cache_size' $base_dir/var/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v '^#' | egrep --color=always '^|autovacuum_cost_limit'"
 			log "---"
 			log
 			log "Note:  The parameters checkpoint_segment and autovacuum_cost_limit can cause errors upgrading to Satellite 6.7"
@@ -2571,12 +2592,19 @@ CAPSULE_IPS=""
 		log "---"
 		log
 
-		log "// number of CPUs"
-		log "grep processor \$base_dir/proc/cpuinfo | wc -l"
-		log "---"
-		log_cmd "grep processor $base_dir/proc/cpuinfo | wc -l"
-		log "---"
-		log
+		#log "// number of CPUs"
+		#log "grep processor \$base_dir/proc/cpuinfo | wc -l"
+		#log "---"
+		#log_cmd "grep processor $base_dir/proc/cpuinfo | wc -l"
+		#log "---"
+		#log
+
+          	log "// number of CPUs"
+          	log "grep processor \$base_dir/proc/cpuinfo | wc -l"
+          	log "---"
+          	log_cmd "if [ -f $base_dir/sos_commands/processor/lscpu ]; then egrep '^CPU\(s\):' $base_dir/sos_commands/processor/lscpu; elif [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
+          	log "---"
+          	log
 
 		log "// Total number of pulp agents"
 		log "grep pulp.agent \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 \$base_dir/sos_commands/pulp/qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671 2>/dev/null | wc -l"
