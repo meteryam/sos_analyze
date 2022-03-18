@@ -1,5 +1,8 @@
 #!/bin/bash
 
+exec 2>/dev/null
+
+
 #
 # Created ....: 03/04/2019
 # Developer ..: Waldirio M Pinheiro <waldirio@gmail.com / waldirio@redhat.com>
@@ -99,6 +102,11 @@ main()
 	    base_foreman=$base_dir
 	  fi
 
+	  if [ -d $base_dir/sos_commands/logs ] && [ ! -f $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot ]; then
+		NEWJOURNALFILE=`ls $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot_--since* | sort | tail -1`
+		ln -s -r $NEWJOURNALFILE $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot
+	  fi
+
 	  echo "The sosreport is: $base_dir"												| tee -a $FOREMAN_REPORT
 
 	  consolidate_differences
@@ -117,12 +125,13 @@ main()
 
 	log()
 	{
-	  echo -e "$1" | cut -b1-5120 >> $FOREMAN_REPORT
+	  echo -e "$1" | uniq | cut -b1-5120 >> $FOREMAN_REPORT
 	}
 
 	log_cmd()
 	{
-	  echo "$@" | bash 2>&1 >> $FOREMAN_REPORT
+	  # echo "$@" | bash 2>&1 >> $FOREMAN_REPORT
+	  echo "$@" | bash 2>/dev/null >> $FOREMAN_REPORT
 	}
 
 	# ref: https://unix.stackexchange.com/questions/44040/a-standard-tool-to-convert-a-byte-count-into-human-kib-mib-etc-like-du-ls1
@@ -145,8 +154,8 @@ main()
 	sos_commands/candlepin/du_-sh_.var.lib.candlepin,hornetq_disk_space
 	sos_commands/cron/root_crontab,crontab_-l
 	sos_commands/date/date,timestamp
-	sos_commands/filesys/df_-ali_-x_autofs,df_-ali
-	sos_commands/filesys/df_-al_-x_autofs,df_-al
+	sos_commands/filesys/df_-ali_-x_autofs,df_-ali,df_-i
+	sos_commands/filesys/df_-al_-x_autofs,df_-al,df_-h
 	sos_commands/foreman/bundle_--local_--gemfile_.usr.share.foreman.Gemfile,bundle_list
 	sos_commands/foreman/foreman-selinux-relabel_-nv,foreman_filecontexts
 	sos_commands/foreman/ls_-lanR_.root.ssl-build,katello_ssl_build_dir
@@ -166,7 +175,7 @@ main()
 	sos_commands/lvm2/vgdisplay_-vv_--config_global_locking_type_0_metadata_read_only_1,vgdisplay_-vv_--config_global_locking_type_0
 	sos_commands/lvm2/vgscan_-vvv_--config_global_locking_type_0_metadata_read_only_1,vgscan_-vvv_--config_global_locking_type_0
 	sos_commands/lvm2/vgs_-v_-o_vg_mda_count_vg_mda_free_vg_mda_size_vg_mda_used_count_vg_tags_--config_global_locking_type_0_metadata_read_only_1,vgs_-v_-o_vg_mda_count_vg_mda_free_vg_mda_size_vg_mda_used_count_vg_tags_--config_global_locking_type_0
-	sos_commands/networking/ip_-d_address,ip_address,ip_a
+	sos_commands/networking/ip_-d_address,ip_address,ip_a,ip_addr
 	sos_commands/networking/ip_neigh_show_nud_noarp,ip_neigh_show
 	sos_commands/networking/ip_route_show_table_all,ip_r
 	sos_commands/networking/ip_-s_-d_link,ip_-s_link
@@ -292,7 +301,7 @@ main()
 	sos_commands/filesys/findmnt
 	sos_commands/filesys/lslocks
 	sos_commands/filesys/ls_-ltradZ_.tmp
-	sos_commands/filesys/mount_-l
+	sos_commands/filesys/mount_-l,mount
 	sos_commands/firewalld/firewall-cmd_--direct_--get-all-chains
 	sos_commands/firewalld/firewall-cmd_--direct_--get-all-passthroughs
 	sos_commands/firewalld/firewall-cmd_--direct_--get-all-rules
@@ -340,7 +349,7 @@ main()
 	sos_commands/java/readlink_-f_.usr.bin.java
 	sos_commands/katello/db_table_size
 	sos_commands/katello/katello_repositories
-	sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671,qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671,qpid-stat-q
+	sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671,qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671,qpid-stat-q,qpid-stat_-q
 	sos_commands/katello/rpm_-V_katello
 	sos_commands/kdump/rpm_-V_kexec-tools
 	sos_commands/kernel/bpftool_-j_map_list
@@ -364,7 +373,7 @@ main()
 	sos_commands/libvirt/ls_-lR_.var.lib.libvirt.qemu
 	sos_commands/logrotate/logrotate_debug
 	sos_commands/md/mdadm_-D_.dev.md
-	sos_commands/memory/free
+	sos_commands/memory/free,free_-h
 	sos_commands/memory/free_-m
 	sos_commands/memory/lsmem_-a_-o_RANGE_SIZE_STATE_REMOVABLE_ZONES_NODE_BLOCK
 	sos_commands/memory/swapon_--bytes_--show
@@ -425,7 +434,7 @@ main()
 	sos_commands/processor/cpupower_frequency-info
 	sos_commands/processor/cpupower_idle-info
 	sos_commands/processor/cpupower_info
-	sos_commands/processor/lscpu
+	sos_commands/processor/lscpu,lscpu.out
 	sos_commands/processor/turbostat_--debug_sleep_10
 	sos_commands/processor/x86info_-a
 	sos_commands/process/ps_alxwww
@@ -465,7 +474,6 @@ main()
 	sos_commands/qpid/qpid-stat_-e
 	sos_commands/qpid/qpid-stat_-g
 	sos_commands/qpid/qpid-stat_-m
-	sos_commands/qpid/qpid-stat_-q
 	sos_commands/qpid/qpid-stat_-u
 	sos_commands/qpid/rpm_-V_qpid-cpp-server_qpid-tools
 	sos_commands/release/lsb_release
@@ -691,27 +699,28 @@ main()
 	sos_commands/x11/dmesg_grep_-e_agpgart
 	etc/hosts
 	etc/selinux/config,selinux_state
+	etc/redhat-release
 	ifconfig,ifconfig_-a
 	chkconfig,chkconfig_--list
 	proc/cpuinfo
 	date,date_--utc
-	df,df_-al,df_-ali,df_-al_-x_autofs,df_-ali_-x_autofs,diskinfo
+	df,df_-al,df_-ali,df_-al_-x_autofs,df_-ali_-x_autofs,diskinfo,df_-h,df.out
 	dmidecode
 	hostname,hostname_-f
-	installed-rpms,rpm-manifest,rpm-qa
+	installed-rpms,rpm-manifest,rpm-qa,rpm-qa.out,installed_packages
 	ip_addr,ip_address,ip_a
 	last
 	lsb-release,lsb_release
 	lsmod
-	lsof,lsof_-b_M_-n_-l,lsof_-b_M_-n_-l_-c
+	lsof,lsof_-b_M_-n_-l,lsof_-b_M_-n_-l_-c,lsof.out
 	lspci,lspci_-nvv,lspci_-nnvv
 	mount,mount_-l
 	netstat,netstat_-W_-neopa,netstat_-neopa
-	ps,ps_auxwww,ps_auxwwwm,ps_auxww,ps_auxww,ps_-elfL,ps_-elf,ps_axo_flags_state_uid_pid_ppid_pgid_sid_cls_pri_addr_sz_wchan_lstart_tty_time_cmd,ps_axo_pid_ppid_user_group_lwp_nlwp_start_time_comm_cgroup,ps-awfux
+	ps,ps_auxwww,ps_auxwwwm,ps_auxww,ps_auxww,ps_-elfL,ps_-elf,ps_axo_flags_state_uid_pid_ppid_pgid_sid_cls_pri_addr_sz_wchan_lstart_tty_time_cmd,ps_axo_pid_ppid_user_group_lwp_nlwp_start_time_comm_cgroup,ps-awfux,ps.out
 	pstree
 	route,route_-n
 	uname,uname_-a
-	uptime
+	uptime,uptime.out
 	vgdisplay,vgdisplay_-vv_--config_global_locking_type_0
 	database-character-sets,rhn-charsets
 	database-schema-version,rhn-schema-version"
@@ -760,10 +769,14 @@ main()
 	  if [ -d $base_dir/sos_commands/lsbrelease ]; then ln -s lsbrelease $base_dir/sos_commands/release 2>/dev/null; fi
 	  if [ -d $base_dir/sos_commands/printing ]; then ln -s printing $base_dir/sos_commands/cups 2>/dev/null; fi
 
+	  # fix the hostname file for foreman-debug packages
+
+	  if [ -f $base_dir/hostname_dns_check ] && [ ! -f $base_dir/hostname ]; then tail -1 $base_dir/hostname_dns_check | awk '{print $1}' > $base_dir/hostname; fi
+
 
 	  # this section populates the sos_commands directory and various links in the root directory of the sosreport
 	   FINDRESULTS=`find $base_dir -mount -type f \( -path $base_dir/run -prune -o -path $base_dir/sy -prune -o -path $base_dir/sos_strings -prune -o -path $base_dir/sos_reports -prune -o -path $base_dir/sos_logs -prune -o -path $base_dir/container -prune -o -path "$base_dir/proc/[0-9]*" -prune \)  -o -print 2>/dev/null | sort -u | egrep -v "$base_dir\/container\/"`
-	   
+
 
 
 	   for MYENTRY in `echo -e "$CSVLINKS"`; do
@@ -791,9 +804,6 @@ main()
 
 			MYFILE=`basename $i`
 
-			#MATCH=`find $base_dir -type f -name $MYFILE 2>/dev/null | egrep -v '\./containers/ps'`	# containers/ps contains podman processes, not normal processes
-			#MATCH=`find -ls -mount $base_dir -type f -name $MYFILE -path $base_dir/run -prune -o -print -path $base_dir/sys -prune -o -print -path $base_dir/sos_strings -prune -o -print -path $base_dir/sos_reports -prune -o -print -path $base_dir/sos_logs -prune -o -print -path $base_dir/container -prune -o -print -path "$base_dir/proc/[0-9]*" -prune -o -print -quit 2>/dev/null`
-			#MATCH=`find $base_dir -mount -type f -name $MYFILE \( -path $base_dir/run -prune -o -path $base_dir/sy -prune -o -path $base_dir/sos_strings -prune -o -path $base_dir/sos_reports -prune -o -path $base_dir/sos_logs -prune -o -path $base_dir/container -prune -o -path "$base_dir/proc/[0-9]*" -prune \)  -o -print 2>/dev/null | sort -u | egrep -v "$base_dir\/container\/" | egrep "\/$MYFILE$"`
 			MATCH=`echo -e "$FINDRESULTS" | egrep "\/$MYFILE$"`
 
 			if [ -f "$MATCH" ] && [ ! -L "$MATCH" ]; then
@@ -824,7 +834,6 @@ main()
 	  # define variables to be used later
 CAPSULE_IPS=""
 	  base_dir=$1
-	  #base_foreman=$base_dir/$2
 	  base_foreman=$2
 	  sos_version=$3
 
@@ -838,7 +847,9 @@ CAPSULE_IPS=""
 	  if [ -f "$base_dir/route" ]; then PRIMARYNIC=`grep UG $base_dir/route | awk '{print $NF}'`; fi
 
 	  IPADDRLIST=""
-	  if [ -f "$base_dir/ip_addr" ]; then IPADDRLIST=`egrep "$PRIMARYNIC" $base_dir/ip_addr | egrep -v "inet6|: lo" | awk '{print $4}' | awk -F"/" '{print $1}' | tr '\n' '|' | rev | cut -c2- | rev`; fi
+	  SATELLITE_IP=""
+	  if [ -f "$base_dir/ip_addr" ]; then SATELLITE_IP=`egrep "$PRIMARYNIC" $base_dir/ip_addr | egrep -v "inet6|: lo" | awk '{print $4}' | awk -F"/" '{print $1}' | tr '\n' '|' | rev | cut -c2- | rev`; fi
+	  IPADDRLIST=$SATELLITE_IP
 
 
 	  log_tee "### Welcome to Report ###"
@@ -865,8 +876,14 @@ CAPSULE_IPS=""
 	  log_cmd "jq '. | \"hostname: \" + .\"network.hostname\",\"FQDN: \" + .\"network.fqdn\"' $base_dir/var/lib/rhsm/facts/facts.json 2>/dev/null"
 	  if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ]; then
 	  log
-	  log "foreman certificate:"
-	  log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | egrep 'CN=|DNS' | egrep --color=always '^|$HOSTNAME'"
+	  log "foreman certificates:"
+	  log "openssl x509 -in \$base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | egrep 'CN=|DNS|Issuer' | egrep --color=always '^|\$HOSTNAME'"
+	  log
+	  log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | egrep 'CN=|DNS|Issuer' | egrep --color=always '^|$HOSTNAME'"
+	  log
+	  log "openssl x509 -in \$base_dir/etc/foreman-proxy/foreman_ssl_ca.pem -noout -text | egrep -i 'before|after'"
+	  log
+	  log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/foreman_ssl_ca.pem -noout -text | egrep -i 'before|after'"
 	  fi
 
 	  if [ "$HOSTS_ENTRY" ]; then
@@ -919,6 +936,42 @@ CAPSULE_IPS=""
 	  log
 	  fi
 
+          if [ "`grep satellite-6 $base_dir/installed-rpms`" ]; then
+          	log "// answers file certs"
+		log "egrep -A 3 server_cert: \$base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml"
+          	log "---"
+	  	log_cmd "egrep -A 3 server_cert: $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml"
+          	log
+          	log "---"
+         	log
+
+                log "// ssl-build directory lines"
+                log "---"
+                log "wc -l \$base_dir/sos_commands/foreman/ls_-lanR_.root.ssl-build"
+                log_cmd "wc -l $base_dir/sos_commands/foreman/ls_-lanR_.root.ssl-build"
+                log
+                log "---"
+                log
+
+	  elif [ "`grep ^satellite-capsule $base_dir/installed-rpms`" ]; then
+		log "// answers file certs"
+		log "egrep -A 3 server_cert: \$base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml"
+          	log "---"
+          	log_cmd "egrep -A 3 server_cert: $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml"
+          	log
+          	log "---"
+          	log
+          fi
+
+
+          log "// disconnected mode?"
+          log "---"
+          log_cmd "egrep disconnected $base_dir/sos_commands/foreman/foreman_settings_table | grep true | sed s'/  //'g"
+          log "---"
+          log
+
+
+
 	  log_tee "## Case Summary"
 	  log
 
@@ -926,11 +979,16 @@ CAPSULE_IPS=""
 	  log "---"
 	  log "ENVIRONMENT:"
 	  log
-	  log_cmd "egrep 'satellite-6|capsule-6|spacewalk|^rhui|^rh-rhua' $base_dir/installed-rpms | awk '{print \$1}' | egrep -v 'tfm-rubygem'"
+	  if [ -f "$base_dir/installed-rpms" ]; then
+		log_cmd "egrep 'satellite-6|capsule-6|spacewalk|^rhui|^rh-rhua|clientrpmtest' $base_dir/installed-rpms | awk '{print \$1}' | egrep -v 'tfm-rubygem'"
+	  else
+		log_cmd "cat $base_dir/etc/redhat-release"
+	  fi
 	  log_cmd "grep release $base_dir/installed-rpms 2>&1 | awk '{print \$1}' | egrep -i 'redhat|oracle|centos|suse|fedora' | egrep -v 'eula|base'"
 	  if [ "`grep :scenario: $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | sed s'/:scenario://'g  | awk -F\":\" '{print $2}'`" ]; then
 		log_cmd "grep :scenario: $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml"
 	  fi
+
 	  log
 	  log "HW platform:"
 	  log
@@ -949,10 +1007,19 @@ CAPSULE_IPS=""
 	  log "---"
 	  log
 
+          if [ -f "$base_dir/etc/os-release" ]; then
+		log "// os-release file details"
+                log_cmd "egrep '^NAME=|^VERSION=' $base_dir/etc/os-release"
+		log
+          fi
+
 	  log "// release version (for version locking)"
 	  log "jq '.' \$base_dir/var/lib/rhsm/cache/releasever.json"
+	  log "cat \$base_dir/etc/yum/vars/releasever 2>/dev/null"
 	  log "---"
 	  log_cmd "jq '.' $base_dir/var/lib/rhsm/cache/releasever.json 2>&1"
+	  log
+	  log_cmd "cat $base_dir/etc/yum/vars/releasever 2>/dev/null"
 	  log "---"
 	  log
 
@@ -978,7 +1045,7 @@ CAPSULE_IPS=""
 	  log "// out of memory errors"
 	  log "grep messages files for out of memory errors"
 	  log "---"
-	  { for mylog in `ls -rt $base_dir/var/log/messages* 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep 'Out of memory' | egrep -v '{|}' | tail -200 | cut -c -10240 >> $FOREMAN_REPORT
+	  { for mylog in `ls -rt $base_dir/var/log/messages* $base_dir/OOO 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep 'Out of memory' | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | tail -200 | cut -c -10240 >> $FOREMAN_REPORT
 	  log "---"
 	  log
 
@@ -1018,7 +1085,7 @@ CAPSULE_IPS=""
 	  log
 
           log "// tuning profile"
-          log "egrep -ir '\-\-tuning' \$base_foreman/var/log/foreman-installer | grep 'Running installer with args'"
+          log "egrep -ir '--tuning' \$base_foreman/var/log/foreman-installer | grep 'Running installer with args'"
           log "---"
           log_cmd "egrep -ir '\-\-tuning' $base_foreman/var/log/foreman-installer | grep 'Running installer with args'"
           log "---"
@@ -1052,10 +1119,13 @@ CAPSULE_IPS=""
 
           if [ -f "$base_dir/etc/sysconfig/dynflowd" ]; then
 
-                log "// dynflow optimizations"
-                log "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" \$base_dir/etc/sysconfig/dynflowd"
+                log "// dynflow optimizations (only used before 6.8)"
+                log "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" \$base_dir/etc/sysconfig/foreman-tasks"
                 log "---"
-                log_cmd "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" $base_dir/etc/sysconfig/dynflowd"
+                log_cmd "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" $base_dir/etc/sysconfig/foreman-tasks"
+                log
+                log "Note:  For Satellite servers older than 6.8, EXECUTORS_COUNT=2 is recommended for 32 Gb of RAM, and EXECUTORS_COUNT=3 is recommended for 65+ Gb of RAM."
+                log
                 log "---"
                 log
 
@@ -1071,16 +1141,17 @@ CAPSULE_IPS=""
           log "// number of CPUs"
           log "grep processor \$base_dir/proc/cpuinfo | wc -l"
           log "---"
-          log_cmd "if [ -f $base_dir/sos_commands/processor/lscpu ]; then egrep '^CPU\(s\):' $base_dir/sos_commands/processor/lscpu; elif [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
+          log_cmd "if [ -f $base_dir/sos_commands/processor/lscpu ]; then egrep '^CPU\(s\):' $base_dir/sos_commands/processor/lscpu; elif [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; elif [ -f $base_dir/procs ]; then cat $base_dir/procs; fi"
           log "---"
           log
 
-          log "// pulp_workers configuration"
-          log "grep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY' \$base_dir/etc/default/pulp_workers"
-          log "---"
-          log_cmd "grep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY' $base_dir/etc/default/pulp_workers 2>&1"
-          log "---"
-          log
+
+           log "// pulp_workers configuration"
+           log "egrep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY|pulpcore_worker_count' \$base_dir/etc/default/pulp_workers \$base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
+           log "---"
+           log_cmd "egrep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY|pulpcore_worker_count' $base_dir/etc/default/pulp_workers $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
+           log "---"
+           log
 
 
 	  log_tee "## Storage"
@@ -1089,11 +1160,11 @@ CAPSULE_IPS=""
 	  log "// no space left on device"
 	  log "'no space left on device' errors in \$base_dir"
 	  log "---"
-	  log_cmd "egrep -hir 'no space left on device' $base_dir 2>/dev/null | egrep -v '{|}' | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\""
+	  log_cmd "egrep -hir 'no space left on device' $base_dir 2>/dev/null | egrep -v '{|}' | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | sed s'/\\n/\n/'g | sed s'/\[Sun //'g | sed s'/\[Mon //'g | sed s'/\[Tue //'g | sed s'/\[Wed //'g | sed s'/\[Thu //'g | sed s'/\[Fri //'g | sed s'/\[Sat //'g | sort -h"
 	  log "---"
 	  log
 
-	  log "// disk usage info"
+	  log "// disk usage info"q
 	  log "awk '{ if (\$2!=0) print \$0 }' \$base_dir/df"
 	  log "---"
 	  log_cmd "awk '{ if (\$2!=0) print \$0 }' $base_dir/df | egrep --color=always \"^|nfs\""
@@ -1110,6 +1181,22 @@ CAPSULE_IPS=""
 	  log "---"
 	  log
 
+          log "// read-only volumes"
+          log "egrep \"/dev/sd|/dev/mapper\" \$base_dir/mount | grep -v rw"
+          log "---"
+          log_cmd "egrep \"/dev/sd|/dev/mapper\" $base_dir/mount | grep -v rw | egrep --color=always \"^|\/tmp\""
+          log "---"
+
+          log "Note:  The satellite-installer tool can fail when /tmp and/or /var/tmp are mounted read-only, so look for that."
+          log
+
+          log "// check noexec property on tmp directories"
+          log "egrep noexec \$base_dir/{mount,etc/fstab} | grep \/tmp"
+          log "---"
+          log_cmd "egrep noexec $base_dir/{mount,etc/fstab} | grep \/tmp"
+          log "---"
+          log
+
 	  log "// logrotate entry for dynflow_executor.output"
 	  log "grep dynflow_executor.output \$base_dir/etc/logrotate.d/foreman*"
 	  log "---"
@@ -1117,18 +1204,51 @@ CAPSULE_IPS=""
 	  log "---"
 	  log
 
-	  log "// read-only volumes"
-	  log "egrep \"/dev/sd|/dev/mapper\" \$base_dir/mount | grep -v rw"
-	  log "---"
-	  log_cmd "egrep \"/dev/sd|/dev/mapper\" $base_dir/mount | grep -v rw | egrep --color=always \"^|\/tmp\""
-	  log "---"
 
-	  log "Note:  The satellite-installer tool can fail when /tmp and/or /var/tmp are mounted read-only, so look for that."
-	  log
+          log_tee "## ntp info"
+          log
+
+          log "// ntp services"
+          log "egrep 'ntpd.service|chronyd' \$base_dir/sos_commands/systemd/systemctl_list-units \$base_dir/sos_commands/systemd/systemctl_list-unit-files | awk -F\"/\" '{print \$NF}'"
+          log "egrep server \$base_dir/etc/{ntp.conf,chrony.conf} | grep -v :\# | awk -F\"/\" '{print \$NF}'"
+          log "---"
+          #log_cmd "egrep 'ntpd|chronyd' $base_dir/sos_commands/systemd/systemctl_list-units $base_dir/sos_commands/systemd/systemctl_list-unit-files | awk -F\"/\" '{print $NF}'"
+          OUTPUT=$(egrep 'ntpd.service|chronyd|sntp.service|systemd-timesyncd.service' $base_dir/sos_commands/systemd/systemctl_list-units $base_dir/sos_commands/systemd/systemctl_list-unit-files | awk -F"/" '{print $NF}')
+          log "$OUTPUT"
+          log
+          #log_cmd "egrep server $base_dir/etc/{ntp.conf,chrony.conf} | grep -v \# | sed s'/$base_dir//'g"
+          OUTPUT=$(egrep server $base_dir/etc/{ntp.conf,chrony.conf} 2>/dev/null | grep -v :\# | awk -F"/" '{print $NF}')
+          log "$OUTPUT"
+          log "---"
+          log
+
+          log "// ntp errors"
+          log "egrep 'ntpd|chrony|sntp|timesync' \$base_dir/var/log/messages* | grep panic"
+          log "egrep -ir 'skew|RES equals failed' \$base_dir/var/log"
+          log "---"
+          log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/var/log/messages* | grep panic"
+          log
+          log_cmd "egrep -ir 'skew|RES equals failed' $base_dir/var/log | egrep -v 'BEGIN CERTIFICATE|^Binary'"
+          log "---"
+          log
 
 
 	  log_tee "## Proxy info"
 	  log
+
+          log "// check /etc/environment"
+          log "grep -i proxy \$base_dir/etc/environment"
+          log "---"
+          log_cmd "grep -i proxy $base_dir/etc/environment 2>&1"
+          log "---"
+          log
+
+          log "// check the environment variables"
+          log "grep -i proxy \$base_dir/environment"
+          log "---"
+          log_cmd "grep -i proxy $base_dir/environment 2>&1"
+          log "---"
+          log
 
 	  log "// RHSM Proxy"
 	  log "grep proxy \$base_dir/etc/rhsm/rhsm.conf | grep -v ^#"
@@ -1137,10 +1257,10 @@ CAPSULE_IPS=""
 	  log "---"
 	  log
 
-	  log "// yum Proxy"
-	  log "grep proxy \$base_dir/etc/yum.conf | grep -v ^#"
+	  log "// yum/dnf proxy"
+	  log "grep proxy \$base_dir/etc/yum.conf \$base_dir/etc/dnf/dnf.conf | grep -v ^#"
 	  log "---"
-	  log_cmd "grep proxy $base_dir/etc/yum.conf | grep -v ^#"
+	  log_cmd "grep proxy $base_dir/etc/yum.conf $base_dir/etc/dnf/dnf.conf | grep -v ^#"
 	  log "---"
 	  log
 
@@ -1160,23 +1280,31 @@ CAPSULE_IPS=""
 	  log "---"
 	  log
 
+	  if [ -f $base_dir/bash_proxy ]; then
+		log "// bash Proxy"
+       		log "cat \$base_dir/bash_proxy"
+          	log "---"
+          	log_cmd "cat $base_dir/bash_proxy"
+          	log "---"
+          	log
+	  fi
 
 	  log_tee "## Network Information"
 	  log
 
 	  log "// ip address"
-	  log "cat \$base_dir/ip_addr"
+	  log "sort \$base_dir/ip_addr"
 	  log "---"
-	  log_cmd "cat $base_dir/ip_addr"
+	  log_cmd "sort $base_dir/ip_addr"
 	  log "---"
 	  log
 
-	  #log "// ip address stored in /var/lib/rhsm/facts/facts.json"
-	  #log "jq '. | \"IP address: \" + .\"network.ipv4_address\"' $base_dir/var/lib/rhsm/facts/facts.json"
-	  #log "---"
-	  #log_cmd "jq '. | \"IP address: \" + .\"network.ipv4_address\"' $base_dir/var/lib/rhsm/facts/facts.json"
-	  #log "---"
-	  #log
+          log "// check dhcp and dns interfaces in satellite-answers"
+          log "grep _interface: \$base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep 'dhcp|dns'"
+          log "---"
+          log_cmd "grep _interface: $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep 'dhcp|dns'"
+          log "---"
+          log
 
 	  if [ -f "$base_dir/ping_hostname" ] || [ -f "$base_dir/ping_hostname_full" ]; then
 		log "// ping hostname"
@@ -1205,17 +1333,25 @@ CAPSULE_IPS=""
 	  log "---"
 	  log
 
+          log "// firewall services"
+          log "egrep 'iptables|firewalld' \$base_dir/sos_commands/systemd/systemctl_list-units \$base_dir/sos_commands/systemd/systemctl_list-unit-files"
+          log "---"
+          log_cmd "egrep 'iptables|firewalld' $base_dir/sos_commands/systemd/systemctl_list-units $base_dir/sos_commands/systemd/systemctl_list-unit-files"
+          log "---"
+          log
+
 	  log "// firewalld settings"
-	  log "egrep -A14 \"(active)|^FirewallD is not running\" \$base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones"
+	  log "sed -n '/(active)/,/^$/p' \$base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones"
 	  log "---"
-	  log_cmd "egrep -A14 \"(active)|^FirewallD is not running\" $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones"
+	  log_cmd "sed -n '/(active)/,/^$/p' $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones"
+	  log_cmd "egrep 'FirewallD is not running' $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones'"
 	  log "---"
 	  log
 
 	  log "// iptables extra line count"
 	  log "egrep -v '^$|^COMMAND|Chain|pkts' \$base_dir/sos_commands/networking/iptables_-vnxL | wc -l"
 	  log "---"
-	  log_cmd "if [ -f $base_dir/sos_commands/networking/iptables_-vnxL ]; then egrep -v '^$|^COMMAND|Chain|pkts' $base_dir/sos_commands/networking/iptables_-vnxL | wc -l; fi"
+	  log_cmd "if [ -f $base_dir/sos_commands/networking/iptables_-vnxL ]; then egrep -v '^$|^COMMAND|Chain|pkts' $base_dir/sos_commands/networking/iptables_-vnxL | wc -l; else echo 'no iptables output found'; fi"
 	  log "---"
 	  log
 
@@ -1224,12 +1360,12 @@ CAPSULE_IPS=""
 	  log
 
           log "// maintenance mode check"
-	  log "egrep 'maintenance_mode' \$base_dir/var/log/foreman-maintain/foreman-maintain.log"
-	  log "egrep 443 \$base_dir/sos_commands/networking/iptables_-vnxL"
+	  log "egrep 'maintenance_mode' \$base_dir/var/log/foreman-maintain/foreman-maintain.log | tail"
+	  log "cat \$base_dir/sos_commands/networking/iptables_-vnxL | sed -n '/FOREMAN_MAINTAIN/,/^$/p'"
           log "---"
-	  log_cmd "egrep 'maintenance_mode' $base_dir/var/log/foreman-maintain/foreman-maintain.log"
+	  log_cmd "egrep 'maintenance_mode' $base_dir/var/log/foreman-maintain/foreman-maintain.log | tail"
 	  log
-	  log_cmd "egrep 443 $base_dir/sos_commands/networking/iptables_-vnxL"
+	  log_cmd "cat $base_dir/sos_commands/networking/iptables_-vnxL | sed -n '/FOREMAN_MAINTAIN/,/^$/p'"
           log "---"
           log
 
@@ -1255,22 +1391,34 @@ CAPSULE_IPS=""
 	  log_cmd "cat $base_dir/etc/environment"
 	  log
 
-	  #if [ -f "$base_dir/facts" ]; then
-		#log "grep path $base_dir/facts"
-		#log "---"
-		#log_cmd "grep path $base_dir/facts"
-		#log "---"
-	  #fi
+
+          log "// contents of /etc/locale.conf"
+          log "cat \$base_dir/etc/locale.conf"
+          log "---"
+          log_cmd "cat $base_dir/etc/locale.conf"
+          log "---"
+          log
 
 	  log_tee "## SELinux"
 	  log
 
-	  log "// SELinux conf"
-	  log "display SELinux settings"
-	  log "---"
-	  log_cmd "grep -v \# $base_dir/etc/selinux/config | grep ."
-	  log "---"
+#	  log "// SELinux conf"
+#	  log "display SELinux settings"
+#	  log "---"
+#	  log_cmd "grep -v \# $base_dir/etc/selinux/config | grep ."
+#	  log "---"
+#	  log
+
+
+
+          log "// SELinux status"
+          log "display SELinux status"
+          log "---"
+	  log_cmd "cat $base_dir/sos_commands/selinux/sestatus_-b | sed -n '/status/,/^$/p'"
 	  log
+          log_cmd "grep -v \# $base_dir/etc/selinux/config | grep ."
+          log "---"
+          log
 
 	  log "// setroubleshoot package"
 	  log "grep setroubleshoot \$base_dir/installed-rpms"
@@ -1282,9 +1430,13 @@ CAPSULE_IPS=""
 	  log "// SELinux denials"
 	  log "grep for selinux denials"
 	  log "---"
+	  log "from /var/log/audit/audit.log:"
 	  #log_cmd "tail -30 $base_dir/selinux_denials.log 2>/dev/null || grep -o denied.* $base_dir/var/log/audit/audit.log | sort -u | tail -100"
 	  SE_DENIALS=`cat $base_dir/var/log/audit/* | sort -u | egrep '^type=(AVC|SELINUX)' | while read line; do time=\`echo $line | sed 's/.*audit(\([0-9]*\).*/\1/'\`; echo \`date -d @$time +'%Y-%m-%d.%H:%M'\` $line; done | awk '{$2=""; $3=""; $4=""; print $0}'`
-	  log_cmd "echo -E \"$SE_DENIALS\" | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | tail -30"
+	  log_cmd "echo -E \"$SE_DENIALS\" | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | tail -30 | egrep denied | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto'"
+	  log
+	  log "from /var/log/messages:"
+	  log_cmd "egrep -I 'avc:  denied|SELinux is preventing|setroubleshoot' $base_dir/var/log/messages* | egrep -v units_rpm | sort -u | tail -30 | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto'"
 	  log "---"
 	  log
 
@@ -1367,17 +1519,36 @@ CAPSULE_IPS=""
           log "---"
           log
 
-          log "// yum exclusions"
-          log "egrep -r exclude \$base_dir/etc/yum*"
+          log "// yum/dnf exclusions"
+          log "egrep -r exclude \$base_dir/etc/yum* \$base_dir/etc/dnf/dnf.conf"
           log "---"
-	  log_cmd "egrep -r exclude $base_dir/etc/yum*"
+	  log_cmd "egrep -r exclude $base_dir/etc/yum* $base_dir/etc/dnf/dnf.conf"
           log "---"
           log
+
+          log "// disabled modules"
+          log "egrep '\[x|x\]' \$base_dir/sos_commands/dnf/dnf_--assumeno_module_list"
+          log "---"
+          log_cmd "egrep '\[x|x\]' \$base_dir/sos_commands/dnf/dnf_--assumeno_module_list | sed 's/^[ \t]*//;s/[ \t]*$//'"
+          log "---"
+          log
+
+          log "// contents of /etc/yum/pluginconf.d/versionlock.list"
+          log "cat \$base_dir/etc/yum/pluginconf.d/versionlock.list"
+          log "---"
+          log_cmd "cat $base_dir/etc/yum/pluginconf.d/versionlock.list || echo file '/etc/yum/pluginconf.d/versionlock.list' is absent"
+          log "---"
+          log
+
 
 	  log "// all installed satellite packages"
 	  log "egrep \"satellite|spacewalk|spacecmd\" \$base_dir/installed-rpms"
 	  log "---"
-	  log_cmd "egrep \"satellite|spacewalk|spacecmd\" $base_dir/installed-rpms 2>&1"
+	  if [ "$HOSTNAME" ]; then
+		log_cmd "egrep \"satellite|spacewalk|spacecmd\" $base_dir/installed-rpms 2>&1 | egrep -v $HOSTNAME"
+	  else
+		log_cmd "egrep \"satellite|spacewalk|spacecmd\" $base_dir/installed-rpms 2>&1"
+	  fi
 	  log "---"
 	  log
 
@@ -1385,7 +1556,8 @@ CAPSULE_IPS=""
 
 	  log "grep -v \"Red Hat\" \$base_dir/sos_commands/rpm/package-data | egrep -v ^\$HOSTNAME | cut -f1,4 | sort -k2"
 	  log "---"
-	  log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | egrep -v ^$HOSTNAME | cut -f1,4 | sort -k2 | egrep -i --color=always '^|$SATPACKAGES|Fedora|Kojii|CentOS|syslog-ng'"
+	  log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | egrep -v ^$HOSTNAME | cut -f1,4 | sort -k2 | egrep -i --color=always '^|$SATPACKAGES|Fedora|Kojii|CentOS|syslog-ng' | GREP_COLORS='ms=01;97' egrep --color=always '^|katello-|foreman-|pulp-client'"
+	  log_cmd "cat $base_dir/3rd_party 2>/dev/null | sort -k2 | egrep -i --color=always '^|$SATPACKAGES|Fedora|Kojii|CentOS|syslog-ng' | GREP_COLORS='ms=01;97' egrep --color=always '^|katello-|foreman-|pulp-client'"
 	  log "---"
 	  log
 
@@ -1401,12 +1573,21 @@ CAPSULE_IPS=""
 	  log "---"
 	  log
 
-	  log "// yum.log info"
-	  log "tail -300 \$base_dir/var/log/yum.log"
-	  log "---"
-	  log_cmd "tail -300 $base_dir/var/log/yum.log | egrep -i --color=always \"^|$SATPACKAGES\""
-	  log "---"
-	  log
+	  if [ ! -f $base_dir/var/log/dnf.rpm.log ]; then
+	  	log "// yum.log info"
+	  	log "tail -300 \$base_dir/var/log/yum.log"
+	  	log "---"
+	  	log_cmd "tail -300 $base_dir/var/log/yum.log | egrep -i --color=always '^|$SATPACKAGES'"
+	  	log "---"
+	  	log
+	  else
+                log "// dnf.rpm.log info"
+                log "egrep -v logging \$base_dir/var/log/dnf.rpm.log | tail -300"
+                log "---"
+                log_cmd "egrep -v logging $base_dir/var/log/dnf.rpm.log | tail -300 | egrep -i --color=always '^|$SATPACKAGES'"
+                log "---"
+                log
+	  fi
 
 	  log "// yum activity from lvmdump messages"
 	  log "grep yum \$base_dir/sos_commands/lvm2/lvmdump/messages"
@@ -1421,15 +1602,11 @@ CAPSULE_IPS=""
 
 	  log "// Recent exit codes from satellite-installer"
 
-	  log "grepping satellite and capsule files in foreman-installer directories for upgrade statuses"
+	  log "grepping satellite and capsule files in foreman-installer directory for upgrade statuses"
 	  log "---"
 
 	  export GREP_COLORS='ms=01;33'
-	  #cmd_output=`egrep -i "Exit with status code|--upgrade|Upgrade completed|Running installer with args|ASCII" $base_foreman/var/log/foreman-installer/{satellite*,capsule*} $base_dir/var/log/foreman-maintain/{satellite*,capsule*,foreman-maintain*} $base_dir/var/log/katello-installer/* 2>/dev/null | egrep -v "Hook" | sed s'/\[\[//'g | awk -F"[" '{print $2}' | sort -k 2 | tail | egrep --color=always "^|tuning|upgrade"`
-	  #cmd_output=`{ for i in \`ls -l --time-style=+'%Y%m%d.%H%M' $base_dir/var/log/foreman-installer/{satellite*,capsule*} 2>/dev/null | grep -v gz$ | sort -k 6 | awk '{print $NF}'\`; do egrep -h '^\[' $i  | sed s'/^\[/\[ /'g | egrep 'Exit with status code|Upgrade completed|installer with args' | egrep -i -A 2 '\-\-upgrade'; done; } | sort -k 3 | tail -30 | egrep --color=always "^|tuning|upgrade"`
-
-	  cmd_output=`{ for i in $(ls -l --time-style=+'%Y%m%d.%H%M' $base_dir/var/log/foreman-installer/{satellite*,capsule*} 2>/dev/null | grep -v gz$ | sort -k 6 | awk '{print $NF}'); do egrep -h '^\[' $i  | sed s'/^\[/\[ /'g | egrep 'Exit with status code|Upgrade completed|installer with args|Complete'; done; } | sort -k 3 | uniq -f 3 | tail -30 | egrep --color=always "^|tuning|upgrade"`
-
+	  cmd_output=$(egrep -i -h "Exit with status code|running installer with args|Upgrade completed|target-version" $base_dir/var/log/foreman-installer/{satellite*,capsule*} $base_dir/var/log/foreman-maintain/foreman-maintain.log* 2>/dev/null | grep \- | sed s'/\[  INFO //'g | sed s'/\[ INFO //'g | sed s'/\[DEBUG //'g | sed s'/^., \[//'g | sort -n | tail -30 | egrep --color=always -i "^|tuning|upgrade")
 
 	  log "$cmd_output"
 	  export GREP_COLORS='ms=01;31'
@@ -1479,12 +1656,30 @@ CAPSULE_IPS=""
 		log
 	  fi
 
+          log "// syspurpose"
+          log "cat \$base_dir/etc/rhsm/syspurpose/syspurpose.json"
+          log "---"
+          log_cmd "cat $base_dir/etc/rhsm/syspurpose/syspurpose.json"
+	  log
+          log "---"
+          log
+
 	  log "// list rhsm targets"
 	  log "egrep \"baseurl\" \$base_dir/etc/rhsm/rhsm.conf*"
 	  log "---"
 	  log_cmd "egrep \"baseurl\" $base_dir/etc/rhsm/rhsm.conf*"
 	  log "---"
 	  log
+
+
+          log "// check for simple content access (SCA)"
+          log "jq '.' \$base_dir/var/lib/rhsm/cache/content_access_mode.json | egrep 'org_environment'"
+          log "egrep 'Content Access' \$base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | tail"
+          log "---"
+          log_cmd "jq '.' $base_dir/var/lib/rhsm/cache/content_access_mode.json | egrep 'org_environment'"
+          log_cmd "egrep 'Content Access' $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | tail"
+          log "---"
+          log
 
 	  log "// subsman list installed"
 	  log "cat \$base_dir/sos_commands/subscription_manager/subscription-manager_list_--installed"
@@ -1495,6 +1690,7 @@ CAPSULE_IPS=""
 
 	  log "// subsman list consumed"
 	  log "cat \$base_dir/sos_commands/subscription_manager/subscription-manager_list_--consumed"
+          log "---"
 	  log_cmd "cat $base_dir/sos_commands/subscription_manager/subscription-manager_list_--consumed"
 	  log "---"
 	  log
@@ -1509,7 +1705,7 @@ CAPSULE_IPS=""
           log "// number of CPUs"
           log "grep processor \$base_dir/proc/cpuinfo | wc -l"
           log "---"
-          log_cmd "if [ -f $base_dir/sos_commands/processor/lscpu ]; then egrep '^CPU\(s\):' $base_dir/sos_commands/processor/lscpu; elif [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
+          log_cmd "if [ -f $base_dir/sos_commands/processor/lscpu ]; then egrep '^CPU\(s\):' $base_dir/sos_commands/processor/lscpu; elif [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; elif [ -f $base_dir/procs ]; then cat $base_dir/procs; fi"
           log "---"
           log
 
@@ -1568,15 +1764,15 @@ CAPSULE_IPS=""
 	  export GREP_COLORS='ms=01;32'
 	  log_cmd "echo 'httpd                            qdrouterd' | egrep --color=always '^|.'"
 	  log_cmd "echo '  |                                  |' | egrep --color=always '^|.'"
-	  log_cmd "echo '  |      celery     mongodb       qpidd' | egrep --color=always '^|.'"
-	  log_cmd "echo '  |           |          |           |' | egrep --color=always '^|.'"
-	  log_cmd "echo '  \-pulp -----/----------/-----------/' | egrep --color=always '^|.'"
+	  log_cmd "echo '  |      celery     mongodb       qpidd      squid' | egrep --color=always '^|.'"
+	  log_cmd "echo '  |           |          |           |         |' | egrep --color=always '^|.'"
+	  log_cmd "echo '  \-pulp -----/----------/-----------/---------/' | egrep --color=always '^|.'"
 	  log_cmd "echo '  |' | egrep --color=always '^|.'"
           log_cmd "echo '  \-smart_proxy_dynflow_core' | egrep --color=always '^|.'"
 	  log "  |"
 	  log "  \-passenger/puma"
 	  log "        |"
-	  log "        \-puppet3       postgreSQL                 tomcat"
+          log_cmd "echo '        \-puppet3       postgreSQL                 tomcat' | egrep --color=always '^|puppet3|postgreSQL'"
 	  log "        |                |   |                       |"
 	  log "        \-foreman -------/   \---------candlepin-----/"
 	  log "            |"
@@ -1587,6 +1783,10 @@ CAPSULE_IPS=""
 	  log
 	  export GREP_COLORS='ms=01;31'
 
+          log
+          log "Note:  In Satellite 6.10, qpidd was deprecated on capsule servers."
+          log
+
 
 	  log_tee "## Satellite Services"
 	  log
@@ -1596,7 +1796,7 @@ CAPSULE_IPS=""
 		log "// hammer ping output"
 		log "cat \$base_dir/sos_commands/foreman/hammer_ping"
 		log "---"
-		log_cmd "cat $base_dir/sos_commands/foreman/hammer_ping | egrep --color=always \"^|FAIL|\[OK\]\""
+		log_cmd "cat $base_dir/sos_commands/foreman/hammer_ping | egrep --color=always '^|FAIL' | GREP_COLORS='ms=01;33' egrep --color=always '^|\[OK\]'"
 		log "---"
 		log
 
@@ -1607,20 +1807,29 @@ CAPSULE_IPS=""
 	    log "// condensed satellite service status"
 	    log "grepping files foreman-maintain_service_status and systemctl_status_--all"
 	    log "---"
-	    log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep \"^$|\.service -|Active:|All services\" | egrep --color=always '^|failed|inactive|activating|deactivating|\[OK\]'"
+	    log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep \"^$|\.service -|Active:|All services\" | egrep --color=always '^|failed|inactive|activating|deactivating' | GREP_COLORS='ms=01;33' egrep --color=always '^|\[OK\]'"
 	    log
-	    log_cmd "egrep 'puppet|virt-who' $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating'"
+	    log_cmd "egrep 'puppet|squid|virt-who' $base_dir/sos_commands/systemd/systemctl_lists | egrep --color=always '^|failed|inactive|activating|deactivating'"
 	    log "---"
 	    log
 
 	    log "// satellite service status"
 	    log "from file $base_dir/sos_commands/foreman/foreman-maintain_service_status"
 	    log "---"
-	    export GREP_COLORS='ms=01;33'
-	    log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep --color=always \"^|Active:|\[OK\]|All services are running\" | egrep -v '{|}|displaying|^\||^\/|^\\|^\-' | uniq"
-	    export GREP_COLORS='ms=01;31'
+	    #export GREP_COLORS='ms=01;33'
+	    #log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep --color=always \"^|Active:|\[OK\]|All services are running\" | egrep -v '{|}|displaying|^\||^\/|^\\|^\-' | uniq"
+	    #export GREP_COLORS='ms=01;31'
+
+	    log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep -i --color=always '^|failed|inactive|activating|deactivating|error|alert|crit|warning' | egrep -v '{|}|displaying|^\||^\/|^\\|^\-' | uniq | GREP_COLORS='ms=01;33' egrep --color=always '^|\[OK\]|Active:|All services are running'"
 	    log "---"
 	    log
+
+            log "// listening services"
+            log "grepping netstat_-W_-neopa file for services listening on the network"
+            log "---"
+            log_cmd "egrep '^Active|^Proto|LISTEN' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d'"
+            log "---"
+            log
 
 	    log_tee " "
 
@@ -1631,13 +1840,13 @@ CAPSULE_IPS=""
 	    log "// condensed satellite service status"
 	    log "grepping files foreman-maintain_service_status and systemctl_status_--all"
 	    log "---"
-	    log "egrep \"mongo|postgres|qdrouterd|qpidd|squid|celery|pulp|dynflow|tomcat|goferd|httpd|puppet|foreman\" \$base_dir/sos_commands/systemd/systemctl_status_--all | grep service | egrep -v '\|'"
+	    log "egrep -A 4 'foreman-proxy.service \- |goferd.service \- |httpd.service \- |pulp*.service \- |puppet.service \- |puppetserver.service \- |qdrouterd.service \- |qpidd.service \- |*dynflow*.service \- |squid.service \- ' \$base_dir/sos_commands/systemd/systemctl_status_--all"
 	    log
-	    log_cmd "egrep \"mongo|postgres|qdrouterd|qpidd|squid|celery|pulp|dynflow|tomcat|goferd|httpd|puppet|foreman\" $base_dir/sos_commands/systemd/systemctl_status_--all | grep service | egrep -v '\|'"
+	    log_cmd "egrep -A 4 'foreman-proxy.service \- |goferd.service \- |httpd.service \- |pulp*.service \- |puppet.service \- |puppetserver.service \- |qdrouterd.service \- |qpidd.service \- |*dynflow*.service \- |squid.service \- ' $base_dir/sos_commands/systemd/systemctl_status_--all"
 	    log "---"
 	    log
 
-	    log "// condensed satellite service status"
+	    log "// satellite service status"
 	    log "grepping files foreman-maintain_service_status and systemctl_status_--all"
 	    log "---"
 	    log_cmd "egrep -A 10 \"foreman-proxy.service -|goferd.service -|httpd.service -|pulp_streamer.service -|puppet.service -|puppetserver.service -|qdrouterd.service -|qpidd.service -|rh-mongodb34-mongod.service -|smart_proxy_dynflow_core.service -|squid.service -|mongod.service -|postgresql.service -|pulp_celerybeat.service -|foreman-tasks.service -\" \$/base_dir/sos_commands/systemd/systemctl_status_--all"
@@ -1662,7 +1871,10 @@ CAPSULE_IPS=""
 
 	  else
 
-		log_tee "## goferd"
+          	export GREP_COLORS='ms=01;32'
+          	log_cmd "echo '## goferd' | grep --color=always \#"
+          	echo '## goferd' | grep --color=always \#
+          	export GREP_COLORS='ms=01;31'
 		log
 
 		log "// goferd service"
@@ -1674,6 +1886,13 @@ CAPSULE_IPS=""
 		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 goferd | egrep --color=always '^|failed|inactive|activating|deactivating'"
 		log "---"
 		log
+
+            	log "// are katello/gofer listening?"
+            	log "grepping netstat_-W_-neopa file for katello-agent port 5646 and goferd port 5647"
+            	log "---"
+            	log_cmd "egrep '^Active|^Proto|\:5646|\:5647' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+            	log "---"
+            	log
 
 		log "// installed katello-agent and/or gofer"
 		log "from file $base_dir/installed-rpms"
@@ -1691,20 +1910,37 @@ CAPSULE_IPS=""
 
 	  fi
 
+          export GREP_COLORS='ms=01;32'
+          log_cmd "echo '## postgres' | grep --color=always \#"
+	  echo '## postgres' | grep --color=always \#
+          export GREP_COLORS='ms=01;31'
+          log
 
+            log "PostgreSQL is used by Foreman and Candlepin to store records related to registered content hosts, subscriptions, jobs, and tasks. Over time, PostgreSQL accumulates enough data to cause queries to slow relative to the speeds achievable in a fresh installation."
+            log
+            log "Note:  Prior to Satellite 6.10, capsule servers should have packages postgresql and postgresql-lib, but not postgresql-server."
+            log
 
-	  log_tee "## PostgreSQL"
-	  log
+	  if [ "`egrep ^postgresql $base_dir/installed-rpms`" ]; then
+                log "// installed postgres packages"
+                log "egrep ^postgresql \$base_dir/installed-rpms"
+                log "---"
+                log_cmd "egrep ^postgresql $base_dir/installed-rpms"
+                log "---"
+                log
+	  fi
 
-	  if [ ! "`egrep -i postgres $base_dir/sos_commands/systemd/systemctl_status_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_foreman/var/lib/pgsql" ] && [ ! -d "$base_foreman/var/opt/rh/rh-postgresql12" ] && [ ! -d "$base_dir/sos_commands/postgresql" ]; then
+	  if [ ! "`egrep -i postgres $base_dir/sos_commands/systemd/systemctl_status_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_foreman/var/lib/pgsql" ] && [ ! -d "$base_foreman/var/opt/rh/rh-postgresql12" ] && [ ! -d "$base_dir/sos_commands/postgresql" ]; then
 
 		log "postgres not found"
 		log
 
-	  else
+	  elif [ -f $base_dir/installed-rpms ] && [ "`egrep 'satellite-capsule' $base_dir/installed-rpms`" ] && [ ! "`egrep 'satellite-6|foreman' $base_dir/installed-rpms`" ]; then
 
-	    log "PostgreSQL is used by Foreman and Candlepin to store records related to registered content hosts, subscriptions, jobs, and tasks. Over time, PostgreSQL accumulates enough data to cause queries to slow relative to the speeds achievable in a fresh installation."
-	    log
+		log "This is a capsule server.  Ignoring postgres server settings."
+		log
+
+	  else
 
 
 		log "// service status"
@@ -1792,7 +2028,7 @@ CAPSULE_IPS=""
 				log "// deadlocks"
 				log "grep -h -i deadlock \$base_foreman/var/lib/pgsql/data/pg_log/*.log"
 				log "---"
-				log_cmd "grep -h -i deadlock $base_foreman/var/lib/pgsql/data/pg_log/*.log"
+				log_cmd "grep -h -i deadlock \$base_foreman/var/lib/pgsql/data/pg_log/*.log | grep -v '[acpi]'"
 				log "---"
 				log
 
@@ -1845,7 +2081,7 @@ CAPSULE_IPS=""
 			log "// deadlocks"
 			log "grep -h -i deadlock \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log"
 			log "---"
-			log_cmd "grep -h -i deadlock $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log"
+			log_cmd "grep -h -i deadlock $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | grep -v '[acpi]'"
 			log "---"
 			log
 
@@ -1875,8 +2111,11 @@ CAPSULE_IPS=""
 
 	  fi
 
-	  log_tee "## MongoDB"
-	  log
+          export GREP_COLORS='ms=01;32'
+          log_cmd "echo '## mongodb' | grep --color=always \#"
+	  echo '## mongodb' | grep --color=always \#
+          export GREP_COLORS='ms=01;31'
+          log
 
 
 	  #if [ ! "`egrep -i mongo $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/etc/mongodb" ] && [ ! -d "$base_dir/var/log/mongodb" ]; then
@@ -1887,7 +2126,7 @@ CAPSULE_IPS=""
 
 	  else
 
-	    log "MongoDB is a NoSQL database server which is used by Pulp to store the metadata related to the synchronized repositories and their contents. Pulp also uses MongoDB to store information about Pulp tasks and their current state."
+	    log "MongoDB is a NoSQL database server which is used by Pulp to store the metadata related to the synchronized repositories and their contents. Pulp also uses MongoDB to store information about Pulp tasks and their current state.  MongoDB was deprecated in Satellite 6.10."
 	    log
 
 		log "// service status"
@@ -1941,21 +2180,23 @@ CAPSULE_IPS=""
 
 
 
-
-	  log_tee "## httpd (Apache)"
+	  export GREP_COLORS='ms=01;32'
+	  log_cmd "echo '## httpd (Apache)' | grep --color=always \#"
+	  echo '## httpd (Apache)' | grep --color=always \#
+          export GREP_COLORS='ms=01;31'
 	  log
 
 
-	   if [ ! "`egrep -i httpd $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/httpd" ]; then
+	   if [ ! "`egrep -i httpd $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/httpd" ]; then
 
 		log "httpd not found"
 		log
 
 	  else
 
-	    log "The Apache HTTP Server is a core component of Satellite. Passenger and Pulp, which are core components of Satellite, depend upon Apache HTTP Server to serve incoming requests. Requests that arrive through the web UI or the Satellite API are received by Apache HTTP Server and then forwarded to the components of Satellite that operate on them."
-	    log
 
+		log "The httpd.service is responsible for the REST API. It will create a pool of child processes or threads to handle requests.  Passenger and Pulp, which are core components of Satellite, depend upon Apache HTTP Server to serve incoming requests. Requests that arrive through the web UI or the Satellite API are received by Apache HTTP Server and then forwarded to the components of Satellite that operate on them."
+		log
 
 		log "// service status"
 		log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
@@ -1965,6 +2206,13 @@ CAPSULE_IPS=""
 		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 httpd | egrep --color=always '^|failed|inactive|activating|deactivating'"
 		log "---"
 		log
+
+            	log "// is apache listening?"
+            	log "grepping netstat_-W_-neopa file for ports 443 and 80"
+            	log "---"
+            	log_cmd "egrep '^Active|^Proto|\:443|\:80 ' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+            	log "---"
+            	log
 
 		log "// queues on error_log means the # of requests crossed the border - satellite inaccessible"
 		log "grep 'Request queue is full' \$base_foreman/var/log/httpd/error_log | wc -l"
@@ -1980,19 +2228,35 @@ CAPSULE_IPS=""
 		log "---"
 		log
 
-                log "// sysctl configuration"
-                log "grep 'fs.aio-max-nr' \$base_dir/etc/sysctl.conf"
+                log "// sysctl configuration (older than 6.9)"
+                log "grep 'fs.aio-max-nr' \$base_dir/etc/01-satellite-tune.conf"
                 log "---"
-                log_cmd "grep 'fs.aio-max-nr' $base_dir/etc/sysctl.conf"
-                log "---"
-                log
+                log_cmd "grep 'fs.aio-max-nr' $base_dir/etc/01-satellite-tune.conf"
+		log "---"
+		log
+		log "Note:  For PassengerMaxPoolSize > 256, please run these commands:"
+		log
+		log "echo 'kernel.sem= 250 256000 32 16384' > /etc/sysctl.d/01-satellite-tune.conf"
+		log "echo 'fs.aio-max-nr = 1000000' >> /etc/sysctl.d/01-satellite-tune.conf"
+		log "sysctl -p /etc/sysctl.d/01-satellite-tune.conf"
+		log
 
                 log "// httpd|apache limits"
                 log "grep LimitNOFILE \$base_dir/etc/systemd/system/httpd.service.d/limits.conf"
                 log "---"
                 log_cmd "grep LimitNOFILE $base_dir/etc/systemd/system/httpd.service.d/limits.conf"
-                log "---"
-                log
+		log
+		log "---"
+		log
+		log "Note:  The following values are recommended for Satellite servers older than 6.9:"
+		log
+		log "[Service]"
+		log "LimitNOFILE=640000"
+		log
+		log "Then run these commands:"
+		log "# systemctl daemon-reload"
+		log "# foreman-maintain service restart"
+		log
 
                 log "// prefork.conf configuration"
                 log "egrep 'ServerLimit|StartServers' \$base_dir/etc/httpd/conf.modules.d/prefork.conf"
@@ -2003,39 +2267,48 @@ CAPSULE_IPS=""
 
 		if [ -f "$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log" ]; then
 
-		log "// TOP 20 of ip address requesting the satellite via https"
-		log "awk '{print \$1}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | sort | uniq -c | sort -nr | head -n20"
-		log "---"
-		log_cmd "awk '{print \$1}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | sort | uniq -c | sort -nr | head -n20 | egrep --color=always \"^|$IPADDRLIST|$CAPSULE_IPS\""
-		log "---"
-		log
+                log "// TOP 20 IP addresses sending https requests to Satellite (Satellite and capsule servers highlighted)"
+                log "awk '{print \$1}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | sort | uniq -c | sort -nr | head -n20"
+                log "---"
+                log_cmd "awk '{print \$1}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | sort | uniq -c | sort -nr | head -n20 | egrep --color=always \"^|$SATELLITE_IP|$CAPSULE_IPS\""
+                log "---"
+                log
 
-		log "// TOP 20 of ip address requesting the satellite via https (detailed) - not from Satellite server"
+		log "// TOP 20 IP addresses sending https requests to Satellite - not from Satellite or capsule servers (detailed)"
 		#log "egrep -v \"\$HOST_IPS\" \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1,\$4}' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
-		log "awk '{print \$1,\$4}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v \"\$IPADDRLIST\" | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
+		log "awk '{print \$1,\$4}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v '\$SATELLITE_IP|\$CAPSULE_IPS' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
 		log "---"
 		#log_cmd "egrep -v \"$HOST_IPS\" $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1,\$4}' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
-		log_cmd "awk '{print \$1,\$4}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v \"\$IPADDRLIST\" | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20 | egrep --color=always \"^|$CAPSULE_IPS\""
+		log_cmd "awk '{print \$1,\$4}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20 | egrep --color=always \"^|$CAPSULE_IPS\""
 		log "---"
 		log
 
-		log "// TOP 50 of uri requesting the satellite via https - not from Satellite server"
+		log "// TOP 50 URIs sending https requests to Satellite - not from Satellite or capsule servers"
 		#log "egrep -v \"\$HOST_IPS\" \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
-		log "awk '{print \$1, \$6, \$7}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v \"\$IPADDRLIST\" | sort | uniq -c | sort -nr | head -n 50"
+		log "awk '{print \$1, \$6, \$7}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v '\$SATELLITE_IP|\$CAPSULE_IPS' | sort | uniq -c | sort -nr | head -n 50"
 		log "---"
 		#log_cmd "egrep -v \"$HOST_IPS\" $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
-		log_cmd "awk '{print \$1, \$6, \$7}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v \"\$IPADDRLIST\" | sort | uniq -c | sort -nr | head -n 50 | egrep --color=always \"^|$CAPSULE_IPS\""
+		log_cmd "awk '{print \$1, \$6, \$7}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | sort | uniq -c | sort -nr | head -n 50 | egrep --color=always \"^|$CAPSULE_IPS\""
 		log "---"
 		log
 
-		log "// TOP 50 of uri requesting the satellite via https - from Satellite server"
+		log "// TOP 50 URIs sending https requests to Satellite - from Satellite server"
 		#log "egrep \"\$HOST_IPS\" \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
-		log "awk '{print \$1, \$6, \$7}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep \"\$IPADDRLIST\" | sort | uniq -c | sort -nr | head -n 50"
+		log "awk '{print \$1, \$6, \$7}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep '\$SATELLITE_IP' | sort | uniq -c | sort -nr | head -n 50"
 		log "---"
 		#log_cmd "egrep \"$HOST_IPS\" $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
-		log_cmd "awk '{print \$1, \$6, \$7}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep \"\$IPADDRLIST\" | sort | uniq -c | sort -nr | head -n 50"
+		log_cmd "awk '{print \$1, \$6, \$7}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep '$SATELLITE_IP' | sort | uniq -c | sort -nr | head -n 50"
 		log "---"
 		log
+
+                log "// TOP 50 URIs sending https requests to Satellite - from capsule servers"
+                #log "egrep \"\$HOST_IPS\" \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
+                log "awk '{print \$1, \$6, \$7}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep '\$CAPSULE_IPS' | egrep -v '\$SATELLITE_IP' | sort | uniq -c | sort -nr | head -n 50"
+                log "---"
+                #log_cmd "egrep \"$HOST_IPS\" $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1, \$6, \$7}' | sort | uniq -c | sort -nr | head -n 50"
+                log_cmd "awk '{print \$1, \$6, \$7}' $base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | egrep '$CAPSULE_IPS' | egrep -v '$SATELLITE_IP' | sort | uniq -c | sort -nr | head -n 50"
+                log "---"
+                log
 
 		log "// General HTTP return codes in apache logs"
 		log "\$n;grep -P '\" \$n\d\d ' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$9}' | sort | uniq -c | sort -nr"
@@ -2056,8 +2329,414 @@ CAPSULE_IPS=""
 	  fi
 
 
+          export GREP_COLORS='ms=01;32'
+          log_cmd "echo '## puppet' | grep --color=always \#"
+	  echo '## puppet' | grep --color=always \#
+          export GREP_COLORS='ms=01;31'
+          log
+
+
+	   if [ ! "`egrep puppet $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/puppetlabs" ] && [ ! -d "$base_dir/var/log/puppet" ] && [ ! -d "$base_dir/etc/puppet" ] && [ ! -d "$base_dir/etc/puppetlabs" ]; then
+
+		log "puppet not found"
+		log
+
+	  else
+
+	    log "Puppet 3 is a Ruby application and runs inside the Passenger application server, whereas Puppet 4 runs as a standalone Java-based application. Puppet 3 came with Satellite 6.3, Puppet 4 and 5 came with Satellite 6.4, and Puppet 6 came with Satellite 6.8."
+	    log
+
+	    log "The Satellite server uses Puppet to manage its configuration files, and (prior to version 6.8) as its default software configuration tool for hosts.  Hosts also use Puppet to send facts to the Satellite server, although workarounds are available to do this without Puppet."
+	    log
+
+                log "// service status"
+                log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
+                log "---"
+                log_cmd "grep -h puppet $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+                log
+                log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 puppet | egrep --color=always '^|failed|inactive|activating|deactivating'"
+                log "---"
+                log
+
+            	log "// is puppet listening?"
+            	log "grepping netstat_-W_-neopa file for port 8140"
+            	log "---"
+            	log_cmd "egrep '^Active|^Proto|\:8140' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+            	log "---"
+            	log
+
+
+                log "// check noexec property on tmp directories"
+                log "egrep noexec \$base_dir/{mount,etc/fstab} | grep \/tmp"
+                log "---"
+                log_cmd "egrep noexec $base_dir/{mount,etc/fstab} | grep \/tmp"
+                log "---"
+                log
+
+		log "// puppetserver memory allocation"
+		log "grep 'JAVA_ARGS=' \$base_dir/etc/sysconfig/puppetserver"
+		log "---"
+		log_cmd "grep 'JAVA_ARGS=' $base_dir/etc/sysconfig/puppetserver"
+		log "---"
+		log
+		log "Note: If too little memory is allocated to puppetserver, the puppetserver service can over-use the CPU."
+		log
+
+                log "// puppetserver memory usage"
+                log "from \$base_dir/ps"
+                log "---"
+                if [ -f "$base_dir/ps" ]; then
+                        num=0;
+                        for i in `grep puppetserver $base_dir/ps | awk '{print $6}'`; do
+                                num=`expr $num + $i`;
+                        done;
+                        num=`expr $num / 1024`
+                        log "$num Mib";
+                fi
+                log "---"
+                log
+
+
+                log "// Puppet Server Error"
+                log "grep ERROR \$base_dir/var/log/puppetlabs/puppetserver/puppetserver.log $base_dir/var/log/puppet/puppetserver/puppetserver.log 2>/dev/null"
+                log "---"
+                log_cmd "grep ERROR $base_dir/var/log/puppetlabs/puppetserver/puppetserver.log $base_dir/var/log/puppet/puppetserver/puppetserver.log 2>/dev/null | tail -100"
+                log "---"
+                log
+
+
+
+	  fi
+
+
+          export GREP_COLORS='ms=01;32'
+          log_cmd "echo '## celery' | grep --color=always \#"
+          echo '## celery' | grep --color=always \#
+          export GREP_COLORS='ms=01;31'
+          log
+
+          if [ ! "`egrep -i celery $base_dir/installed_rpms 2>/dev/null | head -1`" ] && [ ! "`egrep -i celerybeat $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_show_service_--all 2>/dev/null | head -1`" ]; then
+
+                log "celery not found"
+                log
+
+
+          else
+
+		log "Pulp celery resource_manager is responsible for dispatching Pulp jobs among worker threads.  When you see log messages about tasks that reserve and release resources, this is the worker that performs those tasks.  Only one of these services should be running at once.  In Satellite 6.10, celery was removed, but resource_manager remains."
+		log
+
+                log "// service status"
+                log "from files systemctl_list-unit-files and systemctl_status_--all"
+                log "---"
+                log_cmd "grep -h celerybeat $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+                log
+                log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 celerybeat | egrep --color=always '^|failed|inactive|activating|deactivating'"
+                log "---"
+                log
+
+                log "// resource_manager status"
+                log "from file qpid-stat_-q"
+                log "---"
+                log_cmd "egrep 'resource_manager|\=|bytesIn' $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 | egrep -v '0     0      0       0      0        0'"
+                log "---"
+                log
+
+                log "// active celery workers (pre-6.10)"
+                log "egrep celery \$base_dir/ps"
+                log "---"
+		log_cmd "egrep celery $base_dir/ps"
+                log "---"
+                log
+
+
+                log "// celery errors"
+                log "egrep celery \$base_dir/var/log/messages | egrep ERROR"
+                log "---"
+		log_cmd "egrep celery $base_dir/var/log/messages | egrep ERROR | tail - 100"
+                log "---"
+                log
+
+	   fi
+
+
+
+          export GREP_COLORS='ms=01;32'
+          log_cmd "echo '## pulp' | grep --color=always \#"
+	  echo '## pulp' | grep --color=always \#
+          export GREP_COLORS='ms=01;31'
+          log
+
+	  if [ ! "`egrep -i pulp $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ]; then
+
+		log "pulp not found"
+		log
+
+
+	  else
+
+	    log "Pulp, a component of Katello, is a software repository management tool written in Python. Pulp provides complete software repository management and the capability to mirror repositories, the capability to host repositories, and the capability to distribute the contents of those repositories to a large number of consumers."
+	    log
+
+	    log "Pulp manages RPM content, Puppet modules, and container images in Satellite. Pulp also publishes Content Views and creates local repositories from which Capsules and hosts retrieve content. The configuration of the Apache HTTP Server determines how efficiently Pulp REST API requests are handled."
+	    log
+
+	    log "Pulp depends upon Apache server to provide access to Pulp's APIs and internal components."
+	    log
+
+	    log "Pulp3, introduced in Satellite 6.10, stores on demand packages in postgres rather than as soft links on disk.  Pulp3's storage scheme is incompatible with both pulp2 and with pulp-admin."
+	    log
+
+	    log "The pulp_streamer is a streaming proxy service that translates the files in Pulp repositories to their locations in upstream repositories. This service interacts with Pulp’s core services to determine where the content is located and how to download it. It streams the content back to the client through Squid and Apache httpd as it is downloaded."
+	    log
+
+                log "Pulp celery resource_manager is responsible for dispatching Pulp jobs among worker threads.  When you see log messages about tasks that reserve and release resources, this is the worker that performs those tasks.  Only one of these services should be running at once.  In Satellite 6.10/pulp3, celery was removed, but resource_manager remains."
+                log
+
+	    log "The pulp_workers.service is responsible for downloading data from upstream repositories, and for publishing.  Pulp workers depend on celery."
+	    log
+
+
+		log "// service status"
+		log "from files systemctl_list-unit-files and systemctl_status_--all"
+		log "---"
+		log_cmd "grep -h pulp $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+		log
+		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 pulp | egrep --color=always '^|failed|inactive|activating|deactivating'"
+		log "---"
+		log
+
+                log "// resource_manager status"
+                log "from file qpid-stat_-q"
+                log "---"
+                log_cmd "egrep 'resource_manager|\=|bytesIn' $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 | egrep -v '0     0      0       0      0        0'"
+                log "---"
+                log
+
+		log "// pulp_workers configuration"
+		log "egrep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY|pulpcore_worker_count' \$base_dir/etc/default/pulp_workers \$base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
+		log "---"
+		log_cmd "egrep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY|pulpcore_worker_count' $base_dir/etc/default/pulp_workers $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
+		log "---"
+		log
+
+          	log "// number of CPUs"
+          	log "grep processor \$base_dir/proc/cpuinfo | wc -l"
+          	log "---"
+          	log_cmd "if [ -f $base_dir/sos_commands/processor/lscpu ]; then egrep '^CPU\(s\):' $base_dir/sos_commands/processor/lscpu; elif [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; elif [ -f $base_dir/procs ]; then cat $base_dir/procs; fi"
+          	log "---"
+          	log
+
+            	log "// pulp squid port"
+            	log "egrep pulp -A 1 \$base_dir/etc/squid/squid.conf"
+            	log "---"
+          	export GREP_COLORS='ms=01;33'
+            	log_cmd "egrep pulp -A 1 $base_dir/etc/squid/squid.conf | egrep '^$|http_port|3128|accel|defaultsite=|127.0.0.1|\:8751' --color=ALWAYS"
+		export GREP_COLORS='ms=01;31'
+            	log "---"
+            	log
+
+		log "// Total number of configured pulp agents"
+		log "grep pulp.agent \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 \$base_dir/sos_commands/pulp/qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671 2>/dev/null | wc -l"
+		log "---"
+		log_cmd "grep pulp.agent $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 $base_dir/sos_commands/pulp/qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671 2>/dev/null | wc -l"
+		log "---"
+		log
+
+		log "// Total number of (active) pulp agents"
+		log "egrep 'pulp.agent|Anonymous connections disabled' \$base_dir/sos_commands/katello/qpid-stat_-q* \$base_dir/sos_commands/pulp/qpid-stat_-q* 2>/dev/null | grep \" 1.*1\$\" | wc -l"
+		log "---"
+		log_cmd "egrep 'pulp.agent|Anonymous connections disabled' $base_dir/sos_commands/katello/qpid-stat_-q* $base_dir/sos_commands/pulp/qpid-stat_-q* 2>/dev/null | grep \" 1.*1\$\" | wc -l"
+		log "---"
+		log
+
+                log "// pulp worker timeout"
+                log "egrep ^worker_timeout \$base_dir/etc/pulp/server.conf"
+                log "---"
+		log_cmd "egrep ^worker_timeout $base_dir/etc/pulp/server.conf"
+                log "---"
+                log
+
+
+		log "// unfinished pulp tasks"
+		log "grep -E '(\"finish_time\" : null|\"start_time\"|\"state\"|\"pulp:|^})' \$base_dir/sos_commands/pulp/pulp-running_tasks"
+		log "---"
+		log_cmd "grep '\"task_id\"' $base_dir/sos_commands/pulp/pulp-running_tasks | wc -l"
+		log "---"
+		log
+		log_cmd "grep -E '(\"finish_time\" : null|\"start_time\"|\"state\"|\"pulp:|^})' $base_dir/sos_commands/pulp/pulp-running_tasks | uniq"
+		log "---"
+		log
+
+                log "// migration errors"
+                log "egrep pulp_2to3_migration \$base_dir/sos_commands/foreman/foreman-maintain_service_status"
+                log "---"
+                log_cmd "egrep pulp_2to3_migration $base_dir/sos_commands/foreman/foreman-maintain_service_status | tail -100"
+                log "---"
+                log
+
+	  fi
+
+
+          export GREP_COLORS='ms=01;32'
+          log_cmd "echo '## squid' | grep --color=always \#"
+	  echo '## squid' | grep --color=always \#
+          export GREP_COLORS='ms=01;31'
+          log
+
+          if [ ! "`egrep -i squid $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ]; then
+
+                log "squid not found"
+                log
+
+          else
+
+            log "Squid is a caching and forwarding HTTP web proxy supporting http, https, FTP and more. The squid service is used by pulp as is a core component of Red Hat Satellite 6.  When 1 or more clients request a package with yum install $package, it gets downloaded to the squid proxy cache and every 10 minutes, a process runs which copies downloaded packages from the squid cache to disk.  The squid service also supports Satellite's various download policies for repository and capsule syncs."
+            log
+
+	    log "Note: Squid was removed in Satellite 6.10."
+	    log
+
+            log "// service status"
+            log "from files systemctl_list-unit-files and systemctl_status_--all"
+            log "---"
+            log_cmd "grep -h squid $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+            log
+            log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 squid | egrep --color=always '^|failed|inactive|activating|deactivating'"
+            log "---"
+            log
+
+            log "// pulp squid port"
+            log "egrep pulp -A 1 \$base_dir/etc/squid/squid.conf"
+            log "---"
+            export GREP_COLORS='ms=01;33'
+            log_cmd "egrep pulp -A 1 $base_dir/etc/squid/squid.conf"
+            export GREP_COLORS='ms=01;31'
+            log "---"
+            log
+
+          fi
+
+
+
+          export GREP_COLORS='ms=01;32'
+          log_cmd "echo '## qpidd' | grep --color=always \#"
+	  echo '## qpidd' | grep --color=always \#
+          export GREP_COLORS='ms=01;31'
+          log
+
+	  if [ ! "`egrep -i 'qpidd' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd $base_dir/etc/qpid/qpidd.conf 2>/dev/null | head -1`" ]; then
+
+		log "qpidd not found"
+		log
+
+                log "Note:  In Satellite 6.10, qpidd was deprecated on capsule servers."
+                log
+
+	  else
+
+		log "Apache Qpid is a cross-platform Enterprise Messaging system that implements the Advanced Messaging Queue Protocol (AMQP)."
+		log
+
+		log "AMQP Messaging uses a Producer - Consumer model. Communication between the message producers and message consumers is decoupled by a broker that provides exchanges and queues. This allows applications to produce and consume data at different rates. Producers send messages to exchanges on the message broker. Consumers subscribe to exchanges that contain messages of interest, creating subscription queues that buffer messages for the consumer. Message producers can also create subscription queues and publish them for consuming applications."
+		log
+
+		log "The messaging broker functions as a decoupling layer, providing exchanges that distribute messages, the ability for consumers and producers to create public and private queues and subscribe them to exchanges, and buffering messages that are sent at-will by producer applications, and delivered on-demand to interested consumers."
+		log
+
+		log "Note:  In Satellite 6.10, qpidd was deprecated on capsule servers."
+		log
+
+
+		log "// service status"
+		log "from files systemctl_list-unit-files and systemctl_status_--all"
+		log "---"
+		log_cmd "grep -h qpidd $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+		log
+		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 qpidd | egrep --color=always '^|failed|inactive|activating|deactivating'"
+		log "---"
+		log
+
+		if [ "`grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data 2>/dev/null | grep qpid`" ]; then
+			log "// 3rd party qpidd packages"
+			log "from file $base_dir/sos_commands/rpm/package-data"
+			log "---"
+			log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | grep qpid | grep -v ^$HOSTNAME | cut -f1,4 | sort -k2"
+			log "---"
+			log
+		fi
+
+		log "// qpidd disk usage"
+		log "grep \"^-\" \$base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=\$5 } END {printf \"\%d\", s}' | numfmt --to=iec"
+		log "---"
+		QPIDD_DISK_USAGE=`grep "^-" $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=$5 } END {printf "%d", s}' | numfmt --to=iec`
+		log "$QPIDD_DISK_USAGE"
+		log "---"
+		log
+
+		log "// qpidd configuration"
+		log "grep mgmt_pub_interval \$base_dir/etc/qpid/qpidd.conf"
+		log "---"
+		log_cmd "grep mgmt_pub_interval $base_dir/etc/qpid/qpidd.conf"
+		log "---"
+		log
+
+		log "// qpidd limits"
+		log "grep LimitNOFILE \$base_dir/etc/systemd/system/qpidd.service.d/90-limits.conf"
+		log "---"
+		log_cmd "grep LimitNOFILE $base_dir/etc/systemd/system/qpidd.service.d/90-limits.conf"
+		log "---"
+		log
+
+	  fi
+
+          export GREP_COLORS='ms=01;32'
+          log_cmd "echo '## qdrouterd' | grep --color=always \#"
+	  echo '## qdrouterd' | grep --color=always \#
+          export GREP_COLORS='ms=01;31'
+          log
+
+	  if [ ! "`egrep -i 'qdrouterd' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ]; then
+
+		log "qdrouterd not found"
+		log
+
+	  else
+
+
+		log "The qdrouterd.service is a network daemon that directs messages between endpoints, such as messaging clients and servers.  Unlike message brokers, they do not take responsibility for messages.  The (AMQP) router network will deliver the message, possibly through several intermediate routers – and then route the consumer’s acknowledgement of that message back across the same path."
+		log
+		log "The qdrouterd service communicates with goferd, which is expected to run on the host servers (including capsule servers)."
+		log
+
+		log "// service status"
+		log "from files systemctl_list-unit-files and systemctl_status_--all"
+		log "---"
+		log_cmd "grep -h qdrouterd $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
+		log
+		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 qdrouterd | egrep --color=always '^|failed|inactive|activating|deactivating'"
+		log "---"
+		log
+
+		log "// qrouterd limits"
+		log "grep LimitNOFILE \$base_dir/etc/systemd/system/qdrouterd.service.d/90-limits.conf"
+		log "---"
+		log_cmd "grep LimitNOFILE $base_dir/etc/systemd/system/qdrouterd.service.d/90-limits.conf"
+		log "---"
+		log
+
+	  fi
+
+
 	  log_tee "## Passenger"
 	  log
+
+                log "// are any passenger gems installed?"
+                log "grep passenger \$base_dir/sos_commands/ruby/gem_list"
+                log "---"
+                log_cmd "grep passenger $base_dir/sos_commands/ruby/gem_list"
+                log "---"
+                log
 
 	  if [ ! "`egrep . $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ] && [ ! "`egrep -i general $base_dir/sos_commands/foreman/passenger-status_--show_pool 2>/dev/null | head -1`" ]; then
 
@@ -2082,12 +2761,12 @@ CAPSULE_IPS=""
 		log "---"
 		log
 
-		log "// passenger pool status"
-		log "head -7 \$base_dir/sos_commands/foreman/passenger-status_--show_pool"
-		log "---"
-		log_cmd "head -7 $base_dir/sos_commands/foreman/passenger-status_--show_pool 2>&1"
-		log "---"
-		log
+                log "// passenger pool status"
+                log "egrep -A 3 'General information' \$base_dir/sos_commands/foreman/passenger-status_--show_pool"
+                log "---"
+                log_cmd "egrep -A 3 'General information' $base_dir/sos_commands/foreman/passenger-status_--show_pool"
+                log "---"
+                log
 
 		log "// passenger memory usage"
 		log "egrep 'Passenger processes' -A 100 \$base_dir/sos_commands/foreman/passenger-memory-stats"
@@ -2215,64 +2894,6 @@ CAPSULE_IPS=""
 	  fi
 
 
-	  log_tee "## Puppet"
-	  log
-
-
-	   if [ ! "`egrep puppet $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/puppetlabs" ] && [ ! -d "$base_dir/var/log/puppet" ] && [ ! -d "$base_dir/etc/puppet" ] && [ ! -d "$base_dir/etc/puppetlabs" ]; then
-
-		log "puppet not found"
-		log
-
-	  else
-
-	    log "Puppet 3 is a Ruby application and runs inside the Passenger application server, whereas Puppet 4 runs as a standalone Java-based application. Puppet 3 came with Satellite 6.3, Puppet 4 and 5 came with Satellite 6.4, and Puppet 6 came with Satellite 6.8."
-	    log
-
-
-		log "// service status"
-		log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
-		log "---"
-		log_cmd "grep -h puppet $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
-		log
-		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 puppet | egrep --color=always '^|failed|inactive|activating|deactivating'"
-		log "---"
-		log
-
-		log "// Puppet Server Error"
-		log "grep ERROR \$base_dir/var/log/puppetlabs/puppetserver/puppetserver.log $base_dir/var/log/puppet/puppetserver/puppetserver.log 2>/dev/null"
-		log "---"
-		log_cmd "grep ERROR $base_dir/var/log/puppetlabs/puppetserver/puppetserver.log $base_dir/var/log/puppet/puppetserver/puppetserver.log 2>/dev/null | tail -100"
-		log "---"
-		log
-
-		log "// puppetserver memory usage"
-		log "from \$base_dir/ps"
-		log "---"
-		if [ -f "$base_dir/ps" ]; then 
-			num=0;
-			for i in `grep puppetserver $base_dir/ps | awk '{print $6}'`; do 
-				num=`expr $num + $i`; 
-			done; 
-			num=`expr $num / 1024`
-			log "$num Mib"; 
-		fi
-		log "---"
-		log
-
-		log "// puppetserver memory allocation"
-		log "grep 'JAVA_ARGS=' \$base_dir/etc/sysconfig/puppetserver"
-		log "---"
-		log_cmd "grep 'JAVA_ARGS=' $base_dir/etc/sysconfig/puppetserver"
-		log "---"
-		log
-		log "Note: If too little memory is allocated to puppetserver, the puppetserver service can over-use the CPU."
-		log
-
-
-
-	  fi
-
 
 	  log_tee "## Foreman"
 	  log
@@ -2286,6 +2907,8 @@ CAPSULE_IPS=""
 
 	    log "Foreman is a Ruby application that runs inside the Passenger application server and does a number of things, among them providing a UI, providing remote execution, running Foreman SCAP scans on content hosts. Foreman is also involved in Content Host Registrations.  Foreman’s performance and scalability are affected directly by the configurations of httpd and Passenger."
 	    log
+	    log "The foreman-proxy.service  manages the foreman-proxy. Foreman-Proxy is located on or near a machine that performs a specific function and helps foreman orchestrate the process of commissioning a new host. Placing the proxy on or near to the actual service will also help reduce latencies in large distributed organizations."
+	    log
 
 
 		log "// service status"
@@ -2296,6 +2919,13 @@ CAPSULE_IPS=""
 		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 foreman-proxy | egrep --color=always '^|failed|inactive|activating|deactivating'"
 		log "---"
 		log
+
+                log "// are any foreman gems installed?"
+                log "grep foreman \$base_dir/sos_commands/ruby/gem_list"
+                log "---"
+                log_cmd "grep foreman $base_dir/sos_commands/ruby/gem_list"
+                log "---"
+                log
 
                 log "// postgres idle processes (foreman)"
                 log "grep ^postgres \$base_dir/ps | grep idle$ | grep \"foreman foreman\" | wc -l"
@@ -2319,7 +2949,7 @@ CAPSULE_IPS=""
 		log "// paused foreman tasks"
 		log "grepping foreman_tasks_tasks for paused tasks"
 		log "---"
-		log_cmd "grep -E '(^                  id|paused)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed 's/  //g' | sed -e 's/ |/|/g' | sed -e 's/| /|/g' | sed -e 's/^ //g' | sed -e 's/|/,/g'"
+		log_cmd "grep -E '(^                  id|paused)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed 's/  //g' | sed -e 's/ |/|/g' | sed -e 's/| /|/g' | sed -e 's/^ //g' | sed -e 's/|/,/g' | sort -t ',' -k 3"
 		log "---"
 		log
 
@@ -2330,10 +2960,19 @@ CAPSULE_IPS=""
 		log "---"
 		log
 
+
+                log "// Failed Tasks TOP"
+                log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
+                log "---"
+                failed_tasks_top=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -v "success|running|scheduled" | sort -t "|" -k 10 -r | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//'`
+                log "$failed_tasks_top"
+                log "---"
+                log
+
 		log "// Tasks TOP"
 		log "grep Actions \$base_dir/sos_commands/foreman/foreman_tasks_tasks  | cut -d, -f3 | sort | uniq -c | sort -nr | tail -100"
 		log "---"
-		log_cmd "grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks  | cut -d, -f3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort | uniq -c | sort -nr | tail -100 | egrep --color=always '^|paused|running|error|pending|warning|scheduled'"
+		log_cmd "grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks  | cut -d, -f3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -k 7 -r | head -100 | egrep --color=always '^|paused|running|error|pending|warning|scheduled' | sed s'/  //'g"
 		log "---"
 		log
 
@@ -2354,7 +2993,7 @@ CAPSULE_IPS=""
           log "Cockpit is a web-based server administration tool sponsored by Red Hat.  It was included in Fedora 21 by default, and later in RHEL 8 (although it can be installed in RHEL 7).  Cockpit listens on port 9090 by default, and therefore it conflicts with the foreman-proxy service.  Cockpit can be reconfigured to use another port to prevent this conflict."
           log
 
-          if [ ! "`egrep -i cockpit $base_dir/installed-rpms $base_dir/sos_commands/systemd/systemctl_status_--all $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot $base_dir/var/log/messages* 2>/dev/null | grep -v units_rpm`" ]; then
+          if [ ! "`egrep -i cockpit $base_dir/installed-rpms $base_dir/sos_commands/systemd/systemctl_status_--all $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot $base_dir/var/log/messages* 2>/dev/null | egrep -v 'units_rpm|\.rpm'`" ]; then
 
                 log "cockpit not found"
                 log
@@ -2372,13 +3011,16 @@ CAPSULE_IPS=""
                 log
 
                 log "// log errors for cockpit-ws"
-                log "from journalctl_--no-pager_--catalog_--boot and messages"
-                log "---"
 		if [ -f "$base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot" ]; then
-			log_cmd "grep 'cockpit-ws' $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | grep -v 'units_rpm command' | tail -30 | cut -c -10240"
+			log "from journalctl_--no-pager_--catalog_--boot and messages"
+			log "---"
+			log_cmd "grep 'cockpit-ws' $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | egrep -v 'units_rpm command|pulp_streamer|nectar.download' | tail -30 | cut -c -10240"
 		elif [ -f "$base_dir/var/log/messages" ]; then
+			log "from /var/log/messages"
+			log "---"
 			log_cmd "grep 'cockpit-ws' $base_dir/var/log/messages | grep -v 'units_rpm command' | tail -30 | cut -c 10240"
 		else
+			log "---"
 			log "neither journalctl_--no-pager_--catalog_--boot nor /var/log/messages found"
 		fi
                 log "---"
@@ -2386,35 +3028,6 @@ CAPSULE_IPS=""
 
           fi
 
-
-	  log_tee "## Katello"
-	  log
-
-	  if [ ! -d "$base_dir/sos_commands/katello" ] && [ ! -f "$base_dir/etc/httpd/conf.d/05-foreman-ssl.d/katello.conf" ]; then
-
-		log "katello not found"
-		log
-
-	  else
-
-	    log "Katello is a Foreman plug-in for subscription and repository management. It provides a means to subscribe to Red Hat repositories and download content. You can create and manage different versions of this content and apply them to specific systems within user-defined stages of the application life cycle."
-	    log
-
-		log "// katello_event_queue (foreman-tasks / dynflow is running?)"
-		log "grep -E -h '(  queue|  ===|katello_event_queue)' \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671i \$base_dir/sos_commands/pulp/qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671 2>/dev/null"
-		log "---"
-		log_cmd "grep -E -h '(  queue|  ===|katello_event_queue)' $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 $base_dir/sos_commands/pulp/qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671 2>/dev/null"
-		log "---"
-		log
-
-		log "// katello.conf configuration"
-		log "grep 'KeepAlive\b\|MaxKeepAliveRequests\|KeepAliveTimeout $base_dir/etc/httpd/conf.d/05-foreman-ssl.d/katello.conf'"
-		log "---"
-		log_cmd "grep 'KeepAlive\b\|MaxKeepAliveRequests\|KeepAliveTimeout $base_dir/etc/httpd/conf.d/05-foreman-ssl.d/katello.conf'"
-		log "---"
-		log
-
-	  fi
 
 
 	  log_tee "## Dynflow"
@@ -2427,9 +3040,10 @@ CAPSULE_IPS=""
 
 	  else
 
-	    log "DynFlow is a workflow system and task orchestration engine written in Ruby, and runs as a plugin to Foreman. Foreman uses DynFlow to schedule, plan, and execute queued tasks."
-	    log
-
+		log "DynFlow is a workflow system and task orchestration engine written in Ruby, and runs as a plugin to Foreman.  Foreman uses the dynflowd.service to keep track of the progress of running process. It run the code asynchronously, resumes the process when something goes wrong, skip some steps when needed, detects independent parts and runs them concurrently."
+		log
+		log "The smart_proxy_dynflow_core.service is a proxy service for dynflow.  This service was deprecated in Satellite 6.10."
+		log
 
 		log "// service status"
 		log "from files systemctl_list-unit-files and systemctl_status_--all"
@@ -2459,10 +3073,13 @@ CAPSULE_IPS=""
 
 		if [ -f "$base_dir/etc/sysconfig/foreman-tasks" ]; then
 
-		log "// dynflow optimizations"
+		log "// dynflow optimizations (only used before 6.8)"
 		log "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" \$base_dir/etc/sysconfig/foreman-tasks"
 		log "---"
 		log_cmd "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" $base_dir/etc/sysconfig/foreman-tasks"
+		log
+		log "Note:  For Satellite servers older than 6.8, EXECUTORS_COUNT=2 is recommended for 32 Gb of RAM, and EXECUTORS_COUNT=3 is recommended for 65+ Gb of RAM."
+		log
 		log "---"
 		log
 
@@ -2493,12 +3110,15 @@ CAPSULE_IPS=""
 
 		if [ -f "$base_dir/etc/sysconfig/dynflowd" ]; then
 
-		log "// dynflow optimizations"
-		log "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" \$base_dir/etc/sysconfig/dynflowd"
-		log "---"
-		log_cmd "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" $base_dir/etc/sysconfig/dynflowd"
-		log "---"
-		log
+                log "// dynflow optimizations (only used before 6.8)"
+                log "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" \$base_dir/etc/sysconfig/foreman-tasks"
+                log "---"
+                log_cmd "egrep \"EXECUTORS_COUNT|MALLOC_ARENA_MAX\" $base_dir/etc/sysconfig/foreman-tasks"
+                log
+                log "Note:  For Satellite servers older than 6.8, EXECUTORS_COUNT=2 is recommended for 32 Gb of RAM, and EXECUTORS_COUNT=3 is recommended for 65+ Gb of RAM."
+                log
+                log "---"
+                log
 
 		log "// foreman-tasks/dynflow configuration"
 		log "grep 'EXECUTOR_MEMORY_LIMIT\|EXECUTOR_MEMORY_MONITOR_DELAY\|EXECUTOR_MEMORY_MONITOR_INTERVAL' $base_dir/etc/sysconfig/dynflowd"
@@ -2555,90 +3175,10 @@ CAPSULE_IPS=""
 	  fi
 
 
-	  log_tee "## Pulp"
-	  log
-
-	  if [ ! "`egrep -i pulp $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ]; then
-
-		log "pulp not found"
-		log
 
 
-	  else
-
-	    log "Pulp, a component of Katello, is a software repository management tool written in Python. Pulp provides complete software repository management and the capability to mirror repositories, the capability to host repositories, and the capability to distribute the contents of those repositories to a large number of consumers."
-	    log
-
-	    log "Pulp manages RPM content, Puppet modules, and container images in Satellite. Pulp also publishes Content Views and creates local repositories from which Capsules and hosts retrieve content. The configuration of the Apache HTTP Server determines how efficiently Pulp REST API requests are handled."
-	    log
-
-	    log "Pulp depends upon celery, which is responsible for launching Pulp workers, which download data from upstream repositories. Pulp also depends upon Apache HTTP Server to provide access to Pulp’s APIs and internal components."
-	    log
 
 
-		log "// service status"
-		log "from files systemctl_list-unit-files and systemctl_status_--all"
-		log "---"
-		log_cmd "grep -h pulp $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
-		log
-		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 pulp | egrep --color=always '^|failed|inactive|activating|deactivating'"
-		log "---"
-		log
-
-		log "// pulp_workers configuration"
-		log "grep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY' \$base_dir/etc/default/pulp_workers"
-		log "---"
-		log_cmd "grep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY' $base_dir/etc/default/pulp_workers"
-		log "---"
-		log
-
-		#log "// number of CPUs"
-		#log "grep processor \$base_dir/proc/cpuinfo | wc -l"
-		#log "---"
-		#log_cmd "grep processor $base_dir/proc/cpuinfo | wc -l"
-		#log "---"
-		#log
-
-          	log "// number of CPUs"
-          	log "grep processor \$base_dir/proc/cpuinfo | wc -l"
-          	log "---"
-          	log_cmd "if [ -f $base_dir/sos_commands/processor/lscpu ]; then egrep '^CPU\(s\):' $base_dir/sos_commands/processor/lscpu; elif [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; fi"
-          	log "---"
-          	log
-
-		log "// Total number of pulp agents"
-		log "grep pulp.agent \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 \$base_dir/sos_commands/pulp/qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671 2>/dev/null | wc -l"
-		log "---"
-		log_cmd "grep pulp.agent $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 $base_dir/sos_commands/pulp/qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671 2>/dev/null | wc -l"
-		log "---"
-		log
-
-		log "// Total number of (active) pulp agents"
-		log "grep pulp.agent \$base_dir/sos_commands/katello/qpid-stat_-q* \$base_dir/sos_commands/pulp/qpid-stat_-q* 2>/dev/null | grep \" 1.*1\$\" | wc -l"
-		log "---"
-		log_cmd "grep pulp.agent $base_dir/sos_commands/katello/qpid-stat_-q* $base_dir/sos_commands/pulp/qpid-stat_-q* 2>/dev/null | grep \" 1.*1\$\" | wc -l"
-		log "---"
-		log
-
-		#log "// number of unfinished pulp tasks"
-		#log "grep '\"task_id\"' \$base_dir/sos_commands/pulp/pulp-running_tasks | wc -l"
-		#log "---"
-		#log_cmd "grep '\"task_id\"' $base_dir/sos_commands/pulp/pulp-running_tasks | wc -l"
-		#log "---"
-		#log
-
-
-		log "// unfinished pulp tasks"
-		log "grep -E '(\"finish_time\" : null|\"start_time\"|\"state\"|\"pulp:|^})' \$base_dir/sos_commands/pulp/pulp-running_tasks"
-		log "---"
-		log_cmd "grep '\"task_id\"' $base_dir/sos_commands/pulp/pulp-running_tasks | wc -l"
-		log "---"
-		log
-		log_cmd "grep -E '(\"finish_time\" : null|\"start_time\"|\"state\"|\"pulp:|^})' $base_dir/sos_commands/pulp/pulp-running_tasks"
-		log "---"
-		log
-
-	  fi
 
 
 	  log_tee "## Tomcat"
@@ -2651,7 +3191,7 @@ CAPSULE_IPS=""
 
 	  else
 
-	    log "Apache Tomcat is an open-source, Java-based application development platform."
+	    log "Apache Tomcat is an open-source, Java-based application development platform.  The tomcat.service renders pages written in JSP (Java Server Pages)."
 	    log
 
 
@@ -2670,7 +3210,7 @@ CAPSULE_IPS=""
 		log_cmd "grep tomcat $base_dir/ps 2>&1"
 		log
 		tomcat_mem=`grep tomcat $base_dir/ps 2>&1 | awk '{print $6}'`
-		tomcat_mem_mb=`echo current memory consumption: $(($tomcat_mem / 1024 )) Mb 2>/dev/null`
+		if [ "$tomcat_mem" ]; then tomcat_mem_mb=`echo current memory consumption: $(($tomcat_mem / 1024 )) Mb 2>/dev/null`; else tomcat_mem_mb=''; fi
 		log "$tomcat_mem_mb"
 		log_cmd "echo java heap memory maximum: `grep tomcat $base_dir/ps 2>&1 | tr ' ' '\n' | grep Xmx`"
 
@@ -2694,20 +3234,20 @@ CAPSULE_IPS=""
 
 	  else
 
-	    log "Candlepin is a collection of tools that facilitates the management of software subscriptions, running on Tomcat. It is a part of Katello, which provides a unified workflow and web-based user interface for content and subscriptions. Candlepin provides the component of Katello related to subscriptions."
+	    log "Candlepin is a collection of tools that facilitates the management of software subscriptions.  Candlepin runs on Tomcat, and is written in JSP (Java Server Pages). It is a part of Katello, which provides a unified workflow and web-based user interface for content and subscriptions."
 	    log
 
 		log "// hammer ping output"
 		log "grep -A2 candlepin \$base_dir/sos_commands/foreman/hammer_ping"
 		log "---"
-		log_cmd "grep -A2 candlepin $base_dir/sos_commands/foreman/hammer_ping"
+		log_cmd "grep -A2 candlepin $base_dir/sos_commands/foreman/hammer_ping | egrep --color=always '^|FAIL'"
 		log "---"
 		log
 
                 log "// is candlepin listening?"
-                log "egrep :8443 \$base_dir/sos_commands/networking/netstat_-W_-neopa"
+                log "egrep file netstat_-W_-neopa for subscription-manager port 8443"
                 log "---"
-		log_cmd "egrep :8443 $base_dir/sos_commands/networking/netstat_-W_-neopa"
+		log_cmd "egrep '^Active|^Proto|\:8443' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
                 log "---"
                 log
 
@@ -2717,6 +3257,13 @@ CAPSULE_IPS=""
 		log_cmd "grep -B1 Updated $base_foreman/var/log/candlepin/candlepin.log | tail -100"
 		log "---"
 		log
+
+                log "// verify whether simple content access (SCA) is enabled for hosts"
+                log "egrep -m 5 'org_environment|simple_content_access|simple content access' \$base_dir/var/log/candlepin/audit.log \$base_dir/var/log/httpd/foreman-ssl_access_ssl.log \$base_dir/var/log/candlepin/candlepin.log \$base_dir/var/log/candlepin/error.log \$base_dir/sos_commands/insights/insights-client-dump/data/insights_commands/sudo_-iu_postgres_.usr.bin.psql_-d_candlepin_-c_select_displayname_content_access_mode_from_cp_owner_--csv"
+                log "---"
+                log_cmd "egrep -m 5 --color=ALWAYS 'org_environment|simple_content_access|simple content access' $base_dir/var/log/candlepin/audit.log $base_dir/var/log/httpd/foreman-ssl_access_ssl.log $base_dir/var/log/candlepin/candlepin.log $base_dir/var/log/candlepin/error.log $base_dir/sos_commands/insights/insights-client-dump/data/insights_commands/sudo_-iu_postgres_.usr.bin.psql_-d_candlepin_-c_select_displayname_content_access_mode_from_cp_owner_--csv 2>/dev/null"
+                log "---"
+                log
 
 		log "// ERROR on candlepin log - candlepin.log"
 		log "{ for mylog in \`ls -rt \$base_foreman/var/log/candlepin/candlepin.log*\`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep ERROR | cut -d ' ' -f1,3- | uniq -c"
@@ -2781,16 +3328,16 @@ CAPSULE_IPS=""
           log "The virt-who agent interrogates the hypervisor infrastructure and provides the host/guest mapping to the subscription service. It uses read-only commands to gather the host/guest associations for the subscription services. This way, the guest subscriptions offered by a subscription can be unlocked and available for the guests to use."
           log
 
-          if [ "`grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log`" ]; then
+#          if [ "`grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log`" ]; then
                 log "// virt-who update sources"
-                log "grep cmd=virt-who \$base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u -n"
+                log "grep cmd=virt-who \$base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u"
                 log "---"
                 export GREP_COLORS='ms=01;33'   # temporarily change hilight color to yellow
-                log_cmd "grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u -n | egrep --color=always '^|$IPADDRLIST'"
+                log_cmd "grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u | egrep --color=always '^|$IPADDRLIST'"
                 export GREP_COLORS='ms=01;31'
                 log "---"
                 log
-          fi
+#          fi
 
 	  if [ ! "`egrep -i 'virt-who' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/installed_rpms $base_dir/ps $base_dir/var/log/rhsm/rhsm.log $base_dir/sos_commands/foreman/foreman_tasks_tasks 2>/dev/null | head -1`" ] && [ ! -f "$base_dir/etc/sysconfig/virt-who" ] && [ ! -d "$base_dir/etc/virt-who.d" ]; then
 
@@ -2906,105 +3453,45 @@ CAPSULE_IPS=""
 	  fi
 
 
+          log_tee "## Katello"
+          log
 
+          if [ ! -d "$base_dir/sos_commands/katello" ] && [ ! -f "$base_dir/etc/httpd/conf.d/05-foreman-ssl.d/katello.conf" ]; then
 
-	  log_tee "## qpidd"
-	  log
+                log "katello not found"
+                log
 
-	  if [ ! "`egrep -i 'qpidd' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd $base_dir/etc/qpid/qpidd.conf 2>/dev/null | head -1`" ]; then
+          else
 
-		log "qpidd not found"
-		log
+            log "Katello is a Foreman plug-in for subscription and repository management. It provides a means to subscribe to Red Hat repositories and download content. You can create and manage different versions of this content and apply them to specific systems within user-defined stages of the application life cycle."
+            log
 
-	  else
+                log "// katello_event_queue (foreman-tasks / dynflow is running?)"
+                #log "grep -E -h '(  queue|  ===|katello_event_queue)' \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 \$base_dir/sos_commands/pulp/qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671 2>/dev/null"
+		log "grep -E -h '(  queue|  ===|katello_event_queue)' \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 2>/dev/null"
+                log "---"
+                #log_cmd "grep -E -h '(  queue|  ===|katello_event_queue)' $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 $base_dir/sos_commands/pulp/qpid-stat_-q_--ssl-certificate_.etc.pki.pulp.qpid.client.crt_-b_amqps_..localhost_5671 2>/dev/null"
+                #MYCOMMAND=`grep -E -h '(  queue|  ===|katello_event_queue)' $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 2>/dev/null --color=never | awk 'function MAGENTA(X) { return "\033[35m"   X "\033[0m" }; function GREEN(X) { return "\033[32m"   X "\033[0m" };{$6 = MAGENTA($6); $7 = GREEN($7); print}' | sed s'/====/=/'g | column -t`
+                #log "$MYCOMMAND"
+		log_cmd "cat $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate_.etc.pki.katello.qpid_client_striped.crt_-b_amqps_..localhost_5671 | egrep -v ':1.0'"
+                log "---"
+                log
 
-		log "Apache Qpid is a cross-platform Enterprise Messaging system that implements the Advanced Messaging Queue Protocol (AMQP)."
-		log
+                log "// katello.conf configuration"
+                log "grep 'KeepAlive\b\|MaxKeepAliveRequests\|KeepAliveTimeout \$base_dir/etc/httpd/conf.d/05-foreman-ssl.d/katello.conf'"
+                log "---"
+                log_cmd "grep 'KeepAlive\b\|MaxKeepAliveRequests\|KeepAliveTimeout $base_dir/etc/httpd/conf.d/05-foreman-ssl.d/katello.conf'"
+                log "---"
+                log
 
-		log "AMQP Messaging uses a Producer - Consumer model. Communication between the message producers and message consumers is decoupled by a broker that provides exchanges and queues. This allows applications to produce and consume data at different rates. Producers send messages to exchanges on the message broker. Consumers subscribe to exchanges that contain messages of interest, creating subscription queues that buffer messages for the consumer. Message producers can also create subscription queues and publish them for consuming applications."
-		log
+                log "// katello timeouts"
+                log "egrep timeout \$base_dir/etc/foreman/plugins/katello.yaml"
+                log "---"
+                log_cmd "egrep timeout $base_dir/etc/foreman/plugins/katello.yaml"
+                log "---"
+                log
 
-		log "The messaging broker functions as a decoupling layer, providing exchanges that distribute messages, the ability for consumers and producers to create public and private queues and subscribe them to exchanges, and buffering messages that are sent at-will by producer applications, and delivered on-demand to interested consumers."
-		log
-
-
-		log "// service status"
-		log "from files systemctl_list-unit-files and systemctl_status_--all"
-		log "---"
-		log_cmd "grep -h qpidd $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
-		log
-		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 qpidd | egrep --color=always '^|failed|inactive|activating|deactivating'"
-		log "---"
-		log
-
-		if [ "`grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data 2>/dev/null | grep qpid`" ]; then
-			log "// 3rd party qpidd packages"
-			log "from file $base_dir/sos_commands/rpm/package-data"
-			log "---"
-			log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | grep qpid | grep -v ^$HOSTNAME | cut -f1,4 | sort -k2"
-			log "---"
-			log
-		fi
-
-		log "// qpidd disk usage"
-		log "grep \"^-\" \$base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=\$5 } END {printf \"\%d\", s}' | numfmt --to=iec"
-		log "---"
-		QPIDD_DISK_USAGE=`grep "^-" $base_dir/sos_commands/qpid/ls_-lanR_.var.lib.qpidd 2>/dev/null | awk '{ s+=$5 } END {printf "%d", s}' | numfmt --to=iec`
-		log "$QPIDD_DISK_USAGE"
-		log "---"
-		log
-
-		log "// qpidd configuration"
-		log "grep mgmt_pub_interval \$base_dir/etc/qpid/qpidd.conf"
-		log "---"
-		log_cmd "grep mgmt_pub_interval $base_dir/etc/qpid/qpidd.conf"
-		log "---"
-		log
-
-		log "// qpidd limits"
-		log "grep LimitNOFILE \$base_dir/etc/systemd/system/qpidd.service.d/90-limits.conf"
-		log "---"
-		log_cmd "grep LimitNOFILE $base_dir/etc/systemd/system/qpidd.service.d/90-limits.conf"
-		log "---"
-		log
-
-	  fi
-
-
-	  log_tee "## qdrouterd"
-	  log
-
-	  if [ ! "`egrep -i 'qdrouterd' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ]; then
-
-		log "qdrouterd not found"
-		log
-
-	  else
-
-	    log "The qdrouterd service acts as an AMQP router.  Routers transfer messages between producers and consumers, but unlike message brokers, they do not take responsibility for messages.  The router network will deliver the message, possibly through several intermediate routers – and then route the consumer’s acknowledgement of that message back across the same path."
-	    log
-
-	    log "The qdrouterd service communicates with goferd, which is expected to run on the host servers (including capsule servers)."
-	    log
-
-
-		log "// service status"
-		log "from files systemctl_list-unit-files and systemctl_status_--all"
-		log "---"
-		log_cmd "grep -h qdrouterd $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'"
-		log
-		log_cmd "egrep 'Active:|^$|Loaded:|\.service \-' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 qdrouterd | egrep --color=always '^|failed|inactive|activating|deactivating'"
-		log "---"
-		log
-
-		log "// qrouterd limits"
-		log "grep LimitNOFILE \$base_dir/etc/systemd/system/qdrouterd.service.d/90-limits.conf"
-		log "---"
-		log_cmd "grep LimitNOFILE $base_dir/etc/systemd/system/qdrouterd.service.d/90-limits.conf"
-		log "---"
-		log
-
-	  fi
+          fi
 
 
 
@@ -3039,10 +3526,11 @@ CAPSULE_IPS=""
 
   if [ "`which insights 2>/dev/null`" != "" ]; then
 	log_tee
-        echo "Calling insights..."
-	insights run -p shared_rules -F $sos_path >> $FOREMAN_REPORT
+	log_tee "## Insights"
 	log
-	insights run -p telemetry -F $sos_path >> $FOREMAN_REPORT
+	insights run -p shared_rules -F $sos_path | egrep -v SSSSS | egrep --color=always "^|\[FAIL\]" >> $FOREMAN_REPORT
+	log
+	insights run -p telemetry    -F $sos_path | egrep -v SSSSS | egrep --color=always "^|\[FAIL\]" >> $FOREMAN_REPORT
         echo "done."
   fi
 
@@ -3053,18 +3541,24 @@ CAPSULE_IPS=""
         log
   fi
 
+
+#  exit
+
   echo
   echo
   echo "## The output has been saved in these locations:"
 
   # generate local copy with or without ansi color codes
+
+  cat $FOREMAN_REPORT | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' | tr -d '\033' | sed 's/\[K//g' | sed 's/\[m//g' > ./report_${USER}_$final_name.log
+
   if [ "$ANSI_COLOR_CODES" == "false" ]; then
-	cat $FOREMAN_REPORT | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' > ./report_${USER}_$final_name.log
+	# cat $FOREMAN_REPORT | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' > ./report_${USER}_$final_name.log
 	rm -f $FOREMAN_REPORT 2>/dev/null
   else
 	mv $FOREMAN_REPORT ./report_color_${USER}_$final_name.log
 	chmod 666 ./report_color_${USER}_$final_name.log
-	cat ./report_color_${USER}_$final_name.log | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g' > ./report_${USER}_$final_name.log
+	# cat ./report_color_${USER}_$final_name.log | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g' > ./report_${USER}_$final_name.log
   fi
 
   chmod 666 ./report_${USER}_$final_name.log
@@ -3120,5 +3614,3 @@ fi
 if [ "$OPEN_IN_EDITOR_TMP_DIR" == "true" ]; then
    $EDITOR /tmp/report_${USER}_$final_name.log
 fi
-
-
