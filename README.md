@@ -84,4 +84,15 @@ $ less /tmp/report-sosreport-sat64test-123456-2019-03-07-obvjctv.log
 #internals_help/executed_commands.txt
 #```
 
+4. Optional:
+```
+The following command line arguments are supported:
+
+ -a use ANSI color codes
+ -c copy to current directory
+ -l after creating the file in the current directory, open it.  implies -c.
+ -t open the file from /tmp
+ -x generate an xsos report in the current directory
+```
+
 Hope you enjoy it.

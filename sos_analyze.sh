@@ -878,6 +878,9 @@ main()
 	  log
 	  log "from \$base_dir/var/lib/rhsm/facts/facts.json:"
 	  log_cmd "jq '. | \"hostname: \" + .\"network.hostname\",\"FQDN: \" + .\"network.fqdn\"' $base_dir/var/lib/rhsm/facts/facts.json 2>/dev/null | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
+          log
+          log "from \$base_dir/etc/sysconfig/network (useful for RHEL 6):"
+          log_cmd "cat $base_dir/etc/sysconfig/network | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|HOSTNAME'"
 
 	  if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ]; then
 	    log
@@ -893,7 +896,6 @@ main()
 	    log "check certificates in \$base_dir/etc/foreman-proxy/ for beginning and ending dates"
 	    log
 
-	    #OUTPUT=$(MYDATE=`date -d "\`cat $base_dir/date\`" +"%Y%m%d%H%M"`;for i in `ls $base_dir/etc/foreman-proxy/*.pem`; do echo $i; START_DATE=`openssl x509 -in $i -noout -text | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; END_DATE=`openssl x509 -in $i -noout -text | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; echo -n 'Not Before: '; if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -gt "$MYDATE" ]; then echo "$START_DATE" | egrep .; else echo $START_DATE; fi; echo -n 'Not After : '; if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -lt "$MYDATE" ]; then echo "$END_DATE" | egrep .; else echo $END_DATE; fi; echo; done;)
 	    OUTPUT=$(MYDATE=`date -d "\`cat $base_dir/date\`" +"%Y%m%d%H%M"`;for i in `find $base_dir/etc/foreman-proxy -type f -exec file {} \; | egrep 'certificate|\.pem' | awk -F":" '{print $1}' | sort`; do echo $i; START_DATE=`openssl x509 -in $i -noout -text | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; END_DATE=`openssl x509 -in $i -noout -text | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; echo -n 'Not Before: '; if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -gt "$MYDATE" ]; then echo "$START_DATE" | egrep . --color=always; else echo $START_DATE; fi; echo -n 'Not After : '; if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -lt "$MYDATE" ]; then echo "$END_DATE" | egrep . --color=always; else echo $END_DATE; fi; echo; done;)
 
 	    log_cmd "echo -e \"$OUTPUT\""
@@ -905,7 +907,7 @@ main()
 	    log
 	    log "from \$base_dir/etc/hosts:"
 	    log "---"
-	    log_cmd "cat $HOSTS_ENTRY | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
+	    log_cmd "GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME' $base_dir/etc/hosts"
 	    log "---"
 	    log 
 	  fi
@@ -915,7 +917,7 @@ main()
                 log "// Satellite's organization list"
                 log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
                 log "---"
-                SATORGS=`egrep organization $base_dir/sos_commands/foreman/foreman_tasks_tasks | awk -F"|" '{print $12}' | awk '{print $NF}' | sort -u | tr -d "'"`
+                SATORGS=`egrep organization $base_dir/sos_commands/foreman/foreman_tasks_tasks | awk -F"|" '{print $12}' | awk -F"'" '{print $(NF-1)}' | sort -u | tr -d "'"`
 		log_cmd "echo -e \"$SATORGS\""
                 log "---"
                 log
@@ -1137,6 +1139,9 @@ main()
 	  log "cat \$base_foreman/etc/foreman-installer/custom-hiera.yaml"
 	  log "---"
 	  log_cmd "cat $base_foreman/etc/foreman-installer/custom-hiera.yaml 2>&1 | egrep -v '\#|---' | egrep --color=always '^|checkpoint_segments|apache::purge_configs: false'"
+	  log
+	  log "Note: The checkpoint_segments parameter is incompatible with Satellite 6.8 and above."
+	  log
 	  log "---"
 	  log
 
@@ -1284,11 +1289,11 @@ main()
 
           log "// ntp errors"
           log "egrep 'ntpd|chrony|sntp|timesync' \$base_dir/var/log/messages* | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm'"
-          log "egrep -ir 'skew|RES equals failed' \$base_dir/var/log"
+          log "egrep -ir 'skew|RES equals failed' \$base_dir/var/log | egrep -v anaconda"
           log "---"
-          log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/var/log/messages* | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm' | egrep '^|offline'"
+          log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/var/log/messages* | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm' | egrep '^|offline|mongod'"
           log
-          log_cmd "egrep -ir 'skew|RES equals failed' $base_dir/var/log | egrep -v 'BEGIN CERTIFICATE|^Binary' | egrep -v 'HTTP\/1.1'"
+          log_cmd "egrep -ir 'skew|RES equals failed' $base_dir/var/log | egrep -v 'BEGIN CERTIFICATE|^Binary|anaconda' | egrep -v 'HTTP\/1.1|mongod'"
           log "---"
           log
 
@@ -1798,7 +1803,7 @@ main()
           log "---"
 
           export GREP_COLORS='ms=01;33'
-          cmd_output=$(egrep -i -h "Exit with status code|running installer with args|Upgrade completed|target-version" $base_dir/var/log/foreman-installer/{satellite*,capsule*} $base_dir/var/log/foreman-maintain/foreman-maintain.log* 2>/dev/null | grep \- | sed s'/\[  INFO //'g | sed s'/\[ INFO //'g | sed s'/\[DEBUG //'g | sed s'/^., \[//'g | sort -n | tail -30 | egrep --color=always -i "^|tuning|upgrade")
+          cmd_output=$(egrep -i -h "Exit with status code|running installer with args|Upgrade completed|target-version" $base_dir/var/log/foreman-installer/{satellite*,capsule*} $base_dir/var/log/foreman-maintain/foreman-maintain.log* 2>/dev/null | grep \- | sed s'/\[  INFO //'g | sed s'/\[ INFO //'g | sed s'/\[DEBUG //'g | sed s'/^., \[//'g | sort -n | tail -40 | egrep --color=always -i "^|tuning|upgrade|with args")
 
           log "$cmd_output"
           export GREP_COLORS='ms=01;31'
@@ -1881,7 +1886,7 @@ main()
 		log "// hammer ping output"
 		log "cat \$base_dir/sos_commands/foreman/hammer_ping"
 		log "---"
-		log_cmd "cat $base_dir/sos_commands/foreman/hammer_ping | egrep --color=always '^|FAIL' | GREP_COLORS='ms=01;33' egrep --color=always '^|\[OK\]'"
+		log_cmd "cat $base_dir/sos_commands/foreman/hammer_ping | egrep --color=always '^|FAIL' | GREP_COLORS='ms=01;33' egrep --color=always '^|\[OK\]' | egrep --color=always '^|more service\(s\) failed\, but not shown:'"
 		log "---"
 		log
 
@@ -1907,7 +1912,7 @@ main()
 	    #log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep --color=always \"^|Active:|\[OK\]|All services are running\" | egrep -v '{|}|displaying|^\||^\/|^\\|^\-' | uniq"
 	    #export GREP_COLORS='ms=01;31'
 
-	    log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep -i --color=always '^|failed|inactive|activating|deactivating|error|alert|crit|warning' | egrep -v '{|}|displaying|^\||^\/|^\\|^\-' | uniq | GREP_COLORS='ms=01;33' egrep --color=always '^|\[OK\]|Active:|All services are running'"
+	    log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | tr '\r' '\n' | egrep -i --color=always '^|failed|inactive|activating|deactivating|error|alert|crit|warning|signal=KILL' | egrep -v '{|}|displaying|^\||^\/|^\\|^\-' | uniq | GREP_COLORS='ms=01;33' egrep --color=always '^|\[OK\]|Active:|All services are running'"
 	    log "---"
 	    log
 
@@ -1936,9 +1941,9 @@ main()
 	    log "// satellite service status"
 	    log "grepping files foreman-maintain_service_status and systemctl_status_--all"
 	    log "---"
-	    log_cmd "egrep -A 10 \"foreman-proxy.service -|goferd.service -|httpd.service -|pulp_streamer.service -|puppet.service -|puppetserver.service -|qdrouterd.service -|qpidd.service -|rh-mongodb34-mongod.service -|smart_proxy_dynflow_core.service -|squid.service -|mongod.service -|postgresql.service -|pulp_celerybeat.service -|foreman-tasks.service -\" \$/base_dir/sos_commands/systemd/systemctl_status_--all"
-	    log
-	    log_cmd "egrep -A 10 \"foreman-proxy.service -|goferd.service -|httpd.service -|pulp_streamer.service -|puppet.service -|puppetserver.service -|qdrouterd.service -|qpidd.service -|rh-mongodb34-mongod.service -|smart_proxy_dynflow_core.service -|squid.service -|mongod.service -|postgresql.service -|pulp_celerybeat.service -|foreman-tasks.service -\" $/base_dir/sos_commands/systemd/systemctl_status_--all"
+	    log_cmd "egrep -A 10 \"foreman-proxy.service -|goferd.service -|httpd.service -|pulp_streamer.service -|puppet.service -|puppetserver.service -|qdrouterd.service -|qpidd.service -|rh-mongodb34-mongod.service -|smart_proxy_dynflow_core.service -|squid.service -|mongod.service -|postgresql.service -|pulp_celerybeat.service -|foreman-tasks.service -\" \$/base_dir/sos_commands/systemd/systemctl_status_--all | egrep -i --color=always '^|failed|inactive|activating|deactivating|error|alert|crit|warning|signal=KILL'"
+	    #log
+	    #log_cmd "egrep -A 10 \"foreman-proxy.service -|goferd.service -|httpd.service -|pulp_streamer.service -|puppet.service -|puppetserver.service -|qdrouterd.service -|qpidd.service -|rh-mongodb34-mongod.service -|smart_proxy_dynflow_core.service -|squid.service -|mongod.service -|postgresql.service -|pulp_celerybeat.service -|foreman-tasks.service -\" $/base_dir/sos_commands/systemd/systemctl_status_--all"
 	    log "---"
 	    log
 
@@ -1952,17 +1957,26 @@ main()
 
 
 
+
+          export GREP_COLORS='ms=01;32'
+          log_cmd "echo '## goferd (capsules and hosts only)' | grep --color=always \#"
+          echo '## goferd (capsules and hosts only)' | grep --color=always \#
+          export GREP_COLORS='ms=01;31'
+          log
+
+          log "// installed katello-agent and/or gofer"
+          log "from file $base_dir/installed-rpms"
+          log "---"
+          log_cmd "grep -E '(^katello-agent|^gofer|^katello-host)' $base_dir/installed-rpms 2>&1"
+          log "---"
+          log
+
+
 	  if [ ! "`egrep -i goferd $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sos_commands/systemd/systemctl_status_--all`" ]; then
 
 		nop=1
 
 	  else
-
-          	export GREP_COLORS='ms=01;32'
-          	log_cmd "echo '## goferd (capsules and hosts only)' | grep --color=always \#"
-          	echo '## goferd (capsules and hosts only)' | grep --color=always \#
-          	export GREP_COLORS='ms=01;31'
-		log
 
 		log "// goferd service"
 		log "from file $base_dir/sos_commands/systemd/systemctl_show_service_--all"
@@ -1974,6 +1988,13 @@ main()
 		log "---"
 		log
 
+                log "// goferd packages"
+                log "egrep 'gofer|proton' $base_dir/sos_commands/yum/yum_list_installed"
+                log "---"
+                log_cmd "egrep 'gofer|proton' $base_dir/sos_commands/yum/yum_list_installed"
+                log "---"
+                log
+
             	log "// are katello/gofer listening?"
             	log "grepping netstat_-W_-neopa file for katello-agent port 5646 and goferd port 5647"
             	log "---"
@@ -1981,17 +2002,10 @@ main()
             	log "---"
             	log
 
-		log "// installed katello-agent and/or gofer"
-		log "from file $base_dir/installed-rpms"
-		log "---"
-		log_cmd "grep -E '(^katello-agent|^gofer)' $base_dir/installed-rpms 2>&1"
-		log "---"
-		log
-
 		log "// goferd errors in messages file (last 100)"
 		log "grep messages files for errors"
 		log "---"
-		{ for mylog in `ls -rt $base_dir/var/log/messages* 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep ERROR | grep 'goferd:' | tail -100 &>> $FOREMAN_REPORT
+		{ for mylog in `ls -rt $base_dir/var/log/messages* 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | egrep 'ERROR|WARNING' | grep 'goferd:' | tail -100 &>> $FOREMAN_REPORT
 		log "---"
 		log
 
@@ -2046,7 +2060,8 @@ main()
 		log "// postgres storage consumption"
 		log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql"
 		log "---"
-		log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8/'g | sed s'/\/rh-postgresql12\/lib\/pgsql/\/lib\/pgsql    # post-6.8/'g"
+		#log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8/'g | sed s'/\/rh-postgresql12\/lib\/pgsql/\/lib\/pgsql    # post-6.8/'g"
+		log "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8/'g | sed s'/rh-postgresql12\/lib\/pgsql/rh-postgresql12\/lib\/pgsql    # post-6.8/'g"
 		log "---"
 		log
 
@@ -2269,7 +2284,7 @@ main()
 		log "// mongodb errors in messages file (last 50)"
 		log "grep messages files for errors"
 		log "---"
-		{ for mylog in `ls -rt $base_dir/var/log/messages* 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep -i ERROR | egrep "\{|\}" | uniq | tail -50 | cut -c -10240 >> $FOREMAN_REPORT
+		{ for mylog in `ls -rt $base_dir/var/log/messages* 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep -i ERROR | egrep "\{|\}" | egrep -v succeeded | uniq | tail -50 | cut -c -10240 >> $FOREMAN_REPORT
 		log "---"
 		log
 
@@ -2497,9 +2512,9 @@ main()
 
 
                 log "// Puppet Server Error"
-                log "grep ERROR \$base_dir/var/log/puppetlabs/puppetserver/puppetserver.log $base_dir/var/log/puppet/puppetserver/puppetserver.log 2>/dev/null"
+                log "egrep 'ERROR|Fail' \$base_dir/var/log/puppetlabs/puppetserver/puppetserver.log $base_dir/var/log/puppet/puppetserver/puppetserver.log 2>/dev/null"
                 log "---"
-                log_cmd "grep ERROR $base_dir/var/log/puppetlabs/puppetserver/puppetserver.log $base_dir/var/log/puppet/puppetserver/puppetserver.log 2>/dev/null | tail -100"
+                log_cmd "egrep 'ERROR|Fail' $base_dir/var/log/puppetlabs/puppetserver/puppetserver.log $base_dir/var/log/puppet/puppetserver/puppetserver.log 2>/dev/null | tail -100"
                 log "---"
                 log
 
@@ -2745,7 +2760,8 @@ main()
 		log "qpidd not found"
 		log
 
-                log "Note:  In Satellite 6.10, qpidd was deprecated on capsule servers."
+                log "Note:  qpidd was deprecated on Satellite 6.10.  To install it, please run this command:"
+                log '    # satellite-installer --foreman-proxy-content-enable-katello-agent true'
                 log
 
 	  else
@@ -2829,6 +2845,9 @@ main()
 		log "The qdrouterd.service is a network daemon that directs messages between endpoints, such as messaging clients and servers.  Unlike message brokers, they do not take responsibility for messages.  The (AMQP) router network will deliver the message, possibly through several intermediate routers – and then route the consumer’s acknowledgement of that message back across the same path."
 		log
 		log "The qdrouterd service communicates with goferd, which is expected to run on the host servers (including capsule servers)."
+                log
+                log "Note:  qdrouterd was deprecated in Satellite 6.10.  To install it, please run this command:"
+                log '    # satellite-installer --foreman-proxy-content-enable-katello-agent true'
 		log
 
 		log "// service status"
@@ -3599,18 +3618,18 @@ main()
             log "// Satellite-DNS configuration"
             log "info from /etc/foreman-installer/scenarios.d/"
             log "---"
-            log_cmd "egrep dns $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml} | egrep -v infoblox"
+            log_cmd "egrep dns $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml} | egrep -v infoblox | egrep --color=always '^|:  dns: true'"
 	    log
-            log_cmd "egrep dns $base_dir/etc/foreman-installer/scenarios.d/*-answers.yaml | egrep infoblox"
+            log_cmd "egrep dns $base_dir/etc/foreman-installer/scenarios.d/*-answers.yaml | egrep infoblox | egrep --color=always '^|infoblox: true'"
             log "---"
             log
 
-          log "// check dns interfaces in satellite-answers"
-          log "grep _interface: \$base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep 'dns'"
-          log "---"
-          log_cmd "grep _interface: $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep 'dns'"
-          log "---"
-          log
+           log "// check dns interfaces in satellite-answers"
+           log "grep _interface: \$base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep 'dns'"
+           log "---"
+           log_cmd "grep _interface: $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml"
+           log "---"
+           log
 
           fi
 
@@ -3644,9 +3663,9 @@ main()
             log "// Satellite-DHCP configuration"
             log "info from /etc/foreman-installer/scenarios.d/"
             log "---"
-            log_cmd "egrep dhcp $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml} | egrep -v 'infoblox|::'"
+            log_cmd "egrep dhcp $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml} | egrep -v 'infoblox|::' | egrep --color=always '^|dhcp: true'"
             log
-            log_cmd "egrep dhcp $base_dir/etc/foreman-installer/scenarios.d/*-answers.yaml | egrep infoblox"
+            log_cmd "egrep dhcp $base_dir/etc/foreman-installer/scenarios.d/*-answers.yaml | egrep infoblox | egrep --color=always '^|infoblox: true'"
             log "---"
             log
 
