@@ -8,7 +8,7 @@ log_cmd "cat $base_dir/etc/sysconfig/network | GREP_COLORS='ms=01;33' egrep --co
 log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | sed 's/$/$/' | egrep 'CN=|DNS|Issuer|Subject Alternative Name' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'
 #log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/foreman_ssl_ca.pem -noout -text | egrep -i 'before|after'
 log_cmd "echo -e "$OUTPUT"
-log_cmd "GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME' $base_dir/etc/hosts
+log_cmd "GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$IPADDRLIST' $base_dir/etc/hosts
 $SATORGS"
 row $base_dir/sos_commands/foreman/smart_proxies | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$IPADDRLIST'
 log_cmd "grep -i ^hostname $base_dir/etc/sysconfig/networking/profiles/default/network | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'
@@ -36,6 +36,7 @@ grep -E '(Vendor|Manufacture|Product Name:|Description:)' $base_dir/dmidecode 2>
 grep virtual $base_dir/facts 2>/dev/null | egrep "vendor|version|manufacturer|name" | sed 's/^[ t]*//;s/[ t]*$//' | sort -u
 
 ## Memory
+egrep -hir 'out of memory' $base_dir/var/log $base_dir/sos_commands/logs/journalctl_--no-pager $base_dir/OOO | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | tail -100
 cat $base_dir/ps 2>&1 | sort -nrk6 | head -n5
 cat $base_dir/ps 2>&1 | sort -nr | awk '{print $1, $6}' | grep -v ^USER | grep -v ^COMMAND | grep -v "^ $" | awk '{a[$1] += $2} END{for (i in a) print i, a[i]}' | sort -nrk2
 cat $base_dir/free
@@ -82,7 +83,7 @@ log_cmd "grep _interface: $base_dir/etc/foreman-installer/scenarios.d/satellite-
 cat $base_dir/etc/hosts | egrep --color=always '^|$HOSTNAME|$IPADDRLIST'
 cat $base_dir/etc/resolv.conf
 log_cmd "egrep 'iptables|firewalld' $base_dir/sos_commands/systemd/systemctl_list-units $base_dir/sos_commands/systemd/systemctl_list-unit-files
-sed -n '/(active)/,/^$/p' $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones
+sed -n '/(active)/,/^$/p' $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones | GREP_COLORS='ms=01;32' egrep --color=always '^|RH-Satellite-6|http|80/tcp|https|443/tcp|5646/tcp|5647/tcp|8443/tcp|9090/tcp' | GREP_COLORS='ms=01;33' egrep --color=always '^|ssh|22/tcp|dns|53/udp|53/tcp| dhcp |67/udp|69/udp|5000/tcp|8000/tcp|8140/tcp'
 egrep 'FirewallD is not running' $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones'
 if [ -f $base_dir/sos_commands/networking/iptables_-vnxL ]; then egrep -v '^$|^COMMAND|Chain|pkts' $base_dir/sos_commands/networking/iptables_-vnxL | wc -l; else echo 'no iptables output found'; fi
 egrep 'maintenance_mode' $base_dir/var/log/foreman-maintain/foreman-maintain.log* | sort -k2 -k3 | tail
@@ -102,6 +103,9 @@ tail -30 $base_dir/selinux_denials.log 2>/dev/null || grep -o denied.* $base_dir
 echo -E "$SE_DENIALS" | egrep "`date +'%Y' --date='-2 months'`|`date +'%Y'`" | tail -30 | egrep denied | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto'
 egrep -I 'avc: denied|SELinux is preventing|setroubleshoot' $base_dir/var/log/messages* | egrep -v 'units_rpm|HTTP/1.1' | sort -u | tail -30 | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto'
 
+log_tee "## fips mode
+echo fips_enabled flag: "`cat $base_dir/proc/sys/crypto/fips_enabled`"
+log_cmd "egrep fips_enabled $base_dir/var/log/foreman-installer/satellite* -h | egrep resolved
 
 ## cron
 ls -l $base_dir/var/spool/cron/* 2>/dev/null || echo 'No cron files found in /var/spool/cron'
@@ -189,6 +193,7 @@ postgresql.service $base_dir/sos_commands/systemd/systemctl_list-unit-files | eg
 $base_dir/ps
 log_cmd "egrep '^Active|^Proto|postgres' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'
 $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'//var/lib/pgsql//var/lib/pgsql # pre-6.8/'g | sed s'//rh-postgresql12/lib/pgsql//lib/pgsql # post-6.8/'g
+$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'//var/lib/pgsql//var/lib/pgsql # pre-6.8/'g | sed s'/rh-postgresql12/lib/pgsql/rh-postgresql12/lib/pgsql # post-6.8/'g
 -f $base_dir/ps ]; then grep ^postgres $base_dir/ps 2>&1 | grep idle$ | wc -l; fi
 $base_dir/etc/default/grub;if [ "`grep hugepages $base_dir/etc/tuned/* 2>/dev/null`"]; then echo; grep hugepages $base_dir/etc/tuned/* 2>/dev/null; echo active tuned profile; cat $base_dir/sos_commands/tuned/tuned-adm_active; fi
 log_cmd "head -n30 $base_dir/sos_commands/katello/db_table_size 2>/dev/null
@@ -268,14 +273,14 @@ log_cmd "egrep 'Active:|^$|Loaded:|.service -' $base_dir/sos_commands/systemd/sy
 log_cmd "egrep '^Active|^Proto|squid' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'
 log_cmd "egrep pulp -A 1 $base_dir/etc/squid/squid.conf | egrep '^$|http_port|3128|accel|defaultsite=|127.0.0.1|:8751' --color=ALWAYS
 log_cmd "tail -50 $base_dir/var/log/squid/cache.log
-log_cmd "echo '## qpidd (deprecated on capsules in 6.10)' | grep --color=always #
+log_cmd "echo '## qpidd (deprecated in 6.10)' | grep --color=always #
 qpidd $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'
 -' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 qpidd | egrep --color=always '^|failed|inactive|activating|deactivating'
-'Red Hat' $base_dir/sos_commands/rpm/package-data | grep qpid | grep -v ^$HOSTNAME | cut -f1,4 | sort -k2
+'Red Hat' $base_dir/sos_commands/rpm/package-data | grep qpid | egrep -v None$ | grep -v ^$HOSTNAME | cut -f1,4 | sort -k2
 log_cmd "egrep '^Active|^Proto|qpidd' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'
 $base_dir/etc/qpid/qpidd.conf
 $base_dir/etc/systemd/system/qpidd.service.d/90-limits.conf
-log_cmd "echo '## qdrouterd' | grep --color=always #
+log_cmd "echo '## qdrouterd (deprecated in 6.10)' | grep --color=always #
 qdrouterd $base_dir/sos_commands/systemd/systemctl_list-unit-files | egrep --color=always '^|failed|inactive|activating|deactivating|disabled'
 -' $base_dir/sos_commands/systemd/systemctl_status_--all | grep -A 2 qdrouterd | egrep --color=always '^|failed|inactive|activating|deactivating'
 log_cmd "egrep '^Active|^Proto|qdrouterd' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'

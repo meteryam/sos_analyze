@@ -896,7 +896,7 @@ main()
 	    log "check certificates in \$base_dir/etc/foreman-proxy/ for beginning and ending dates"
 	    log
 
-	    OUTPUT=$(MYDATE=`date -d "\`cat $base_dir/date\`" +"%Y%m%d%H%M"`;for i in `find $base_dir/etc/foreman-proxy -type f -exec file {} \; | egrep 'certificate|\.pem' | awk -F":" '{print $1}' | sort`; do echo $i; START_DATE=`openssl x509 -in $i -noout -text | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; END_DATE=`openssl x509 -in $i -noout -text | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; echo -n 'Not Before: '; if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -gt "$MYDATE" ]; then echo "$START_DATE" | egrep . --color=always; else echo $START_DATE; fi; echo -n 'Not After : '; if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -lt "$MYDATE" ]; then echo "$END_DATE" | egrep . --color=always; else echo $END_DATE; fi; echo; done;)
+	    OUTPUT=$(MYDATE=`date -d "\`cat $base_dir/date\`" +"%Y%m%d%H%M"`;for i in `find $base_dir/etc/foreman-proxy -type f -exec file {} \; | egrep -v key | egrep 'certificate|\.pem|\.crt' | awk -F":" '{print $1}' | sort`; do echo $i; START_DATE=`openssl x509 -in $i -noout -text | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; END_DATE=`openssl x509 -in $i -noout -text | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; echo -n 'Not Before: '; if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -gt "$MYDATE" ]; then echo "$START_DATE" | egrep . --color=always; else echo $START_DATE; fi; echo -n 'Not After : '; if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -lt "$MYDATE" ]; then echo "$END_DATE" | egrep . --color=always; else echo $END_DATE; fi; echo; done;)
 
 	    log_cmd "echo -e \"$OUTPUT\""
 	    log;log
@@ -907,7 +907,7 @@ main()
 	    log
 	    log "from \$base_dir/etc/hosts:"
 	    log "---"
-	    log_cmd "GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME' $base_dir/etc/hosts"
+	    log_cmd "GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$IPADDRLIST' $base_dir/etc/hosts"
 	    log "---"
 	    log 
 	  fi
@@ -1089,7 +1089,8 @@ main()
 	  log "// out of memory errors"
 	  log "grep messages files for out of memory errors"
 	  log "---"
-	  { for mylog in `ls -rt $base_dir/var/log/messages* $base_dir/OOO 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep 'Out of memory' | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | tail -200 | cut -c -10240 >> $FOREMAN_REPORT
+	  #{ for mylog in `ls -rt $base_dir/var/log/messages* $base_dir/OOO 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep 'Out of memory' | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | tail -200 | cut -c -10240 >> $FOREMAN_REPORT
+	  log_cmd "egrep -hir 'out of memory' $base_dir/var/log $base_dir/sos_commands/logs/journalctl_--no-pager $base_dir/OOO | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | tail -100"
 	  log "---"
 	  log
 
@@ -1137,12 +1138,11 @@ main()
 
 	  log "// custom hiera"
 	  log "cat \$base_foreman/etc/foreman-installer/custom-hiera.yaml"
-	  log "---"
+          log "---"
 	  log_cmd "cat $base_foreman/etc/foreman-installer/custom-hiera.yaml 2>&1 | egrep -v '\#|---' | egrep --color=always '^|checkpoint_segments|apache::purge_configs: false'"
+	  log "---"
 	  log
 	  log "Note: The checkpoint_segments parameter is incompatible with Satellite 6.8 and above."
-	  log
-	  log "---"
 	  log
 
 	  if [ "`egrep . $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ] || [ "`egrep -i general $base_dir/sos_commands/foreman/passenger-status_--show_pool 2>/dev/null | head -1`" ]; then
@@ -1282,7 +1282,7 @@ main()
           log "$OUTPUT"
           log
           #log_cmd "egrep server $base_dir/etc/{ntp.conf,chrony.conf} | grep -v \# | sed s'/$base_dir//'g"
-          OUTPUT=$(egrep server $base_dir/etc/{ntp.conf,chrony.conf} 2>/dev/null | grep -v :\# | awk -F"/" '{print $NF}')
+          OUTPUT=$(egrep server $base_dir/etc/{chrony.conf,ntp.conf} 2>/dev/null | grep -v :\# | awk -F"/" '{print $NF}')
           log "$OUTPUT"
           log "---"
           log
@@ -1408,9 +1408,12 @@ main()
 	  log "// firewalld settings"
 	  log "sed -n '/(active)/,/^$/p' \$base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones"
 	  log "---"
-	  log_cmd "sed -n '/(active)/,/^$/p' $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones"
+	  log_cmd "sed -n '/(active)/,/^$/p' $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones | GREP_COLORS='ms=01;32' egrep --color=always '^|RH-Satellite-6|http|80\/tcp|https|443\/tcp|5646\/tcp|5647\/tcp|8443\/tcp|9090\/tcp' | GREP_COLORS='ms=01;33' egrep --color=always '^|ssh|22\/tcp|dns|53\/udp|53\/tcp| dhcp |67\/udp|69\/udp|5000\/tcp|8000\/tcp|8140\/tcp'"
 	  log_cmd "egrep 'FirewallD is not running' $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones'"
 	  log "---"
+	  log
+	  log "Note:  Required ports:  80 (http), 443 (https), katello/qpidd (5646/5647), 8443 (uploading facts), 9090 (capsule API)"
+	  log "Note:  Optional ports:  22 (ssh), 5000 (compute resources), provisioning (53(dns)/67(dhcp)/69(TFTP)/8000 (iPXE)/8443), 8140 (puppet)"
 	  log
 
 	  log "// iptables extra line count"
@@ -1505,6 +1508,19 @@ main()
 		log "---"
 		log
 	  fi
+
+          log_tee "## fips mode"
+          log
+
+          log "// check for fips status"
+	  log "cat \$base_dir/proc/sys/crypto/fips_enabled"
+          log "egrep fips_enabled \$base_dir/var/log/foreman-installer/satellite* -h | egrep resolved"
+          log "---"
+	  log_cmd "echo fips_enabled flag:  \"`cat $base_dir/proc/sys/crypto/fips_enabled`\""
+	  log
+          log_cmd "egrep fips_enabled $base_dir/var/log/foreman-installer/satellite* -h | egrep resolved"
+          log "---"
+          log
 
 	  log_tee "## cron"
 	  log
@@ -2061,7 +2077,7 @@ main()
 		log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql"
 		log "---"
 		#log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8/'g | sed s'/\/rh-postgresql12\/lib\/pgsql/\/lib\/pgsql    # post-6.8/'g"
-		log "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8/'g | sed s'/rh-postgresql12\/lib\/pgsql/rh-postgresql12\/lib\/pgsql    # post-6.8/'g"
+		log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8/'g | sed s'/rh-postgresql12\/lib\/pgsql/rh-postgresql12\/lib\/pgsql    # post-6.8/'g"
 		log "---"
 		log
 
@@ -2583,7 +2599,7 @@ main()
           export GREP_COLORS='ms=01;31'
           log
 
-	  if [ ! "`egrep -i pulp $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ]; then
+	  if [ ! "`egrep -i 'pulp|pulpcore_client' $base_dir/sos_commands/systemd/systemctl_show_service_--all $base_dir/sos_commands/foreman/foreman-maintain_service_status $base_dir/installed_rpms $base_dir/ps 2>/dev/null | head -1`" ]; then
 
 		log "pulp not found"
 		log
@@ -2750,8 +2766,8 @@ main()
 
 
           export GREP_COLORS='ms=01;32'
-          log_cmd "echo '## qpidd (deprecated on capsules in 6.10)' | grep --color=always \#"
-	  echo '## qpidd (deprecated on capsules in 6.10)' | grep --color=always \#
+          log_cmd "echo '## qpidd (deprecated in 6.10)' | grep --color=always \#"
+	  echo '## qpidd (deprecated in 6.10)' | grep --color=always \#
           export GREP_COLORS='ms=01;31'
           log
 
@@ -2792,7 +2808,7 @@ main()
 			log "// 3rd party qpidd packages"
 			log "from file $base_dir/sos_commands/rpm/package-data"
 			log "---"
-			log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | grep qpid | grep -v ^$HOSTNAME | cut -f1,4 | sort -k2"
+			log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | grep qpid | egrep -v None$ | grep -v ^$HOSTNAME | cut -f1,4 | sort -k2"
 			log "---"
 			log
 		fi
@@ -2829,8 +2845,8 @@ main()
 	  fi
 
           export GREP_COLORS='ms=01;32'
-          log_cmd "echo '## qdrouterd' | grep --color=always \#"
-	  echo '## qdrouterd' | grep --color=always \#
+          log_cmd "echo '## qdrouterd (deprecated in 6.10)' | grep --color=always \#"
+	  echo '## qdrouterd (deprecated in 6.10)' | grep --color=always \#
           export GREP_COLORS='ms=01;31'
           log
 
@@ -3660,6 +3676,7 @@ main()
             log "---"
             log
 
+	if [ "`egrep '^dhcp: true$' $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}`" ]; then
             log "// Satellite-DHCP configuration"
             log "info from /etc/foreman-installer/scenarios.d/"
             log "---"
@@ -3668,13 +3685,16 @@ main()
             log_cmd "egrep dhcp $base_dir/etc/foreman-installer/scenarios.d/*-answers.yaml | egrep infoblox | egrep --color=always '^|infoblox: true'"
             log "---"
             log
+	fi
 
+	if [ "`egrep '^dns: true$' $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}`" ]; then
           log "// check dhcp interfaces in satellite-answers"
           log "grep _interface: \$base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep 'dhcp'"
           log "---"
           log_cmd "grep _interface: $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep 'dhcp'"
           log "---"
           log
+	fi
 
           fi
 
