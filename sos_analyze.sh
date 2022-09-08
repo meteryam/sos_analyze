@@ -1090,7 +1090,7 @@ main()
 	  log "grep messages files for out of memory errors"
 	  log "---"
 	  #{ for mylog in `ls -rt $base_dir/var/log/messages* $base_dir/OOO 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep 'Out of memory' | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | tail -200 | cut -c -10240 >> $FOREMAN_REPORT
-	  log_cmd "egrep -hir 'out of memory' $base_dir/var/log $base_dir/sos_commands/logs/journalctl_--no-pager $base_dir/OOO | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | tail -100"
+	  log_cmd "egrep -hir 'out of memory' $base_dir/var/log/messages $base_dir/sos_commands/logs/journalctl_--no-pager $base_dir/OOO | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | tail -100"
 	  log "---"
 	  log
 
@@ -1130,9 +1130,9 @@ main()
 	  log
 
           log "// tuning profile"
-          log "egrep -ir '--tuning' \$base_foreman/var/log/foreman-installer | grep 'Running installer with args'"
+          log "egrep -hir 'tuning' \$base_foreman/var/log/foreman-installer | egrep -vi 'choices|path|hook' | uniq -f 4"
           log "---"
-          log_cmd "egrep -ir '\-\-tuning' $base_foreman/var/log/foreman-installer | grep 'Running installer with args'"
+          log_cmd "egrep -hir 'tuning' $base_foreman/var/log/foreman-installer | egrep -vi 'choices|path|hook|migration' | uniq -f 4"
           log "---"
           log
 
@@ -1278,11 +1278,18 @@ main()
           log "egrep server \$base_dir/etc/{ntp.conf,chrony.conf} | grep -v :\# | awk -F\"/\" '{print \$NF}'"
           log "---"
           #log_cmd "egrep 'ntpd|chronyd' $base_dir/sos_commands/systemd/systemctl_list-units $base_dir/sos_commands/systemd/systemctl_list-unit-files | awk -F\"/\" '{print $NF}'"
-          OUTPUT=$(egrep 'ntpd.service|chronyd|sntp.service|systemd-timesyncd.service' $base_dir/sos_commands/systemd/systemctl_list-units $base_dir/sos_commands/systemd/systemctl_list-unit-files | awk -F"/" '{print $NF}')
+          OUTPUT=$(egrep 'chronyd' $base_dir/sos_commands/systemd/systemctl_list-units $base_dir/sos_commands/systemd/systemctl_list-unit-files | awk -F"/" '{print $NF}')
           log "$OUTPUT"
           log
           #log_cmd "egrep server $base_dir/etc/{ntp.conf,chrony.conf} | grep -v \# | sed s'/$base_dir//'g"
-          OUTPUT=$(egrep server $base_dir/etc/{chrony.conf,ntp.conf} 2>/dev/null | grep -v :\# | awk -F"/" '{print $NF}')
+          OUTPUT=$(egrep ^server $base_dir/etc/chrony.conf 2>/dev/null | grep -v :\# | awk -F"/" '{print $NF}')
+          log "$OUTPUT"
+	  log
+	  log
+          OUTPUT=$(egrep 'ntpd.service|sntp.service|systemd-timesyncd.service' $base_dir/sos_commands/systemd/systemctl_list-units $base_dir/sos_commands/systemd/systemctl_list-unit-files | awk -F"/" '{print $NF}')
+          log "$OUTPUT"
+          log
+          OUTPUT=$(egrep ^server $base_dir/etc/ntp.conf 2>/dev/null | grep -v :\# | awk -F"/" '{print $NF}')
           log "$OUTPUT"
           log "---"
           log
@@ -1408,7 +1415,7 @@ main()
 	  log "// firewalld settings"
 	  log "sed -n '/(active)/,/^$/p' \$base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones"
 	  log "---"
-	  log_cmd "sed -n '/(active)/,/^$/p' $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones | GREP_COLORS='ms=01;32' egrep --color=always '^|RH-Satellite-6|http|80\/tcp|https|443\/tcp|5646\/tcp|5647\/tcp|8443\/tcp|9090\/tcp' | GREP_COLORS='ms=01;33' egrep --color=always '^|ssh|22\/tcp|dns|53\/udp|53\/tcp| dhcp |67\/udp|69\/udp|5000\/tcp|8000\/tcp|8140\/tcp'"
+	  log_cmd "sed -n '/(active)/,/^$/p' $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones | GREP_COLORS='ms=01;33' egrep --color=always '^|RH-Satellite-6|http|80\/tcp|https|443\/tcp|5646\/tcp|5647\/tcp|8443\/tcp|9090\/tcp' | GREP_COLORS='ms=01;96' egrep --color=always '^|ssh|22\/tcp|dns|53\/udp|53\/tcp| dhcp |67\/udp|69\/udp|5000\/tcp|8000\/tcp|8140\/tcp'"
 	  log_cmd "egrep 'FirewallD is not running' $base_dir/sos_commands/firewalld/firewall-cmd_--list-all-zones'"
 	  log "---"
 	  log
@@ -1492,11 +1499,12 @@ main()
 	  log "---"
 	  log "from /var/log/audit/audit.log:"
 	  #log_cmd "tail -30 $base_dir/selinux_denials.log 2>/dev/null || grep -o denied.* $base_dir/var/log/audit/audit.log | sort -u | tail -100"
-	  SE_DENIALS=`cat $base_dir/var/log/audit/* | sort -u | egrep '^type=(AVC|SELINUX)' | while read line; do time=\`echo $line | sed 's/.*audit(\([0-9]*\).*/\1/'\`; echo \`date -d @$time +'%Y-%m-%d.%H:%M'\` $line; done | awk '{$2=""; $3=""; $4=""; print $0}'`
+	  SE_DENIALS=`cat $base_dir/var/log/audit/* | sort -u | egrep '^type=(AVC|SELINUX)' | while read line; do time=\`echo $line | sed 's/.*audit(\([0-9]*\).*/\1/'\`; echo \`date -d @$time +'%Y-%m-%d.%H:%M'\` $line; done | awk '{$2=""; $3=""; $4=""; print $0}' | tail -1000`
 	  log_cmd "echo -E \"$SE_DENIALS\" | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | tail -30 | egrep denied | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto'"
 	  log
 	  log "from /var/log/messages:"
-	  log_cmd "egrep -I 'avc:  denied|SELinux is preventing|setroubleshoot' $base_dir/var/log/messages* | egrep -v 'units_rpm|HTTP\/1.1' | sort -u | tail -30 | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto'"
+	  log_cmd "egrep -I 'avc:  denied|SELinux is preventing|setroubleshoot' $base_dir/var/log/messages* | egrep -v 'units_rpm|HTTP\/1.1|aide:' | sort -u | tail -30 | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto'"
+	  #for i in `find $base_dir/var/log/ -name messages*`; do log_cmd ""egrep -I 'avc:  denied|SELinux is preventing|setroubleshoot' $i | egrep -v 'units_rpm|HTTP\/1.1|aide:' | sort -u | tail -30 | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto'"; done
 	  log "---"
 	  log
 
@@ -1581,7 +1589,7 @@ main()
                 if [ -f "$base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot" ]; then
                         log "from journalctl_--no-pager_--catalog_--boot and messages"
                         log "---"
-                        log_cmd "grep 'cockpit-ws' $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | egrep -v 'units_rpm command|pulp_streamer|nectar.download' | tail -30 | cut -c -10240"
+                        log_cmd "grep 'cockpit-ws' $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | egrep -v 'units_rpm command|units_package_group|pulp_streamer|nectar.download' | tail -30 | cut -c -10240"
                 elif [ -f "$base_dir/var/log/messages" ]; then
                         log "from /var/log/messages"
                         log "---"
@@ -1889,10 +1897,6 @@ main()
 	  log
 	  export GREP_COLORS='ms=01;31'
 
-          log
-          log "Note:  In Satellite 6.10, qpidd was deprecated on capsule servers."
-          log
-
 
 	  log_tee "## Satellite Services"
 	  log
@@ -2077,7 +2081,8 @@ main()
 		log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql"
 		log "---"
 		#log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8/'g | sed s'/\/rh-postgresql12\/lib\/pgsql/\/lib\/pgsql    # post-6.8/'g"
-		log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8/'g | sed s'/rh-postgresql12\/lib\/pgsql/rh-postgresql12\/lib\/pgsql    # post-6.8/'g"
+
+		log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8 or on RHEL8/'g | sed s'/rh-postgresql12\/lib\/pgsql/rh-postgresql12\/lib\/pgsql    # post-6.8 on RHEL7/'g"
 		log "---"
 		log
 
@@ -2122,7 +2127,7 @@ main()
 		fi
 
 
-		if [ ! -f "$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql" ] && [ -d "$base_foreman/var/lib/pgsql/data" ] ; then
+		if [ ! -f "$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql" ] && [ -d "$base_foreman/var/lib/pgsql/data" ] && [ ! -d "$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data" ]; then
 
 			log "// pre-Satellite 6.8"
 			log
@@ -2171,7 +2176,7 @@ main()
 				log "// ERRORs (filtered)"
 				log "grep -h -i ERROR \$base_foreman/var/lib/pgsql/data/pg_log/*.log"
 				log "---"
-				log_cmd "grep -h ERROR $base_foreman/var/lib/pgsql/data/pg_log/*.log | tail -100 | sort -n | egrep -v '{|}|katello_rpms.filename' | cut -c -10240"
+				log_cmd "grep -h ERROR $base_foreman/var/lib/pgsql/data/pg_log/*.log | tail -100 | sort -n | egrep -v '{|}|katello_rpms.filename' | cut -c -10240 | egrep 'katello_docker_meta_tags'"
 				log "---"
 				log
 
@@ -2224,7 +2229,7 @@ main()
 			log "// ERRORs (filtered)"
 			log "grep -h -i ERROR \$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log"
 			log "---"
-			log_cmd "grep -h -i ERROR $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | egrep -v '{|}|katello_rpms.filename' | tail -100 | sort -n | cut -c -10240"
+			log_cmd "grep -h -i ERROR $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log/*.log | egrep -v '{|}|katello_rpms.filename' | tail -100 | sort -n | cut -c -10240 | egrep 'katello_docker_meta_tags'"
 			log "---"
 			log
 
@@ -2300,7 +2305,7 @@ main()
 		log "// mongodb errors in messages file (last 50)"
 		log "grep messages files for errors"
 		log "---"
-		{ for mylog in `ls -rt $base_dir/var/log/messages* 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep -i ERROR | egrep "\{|\}" | egrep -v succeeded | uniq | tail -50 | cut -c -10240 >> $FOREMAN_REPORT
+		{ for mylog in `ls -rt $base_dir/var/log/messages* 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep -i ERROR | egrep "\{|\}" | egrep -v 'succeeded|dynflow-sidekiq' | uniq | tail -50 | cut -c -10240 >> $FOREMAN_REPORT
 		log "---"
 		log
 
@@ -3631,6 +3636,7 @@ main()
             log "---"
             log
 
+        if [ "`egrep '^dns: true$' $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}`" ]; then
             log "// Satellite-DNS configuration"
             log "info from /etc/foreman-installer/scenarios.d/"
             log "---"
@@ -3639,6 +3645,7 @@ main()
             log_cmd "egrep dns $base_dir/etc/foreman-installer/scenarios.d/*-answers.yaml | egrep infoblox | egrep --color=always '^|infoblox: true'"
             log "---"
             log
+	fi
 
            log "// check dns interfaces in satellite-answers"
            log "grep _interface: \$base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep 'dns'"
