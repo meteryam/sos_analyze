@@ -941,6 +941,12 @@ main()
           if [ "`grep :scenario: $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | sed s'/:scenario://'g  | awk -F\":\" '{print $2}'`" ]; then
                 log_cmd "grep :scenario: $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml"
           fi
+          log
+          log "HW platform:"
+          log
+          log_cmd "{ grep -E '(Vendor|Manufacture|Product Name:|Description:)' $base_dir/dmidecode | head -n3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; } || { grep virtual $base_dir/facts 2>/dev/null | egrep \"vendor|version|manufacturer|name\" | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; }"
+          log "---"
+          log
 
 	  log_tee "## hostname"
 	  log
@@ -1140,12 +1146,12 @@ main()
 	#	log_cmd "grep :scenario: $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml"
 	  #fi
 
-	  log
-	  log "HW platform:"
-	  log
-	  log_cmd "{ grep -E '(Vendor|Manufacture|Product Name:|Description:)' $base_dir/dmidecode | head -n3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; } || { grep virtual $base_dir/facts 2>/dev/null | egrep \"vendor|version|manufacturer|name\" | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; }"
-	  log "---"
-	  log
+	  #log
+	  #log "HW platform:"
+	  #log
+	  #log_cmd "{ grep -E '(Vendor|Manufacture|Product Name:|Description:)' $base_dir/dmidecode | head -n3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; } || { grep virtual $base_dir/facts 2>/dev/null | egrep \"vendor|version|manufacturer|name\" | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; }"
+	  #log "---"
+	  #log
 
 
 
