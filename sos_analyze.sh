@@ -997,7 +997,7 @@ elif [ "$CAPSULE_SERVER" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "FALSE" ]; t
 	if [ "$SATELLITE_INSTALLED" == "FALSE" ]; then
 		log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server"
 	elif [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
-		log
+
 		log "Note:  Based on what's in this sosreport, there may be extra Satellite files on this server."
 	fi
 
@@ -3672,55 +3672,56 @@ else
 	export GREP_COLORS='ms=01;31'
 	log
 
+	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
+
+		log "OpenSCAP is a security profiling tool that compares XML-formatted security standards descriptions against the state of a target system."
+		log
+
+		log "// openscap values in answers files"
+		log "egrep openscap \$base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
+		log "---"
+		log_cmd "egrep openscap $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
+		log "---"
+		log
+
+		log "// openscap settings in foreman tables"
+		log "egrep openscap \$base_dir/sos_commands/foreman/foreman_db_tables_sizes"
+		log "---"
+		log_cmd "egrep openscap $base_dir/sos_commands/foreman/foreman_db_tables_sizes"
+		log "---"
+		log
+
+		log "// top openscap tasks"
+		log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
+		log "---"
+		openscap_tasks=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -i 'Run scan for all OpenSCAP policies|Run scan for specified OVAL Policies|foreman_scap_client' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning'`
+		log "$openscap_tasks"
+		log "---"
+		log
+
+		log "// top openscap tasks"
+		log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
+		log "---"
+		openscap_tasks=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -i 'Run scan for all OpenSCAP policies|Run scan for specified OVAL Policies|foreman_scap_client' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning'`
+		log "$openscap_tasks"
+		log "---"
+		log
+
+
+	elif [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
+
+		log "// openscap settings in RHN tables"
+		log "egrep openscap \$base_dir/database/schema-stats.log"
+		log "---"
+		log_cmd "egrep openscap $base_dir/database/schema-stats.log"
+		log "---"
+		log
+
+	fi
+
 fi
 
-#else
-if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 
-	log "OpenSCAP is a security profiling tool that compares XML-formatted security standards descriptions against the state of a target system."
-	log
-
-	log "// openscap values in answers files"
-	log "egrep openscap \$base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
-	log "---"
-	log_cmd "egrep openscap $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
-	log "---"
-	log
-
-	log "// openscap settings in foreman tables"
-	log "egrep openscap \$base_dir/sos_commands/foreman/foreman_db_tables_sizes"
-	log "---"
-	log_cmd "egrep openscap $base_dir/sos_commands/foreman/foreman_db_tables_sizes"
-	log "---"
-	log
-
-	log "// top openscap tasks"
-	log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
-	log "---"
-	openscap_tasks=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -i 'Run scan for all OpenSCAP policies|Run scan for specified OVAL Policies|foreman_scap_client' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning'`
-	log "$openscap_tasks"
-	log "---"
-	log
-
-	log "// top openscap tasks"
-	log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
-	log "---"
-	openscap_tasks=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -i 'Run scan for all OpenSCAP policies|Run scan for specified OVAL Policies|foreman_scap_client' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning'`
-	log "$openscap_tasks"
-	log "---"
-	log
-
-
-elif [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
-
-	log "// openscap settings in RHN tables"
-	log "egrep openscap \$base_dir/database/schema-stats.log"
-	log "---"
-	log_cmd "egrep openscap $base_dir/database/schema-stats.log"
-	log "---"
-	log
-
-fi
 
 
 
