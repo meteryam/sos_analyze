@@ -941,9 +941,10 @@ SPACEWALK_INSTALLED=FALSE
 
 # these checks will be used later on to include or exclude certain sections, as appropriate
 
-if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i capsule)" ] || [ "$(egrep '^foreman-proxy|^foreman-proxy' $base_dir/installed-rpms)" ] || [ "$(egrep '^satellite-capsule-6' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | egrep name | head -1)" ]; then
+if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i capsule)" ] || [ "$(egrep '^foreman-proxy|^foreman-proxy' $base_dir/installed-rpms)" ] || [ "$(egrep '^satellite-capsule-6' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | egrep name | head -1)" ] || [ ! "$(egrep '^satellite-6' $base_dir/installed-rpms)" ]; then
 	CAPSULE_SERVER='TRUE'
-elif [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i satellite)" ] || [ "$(egrep '^passenger|^puma|^foreman|^candlepin|^satellite-6' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep servername | head -1)" ]; then
+fi
+if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i satellite)" ] || [ "$(egrep '^passenger|^puma|^foreman|^candlepin|^satellite-6' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep servername | head -1)" ]; then
 	SATELLITE_INSTALLED='TRUE'
 fi
 if [ "$(egrep '^foreman-1.6|^foreman-1.7|^foreman-proxy-1.6|^foreman-proxy-1.7' $base_dir/installed-rpms)" ]; then EARLY_SATELLITE='TRUE'; fi
@@ -968,20 +969,51 @@ log "// is this a Satellite server?"
 log "---"
 
 
-if [ "$CAPSULE_SERVER" == "TRUE" ]; then
-	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server."
-elif [ "$SATELLITE_INSTALLED" == "TRUE" ] && [ "$EARLY_SATELLITE" == "TRUE" ]; then
-	log
-	log "Note:  Based on what's in this sosreport, this may be a Satellite 6.0 or 6.1 server."
-elif [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
-	log
+
+if [ "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ ! "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 server."
+elif [ ! "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
+	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server"
+elif [ "$SATELLITE_INSTALLED" == "TRUE" ] && [ "$CAPSULE_SERVER" == "FALSE" ]; then
+
+	if [ "$EARLY_SATELLITE" == "TRUE" ]; then
+		log "Note:  Based on what's in this sosreport, this may be a Satellite 6.0 or 6.1 server."
+	elif [ "$EARLY_SATELLITE" == "FALSE" ]; then
+		log "Note:  Based on what's in this sosreport, this may be a Satellite 6 server."
+	fi
+
+	if [ "$CAPSULE_SERVER" == "TRUE" ]; then
+		log
+		log "Note:  Based on what's in this sosreport, there may be extra capsule files on this server."
+	fi
+
+	if [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
+		log
+		log "Note:  Based on what's in this sosreport, there may be leftover files from Satellite 5 on this server."
+	fi
+
+elif [ "$CAPSULE_SERVER" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "FALSE" ]; then
+
+	if [ "$SATELLITE_INSTALLED" == "FALSE" ]; then
+		log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server"
+	elif [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
+		log
+		log "Note:  Based on what's in this sosreport, there may be extra Satellite files on this server."
+	fi
+
+elif [ "$CAPSULE_SERVER" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
+	log "Note:  Based on what's in this sosreport, this server may have a mixture of Satellite and capsule files."
 fi
 
-if [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
-	log
-	log "Note:  Based on what's in this sosreport, this may be a Satellite 5 server, or there may be leftover traces of Satellite 5 on this server."
+
+
+if [ "$SPACEWALK_INSTALLED" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "FALSE" ] && [ "$CAPSULE_SERVER" == "FALSE" ]; then
+	log "Note:  Based on what's in this sosreport, this may be a Satellite 5 server."
 fi
+
+
+
+
 log "---"
 log
 
@@ -3098,12 +3130,14 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log "---"
 		log
 
-		log "// 3rd party passenger packages"
-		log "from file $base_dir/sos_commands/rpm/package-data"
-		log "---"
-		log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | grep passenger | cut -f1,4 | sort -k2"
-		log "---"
-		log
+		if [ "`grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data 2>/dev/null | grep foreman`" ]; then
+			log "// 3rd party passenger packages"
+			log "from file $base_dir/sos_commands/rpm/package-data"
+			log "---"
+			log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | grep passenger | cut -f1,4 | sort -k2"
+			log "---"
+			log
+		fi
 
 		log "// passenger pool status"
 		log "egrep -A 3 'General information' \$base_dir/sos_commands/foreman/passenger-status_--show_pool"
@@ -3188,11 +3222,11 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log "Foreman is a Ruby application that runs inside the Passenger application server and does a number of things, among them providing a UI, providing remote execution, running Foreman OpenSCAP scans on content hosts. Foreman is also involved in Content Host Registrations.  Foreman’s performance and scalability are affected directly by the configurations of httpd and Passenger (or Puma)."
 		log
 
-		if [ -e $base_dir/sos_commands/yum/yum_list_installed ]; then
-			log "// installed foreman package"
-			log "egrep '^foreman.noarch' \$base_dir/sos_commands/yum/yum_list_installed"
+		if [ "`grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data 2>/dev/null | grep foreman`" ]; then
+			log "// 3rd party foreman packages"
+			log "from file $base_dir/sos_commands/rpm/package-data"
 			log "---"
-			log_cmd "egrep '^foreman.noarch' $base_dir/sos_commands/yum/yum_list_installed"
+			log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | grep ^foreman | egrep -v None$ | grep -v ^$HOSTNAME | cut -f1,4 | sort -k2"
 			log "---"
 			log
 		fi
