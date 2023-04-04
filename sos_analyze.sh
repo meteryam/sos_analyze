@@ -942,8 +942,10 @@ SPACEWALK_INSTALLED=FALSE
 
 # these checks will be used later on to include or exclude certain sections, as appropriate
 
-if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i capsule)" ] || [ "$(egrep '^foreman-proxy|^foreman-proxy' $base_dir/installed-rpms)" ] || [ "$(egrep '^satellite-capsule-6' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | egrep name | head -1)" ] || [ ! "$(egrep '^satellite-6' $base_dir/installed-rpms)" ]; then
-	CAPSULE_SERVER='TRUE'
+if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i capsule)" ] || [ "$(egrep '^foreman-proxy|^foreman-proxy' $base_dir/installed-rpms)" ] || [ "$(egrep '^satellite-capsule-6' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | egrep name | head -1)" ]; then
+	if [ ! "$(egrep '^satellite-6' $base_dir/installed-rpms)" ]; then
+		CAPSULE_SERVER='TRUE'
+	fi
 fi
 if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i satellite)" ] || [ "$(egrep '^passenger|^puma|^foreman|^candlepin|^satellite-6' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep servername | head -1)" ]; then
 	SATELLITE_INSTALLED='TRUE'
@@ -1301,7 +1303,7 @@ log_cmd "xsos --mem $base_dir 2>/dev/null"
 log "---"
 log
 
-if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
+if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	#log "// tuning profile"
 	#log "egrep -hir 'tuning' \$base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
 	#log "---"
@@ -2312,7 +2314,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log "// hammer ping output"
 		log "cat \$base_dir/sos_commands/foreman/hammer_ping"
 		log "---"
-		log_cmd "cat $base_dir/sos_commands/foreman/hammer_ping | egrep --color=always '^|FAIL' | GREP_COLORS='ms=01;33' egrep --color=always '^|\[OK\]' | egrep --color=always '^|more service\(s\) failed\, but not shown:'"
+		log_cmd "cat $base_dir/sos_commands/foreman/hammer_ping | egrep --color=always '^|FAIL|[1..9] Failed' | GREP_COLORS='ms=01;33' egrep --color=always '^|\[OK\]' | egrep --color=always '^|more service\(s\) failed\, but not shown:'"
 		log "---"
 		log
 
@@ -2687,24 +2689,17 @@ else
 	log "---"
 	log
 
-	log "// postgres storage consumption"
-	log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var.opt.rh.rh-postgresql12.lib.pgsql"
-	log "---"
-	log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var.opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8 or on RHEL8/'g | sed s'/rh-postgresql12\/lib\/pgsql/rh-postgresql12\/lib\/pgsql    # post-6.8 on RHEL7/'g"
-	log "---"
-	log
-
 	log "// is postgres remote?"
 	log "grepping /etc/foreman-installer/scenarios.d/satellite-answers.yaml"
 	log "---"
 	log "foreman db:"
-	log_cmd "egrep -i 'db_username|foreman_url' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml"
+	log_cmd "egrep -i 'db_username|foreman_url' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
 	log
 	log "pulpcore db:"
-	log_cmd "egrep -i 'pulpcore_postgresql' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml"
+	log_cmd "egrep -i 'pulpcore_postgresql' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
 	log
 	log "candlepin db:"
-	log_cmd "egrep -i 'candlepin_db_host' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml"
+	log_cmd "egrep -i 'candlepin_db_host' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
 	log "---"
 	log
 
@@ -2718,6 +2713,13 @@ else
 	log "// hugepages tuning settings"
 	log "---"
 	log_cmd "grep hugepages $base_dir/etc/default/grub;if [ \"`grep hugepages $base_dir/etc/tuned/* 2>/dev/null`\"]; then echo; grep hugepages $base_dir/etc/tuned/* 2>/dev/null; echo active tuned profile; cat $base_dir/sos_commands/tuned/tuned-adm_active; fi"
+	log "---"
+	log
+
+	log "// postgres storage consumption"
+	log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var.opt.rh.rh-postgresql12.lib.pgsql"
+	log "---"
+	log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var.opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8 or on RHEL8/'g | sed s'/rh-postgresql12\/lib\/pgsql/rh-postgresql12\/lib\/pgsql    # post-6.8 on RHEL7/'g"
 	log "---"
 	log
 
@@ -4177,7 +4179,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log "// hammer ping output"
 		log "grep -A2 candlepin \$base_dir/sos_commands/foreman/hammer_ping"
 		log "---"
-		log_cmd "grep -A2 candlepin $base_dir/sos_commands/foreman/hammer_ping | egrep --color=always '^|FAIL'"
+		log_cmd "grep -A2 candlepin $base_dir/sos_commands/foreman/hammer_ping | egrep --color=always '^|FAIL|[1..9] Failed'"
 		log "---"
 		log
 
@@ -4318,7 +4320,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log "// is mongodb remote?"
 		log "grepping /etc/foreman-installer/scenarios.d/satellite-answers.yaml"
 		log "---"
-		log_cmd "egrep -i candlepin_db_host $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml"
+		log_cmd "egrep -i candlepin_db_host $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
 		log "---"
 		log
 
@@ -5306,7 +5308,7 @@ if [ "`which insights 2>/dev/null`" != "" ]; then
 log_tee
 log_tee "## Insights"
 log
-insights run -p shared_rules -F $sos_path | egrep -v SSSSS | egrep --color=always "^|\[FAIL\]" | sed s'/\\n/\n/'g >> $FOREMAN_REPORT
+insights run -p shared_rules -F $sos_path | egrep -v SSSSS | egrep --color=always "^|\[FAIL\]|[1..9] Failed" | sed s'/\\n/\n/'g >> $FOREMAN_REPORT
 log
 insights run -p telemetry    -F $sos_path | egrep -v SSSSS | egrep --color=always "^|\[FAIL\]" | sed s'/\\n/\n/'g >> $FOREMAN_REPORT
 echo "done."
