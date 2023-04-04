@@ -704,6 +704,7 @@ main()
 	sos_commands/stratis/journalctl_--no-pager_--unit_stratisd
 	sos_commands/systemtap/rpm_-qa_.bin.egrep_-e_kernel._uname_-r_-e_systemtap_-e_elfutils_
 	sos_commands/x11/dmesg_grep_-e_agpgart
+	sos_commands/postgresql/du_-sh_.var.opt.rh.rh-postgresql12.lib.pgsql,du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql
 	etc/hosts
 	etc/selinux/config,selinux_state
 	etc/redhat-release
@@ -967,9 +968,6 @@ log
 
 log "// is this a Satellite server?"
 log "---"
-
-
-
 if [ "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ ! "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 server."
 elif [ ! "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
@@ -1010,18 +1008,9 @@ fi
 if [ "$SPACEWALK_INSTALLED" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "FALSE" ] && [ "$CAPSULE_SERVER" == "FALSE" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 5 server."
 fi
-
-
-
-
 log "---"
 log
 
-log "// date sosreport was collected"
-log "---"
-log_cmd "head -1 $base_dir/date"
-log "---"
-log
 
 MYDATE=`date +"%Y%m%d%H%M"`;
 
@@ -1587,7 +1576,7 @@ log "---"
 log
 
 log "are yum.conf and dnf.conf the same?"
-log_cmd "ls -l \$base_dir/etc/yum.conf $base_dir/etc/dnf/dnf.conf 2>/dev/null"
+log "ls -l \$base_dir/etc/yum.conf \$base_dir/etc/dnf/dnf.conf 2>/dev/null"
 log "---"
 log_cmd "ls -l $base_dir/etc/yum.conf $base_dir/etc/dnf/dnf.conf 2>/dev/null"
 log "---"
@@ -2654,9 +2643,9 @@ else
 	log
 
 	log "// postgres storage consumption"
-	log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql"
+	log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var.opt.rh.rh-postgresql12.lib.pgsql"
 	log "---"
-	log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8 or on RHEL8/'g | sed s'/rh-postgresql12\/lib\/pgsql/rh-postgresql12\/lib\/pgsql    # post-6.8 on RHEL7/'g"
+	log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var.opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8 or on RHEL8/'g | sed s'/rh-postgresql12\/lib\/pgsql/rh-postgresql12\/lib\/pgsql    # post-6.8 on RHEL7/'g"
 	log "---"
 	log
 
@@ -4038,7 +4027,14 @@ else
 	log
 
 
-	if [ "$(egrep 'tomcat' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME')" ]; then
+	if [ "`grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data 2>/dev/null | grep tomcat | egrep -v 'Red Hat|none'`" ]; then
+		log "// 3rd party qpidd packages"
+		log "from file $base_dir/sos_commands/rpm/package-data"
+		log "---"
+		log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | grep tomcat | grep -v ^$HOSTNAME | cut -f1,4 | sort -k2"
+		log "---"
+		log
+	elif [ "$(egrep 'tomcat' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME')" ]; then
 		log "// tomcat packages"
 		log "egrep 'tomcat' \$base_dir/sos_commands/yum/yum_list_installed"
 		log "---"
