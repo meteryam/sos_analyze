@@ -980,24 +980,14 @@ elif [ "$SATELLITE_INSTALLED" == "TRUE" ] && [ "$CAPSULE_SERVER" == "FALSE" ]; t
 		log "Note:  Based on what's in this sosreport, this may be a Satellite 6 server."
 	fi
 
-	if [ "$CAPSULE_SERVER" == "TRUE" ]; then
-		log
-		log "Note:  Based on what's in this sosreport, there may be extra capsule files on this server."
-	fi
-
 	if [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 		log
 		log "Note:  Based on what's in this sosreport, there may be leftover files from Satellite 5 on this server."
 	fi
 
-elif [ "$CAPSULE_SERVER" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "FALSE" ]; then
+elif [ "$SATELLITE_INSTALLED" == "FALSE" ] && [ "$CAPSULE_SERVER" == "TRUE" ]; then
 
-	if [ "$SATELLITE_INSTALLED" == "FALSE" ]; then
-		log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server"
-	elif [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
-
-		log "Note:  Based on what's in this sosreport, there may be extra Satellite files on this server."
-	fi
+	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server"
 
 elif [ "$CAPSULE_SERVER" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 	log "Note:  Based on what's in this sosreport, this server may have a mixture of Satellite and capsule files."
@@ -1312,10 +1302,65 @@ log "---"
 log
 
 if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
-	log "// tuning profile"
-	log "egrep -hir 'tuning' \$base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
-	log "---"
-	log_cmd "egrep -hir 'tuning' $base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
+	#log "// tuning profile"
+	#log "egrep -hir 'tuning' \$base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
+	#log "---"
+	#log_cmd "egrep -hir 'tuning' $base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
+	#log "---"
+	#log
+
+	log "// is a tuning profile enabled?"
+	NO_SCENARIO='FALSE'
+	if [ "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ ! "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
+		if [ -e $base_dir/etc/foreman-installer/scenarios.d/satellite.yaml ]; then
+			log "egrep -H tuning \$base_dir/etc/foreman-installer/scenarios.d/satellite.yaml"
+			log "---"
+			log_cmd "egrep -H tuning $base_dir/etc/foreman-installer/scenarios.d/satellite.yaml"
+		else
+			NO_SCENARIO='TRUE'
+		fi
+
+	elif [ ! "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
+		if [ -e $base_dir/etc/foreman-installer/scenarios.d/capsule.yaml ]; then
+			log "egrep -H tuning \$base_dir/etc/foreman-installer/scenarios.d/capsule.yaml"
+			log "---"
+			log_cmd "egrep -H tuning $base_dir/etc/foreman-installer/scenarios.d/capsule.yaml"
+		else
+			NO_SCENARIO='TRUE'
+		fi
+
+	elif [ "$SATELLITE_INSTALLED" == "TRUE" ] && [ "$CAPSULE_SERVER" == "FALSE" ] && [ "$EARLY_SATELLITE" == "FALSE" ]; then
+		if [ -e $base_dir/etc/foreman-installer/scenarios.d/satellite.yaml ]; then
+			log "egrep -H tuning \$base_dir/etc/foreman-installer/scenarios.d/satellite.yaml"
+			log "---"
+			log_cmd "egrep -H tuning $base_dir/etc/foreman-installer/scenarios.d/satellite.yaml"
+		else
+			NO_SCENARIO='TRUE'
+		fi
+
+	elif [ "$SATELLITE_INSTALLED" == "FALSE" ] && [ "$CAPSULE_SERVER" == "TRUE" ] && [ "$EARLY_SATELLITE" == "FALSE" ]; then
+		if [ -e $base_dir/etc/foreman-installer/scenarios.d/capsule.yaml ]; then
+			log "egrep -H tuning \$base_dir/etc/foreman-installer/scenarios.d/capsule.yaml"
+			log "---"
+			log_cmd "egrep -H tuning $base_dir/etc/foreman-installer/scenarios.d/capsule.yaml"
+		else
+			NO_SCENARIO='TRUE'
+		fi
+
+	elif [ "$CAPSULE_SERVER" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
+		if [ -e $base_dir/etc/foreman-installer/scenarios.d/capsule.yaml ] || [ -e $base_dir/etc/foreman-installer/scenarios.d/satellite.yaml ]; then
+			log "egrep -H tuning \$base_dir/etc/foreman-installer/scenarios.d/satellite.yaml $base_dir/etc/foreman-installer/scenarios.d/capsule.yaml 2>/dev/null"
+			log "---"
+			log_cmd "egrep -H tuning $base_dir/etc/foreman-installer/scenarios.d/satellite.yaml $base_dir/etc/foreman-installer/scenarios.d/capsule.yaml 2>/dev/null"
+		else
+			NO_SCENARIO='TRUE'
+		fi
+	fi
+	if [ "$NO_SCENARIO" == "TRUE" ]; then
+		log "egrep -hir 'tuning' \$base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
+		log "---"
+		log_cmd "egrep -hir 'tuning' $base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
+	fi
 	log "---"
 	log
 
