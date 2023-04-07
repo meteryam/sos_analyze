@@ -889,15 +889,8 @@ main()
 		touch $base_dir/sysmgmt/journal.log
 	  fi
 
-	  #if [ -f "$base_dir/sos_commands/foreman/foreman-maintain_service_status" ]; then
-	#	cp "$base_dir/sos_commands/foreman/foreman-maintain_service_status" "$base_dir/sysmgmt/services.txt"
-	#	egrep '^\* puppet|^\* elasticsearch|^\* virt-who|^\* ntpd|^\* chronyd|^\* systemd-timedatectl|^\* cockpit|^\* named|^\* dhcpd|^\* osbuild' "$base_dir/sos_commands/systemd/systemctl_status_--all" -A 20 2>/dev/null >> "$base_dir/sysmgmt/services.txt"
-	 # else
 		touch "$base_dir/sysmgmt/services.txt"
-		#egrep '\.service -' $base_dir/sos_commands/systemd/systemctl_status_--all -A 30 | egrep 'ntpd|chronyd|systemd-timedatectl|cockpit|goferd|elasticsearch|named|dhcpd|osbuild|postgres|httpd|puppet|redis|squid|foreman|tomcat|virt-who|qpidd|qdrouterd|mongod|celery|pulp|dynflow' -A 30 | sed s'/\●/\*/'g > "$base_dir/sysmgmt/services.txt"
-		#cat $base_dir/sos_commands/systemd/systemctl_status_--all | sed -n '/auditd.service -/,/Root Slice/p' | egrep '\.service -' -A 30 | egrep 'ntpd|chronyd|systemd-timedatectl|cockpit|goferd|elasticsearch|named|dhcpd|osbuild|postgres|httpd|puppet|redis|squid|foreman|tomcat|virt-who|qpidd|qdrouterd|mongod|celery|pulp|dynflow' -A 30 | sed s'/\●/\*/'g > $base_dir/sysmgmt/services.txt
 		cat $base_dir/sos_commands/systemd/systemctl_status_--all | sed -n '/service -/,/timer -/p' | sed -n '/service -/,/target -/p' | sed -n '/service -/,/swap -/p' | sed -n '/service -/,/socket -/p' | sed -n '/service -/,/slice -/p' | sed s'/\●/\*/'g | egrep '^\* ntpd|^\* chronyd|^\* systemd-timedatectl|^\* cockpit|^\* goferd|^\* elasticsearch|^\* named|^\* dhcpd|^\* osbuild|^\* postgres|^\* httpd|^\* light|^\* puppet|^\* redis|^\* squid|^\* foreman|^\* tomcat|^\* virt-who|^\* qpidd|^\* qdrouterd|^\* mongod|^\* rh-mongodb34-mongod|^\* celery|^\* pulp|^\* dynflow|^\* smart_proxy_dynflow_core' -A 20 | egrep -v 'displaying |\|-' &> $base_dir/sysmgmt/services.txt
-	  #fi
 
 	  tail -10000 $base_dir/var/log/httpd/foreman-ssl_access_ssl.log 2>/dev/null > $base_dir/sysmgmt/foreman-ssl_access_ssl.log
 
@@ -1358,11 +1351,13 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 			NO_SCENARIO='TRUE'
 		fi
 	fi
-	if [ "$NO_SCENARIO" == "TRUE" ]; then
-		log "egrep -hir 'tuning' \$base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
-		log "---"
-		log_cmd "egrep -hir 'tuning' $base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
-	fi
+	log "---"
+	log
+
+	log "// tuning profile in the logs"
+	log "egrep -hir 'tuning' \$base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
+	log "---"
+	log_cmd "egrep -hir 'tuning' $base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
 	log "---"
 	log
 
