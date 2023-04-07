@@ -3697,16 +3697,20 @@ if [ ! "$(egrep '^scap|openscap' $base_dir/installed-rpms $base_dir/sos_commands
 
 else
 
-	export GREP_COLORS='ms=01;32'
-	log_cmd "echo '## openscap' | grep --color=always \#"
-	echo '## openscap' | grep --color=always \#
-	export GREP_COLORS='ms=01;31'
-	log
+	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ] || [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 
-	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
+		export GREP_COLORS='ms=01;32'
+		log_cmd "echo '## openscap' | grep --color=always \#"
+		echo '## openscap' | grep --color=always \#
+		export GREP_COLORS='ms=01;31'
+		log
 
 		log "OpenSCAP is a security profiling tool that compares XML-formatted security standards descriptions against the state of a target system."
 		log
+
+	fi
+
+	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 
 		log "// openscap values in answers files"
 		log "egrep openscap \$base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
