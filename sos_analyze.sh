@@ -907,6 +907,7 @@ report()
 {
 
 
+
 # define variables to be used later
 CAPSULE_IPS=""
 base_dir=$1
@@ -914,18 +915,28 @@ base_foreman=$2
 sos_version=$3
 
 HOSTNAME=""
-if [ -f "$base_dir/hostname" ]; then HOSTNAME=`cat $base_dir/hostname`; fi
+if [ "$(jq '.\"network.hostname\"' $base_dir/var/lib/rhsm/facts/facts.json 2>/dev/null)" != '' ]; then
+	HOSTNAME=$(jq '."network.hostname"' $base_dir/var/lib/rhsm/facts/facts.json | tr -d '"')
+elif [ "$(cat $base_dir/sos_commands/host/hostnamectl_status 2>/dev/null)" != '' ]; then
+	HOSTNAME=$(egrep 'Static hostname:' $base_dir/sos_commands/host/hostnamectl_status | awk '{print $NF}')
+elif [ "$(cat $base_dir/hostname 2>/dev/null)" != '' ]; then 
+	HOSTNAME=$(cat $base_dir/hostname); 
+fi
+
+HOSTNAME_SHORT=$(echo $HOSTNAME | awk -F"." '{print $1}')
+
 CAPSULE_IPS=""
 HOSTS_ENTRY=""
 if [ -f "$base_dir/etc/hosts" ] && [ "$HOSTNAME" ]; then HOSTS_ENTRY=`grep $HOSTNAME $base_dir/etc/hosts | egrep --color=always '^|$IPADDRLIST'`; fi
 
 PRIMARYNIC=""
-if [ -f "$base_dir/route" ]; then PRIMARYNIC=`grep UG $base_dir/route | awk '{print $NF}'`; fi
+if [ "$(cat $base_dir/route 2>/dev/null)" != '' ]; then PRIMARYNIC=`grep UG $base_dir/route | awk '{print $NF}'`; fi
+
 
 IPADDRLIST=""
 SATELLITE_IP=""
-if [ -f "$base_dir/ip_addr" ]; then SATELLITE_IP=`egrep "$PRIMARYNIC" $base_dir/ip_addr | egrep '\.' | egrep -v "inet6" | awk -F"/" '{print $1}' | awk '{print $NF}' | tr '\n' '|' | rev | cut -c2- | rev`; fi
-if [ "$SATELLITE_IP" == '' ]; then SATELLITE_IP=$(egrep $HOSTNAME $base_dir/etc/hosts | egrep -v \# | head -1);fi
+if [ "$PRIMARYNIC" != '' ]; then SATELLITE_IP=`egrep "$PRIMARYNIC" $base_dir/ip_addr | egrep '\.' | egrep -v "inet6" | awk -F"/" '{print $1}' | awk '{print $NF}' | tr '\n' '|' | rev | cut -c2- | rev`; fi
+if [ "$SATELLITE_IP" == '' ] && [ "$HOSTNAME" != '' ] ; then SATELLITE_IP=$(egrep $HOSTNAME $base_dir/etc/hosts | egrep -v \# | head -1);fi
 IPADDRLIST=$SATELLITE_IP
 
 SATELLITE_INSTALLED=FALSE
@@ -940,16 +951,16 @@ if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scena
 		CAPSULE_SERVER='TRUE'
 	fi
 fi
-if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i satellite)" ] || [ "$(egrep '^passenger|^puma|^foreman|^candlepin|^satellite-6' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep servername | head -1)" ]; then
+if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | egrep -i satellite)" ] || [ "$(egrep '^passenger|^puma|^foreman|^candlepin|^satellite-6' $base_dir/installed-rpms 2>/dev/null)" ] || [ `egrep "$HOSTNAME$" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml 2>/dev/null | egrep servername | head -1` ] || [ -e $base_dir/sos_commands/foreman/smart_proxies ]; then
 	SATELLITE_INSTALLED='TRUE'
 fi
 if [ "$(egrep '^foreman-1.6|^foreman-1.7|^foreman-proxy-1.6|^foreman-proxy-1.7' $base_dir/installed-rpms)" ]; then EARLY_SATELLITE='TRUE'; fi
 if [ "$(egrep '^spacewalk-backend-server|^cobblerd|^rhn-search|^jabberd|^taskomatic|^satellite-branding' $base_dir/installed-rpms)" ]; then SPACEWALK_INSTALLED='TRUE'; fi
 
+
 log_tee "### Welcome to Report ###"
 log_tee "### CEE/SysMGMT ###"
 log_tee " "
-
 
 
 log_tee "## Date"
@@ -961,17 +972,19 @@ log_cmd "head -1 $base_dir/date"
 log "---"
 log
 
+
+
 log "// is this a Satellite server?"
 log "---"
-if [ "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ ! "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
+if [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ ! "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 server."
-elif [ ! "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
+elif [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ ! "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server"
 elif [ "$SATELLITE_INSTALLED" == "TRUE" ] && [ "$CAPSULE_SERVER" == "FALSE" ]; then
 
 	if [ "$EARLY_SATELLITE" == "TRUE" ]; then
 		log "Note:  Based on what's in this sosreport, this may be a Satellite 6.0 or 6.1 server."
-	elif [ "$EARLY_SATELLITE" == "FALSE" ]; then
+	elif [ -e $base_dir/sos_commands/foreman/smart_proxies ]; then
 		log "Note:  Based on what's in this sosreport, this may be a Satellite 6 server."
 	fi
 
@@ -995,6 +1008,8 @@ if [ "$SPACEWALK_INSTALLED" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "FALSE" ]
 fi
 log "---"
 log
+
+
 
 
 MYDATE=`date +"%Y%m%d%H%M"`;
@@ -1816,6 +1831,8 @@ if [ -f "$base_dir/foreman_filecontexts" ]; then
 	log
 fi
 
+
+
 log_tee "## fips mode"
 log
 
@@ -1832,11 +1849,15 @@ log
 log "// fips in the logs"
 log "egrep -hir 'fips mode|fips_enabled' \$base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h"
 log "---"
-log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h | head -25"
+log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h | head -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '^|false'"
 log "..."
-log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h | tail -25"
+log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h | tail -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '^|false'"
 log "---"
 log
+
+
+
+
 
 log_tee "## crond"
 log
@@ -2371,7 +2392,7 @@ if [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 		echo '## cobblerd (Satellite 5)' | grep --color=always \#
 		log
 
-		log "Cobbler is a free and open source Linux installation server that can be used to automate the network installation environments from a central location."
+		log "Cobbler is Spacewalk's provisioning component."
 		log
 
 		log "cobblerd not found"
@@ -2383,7 +2404,7 @@ if [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 		echo '## cobblerd (Satellite 5)' | grep --color=always \#
 		log
 
-		log "Cobbler is a free and open source Linux installation server that can be used to automate the network installation environments from a central location."
+		log "Cobbler is Spacewalk's provisioning component."
 		log
 
 		SERVICE_NAME='cobblerd'
