@@ -722,6 +722,7 @@ main()
 	installed-rpms,rpm-manifest,rpm-qa,rpm-qa.out,installed_packages
 	ip_addr,ip_address,ip_a
 	last
+	free,free_-m
 	lsb-release,lsb_release
 	lsmod
 	lsof,lsof_-b_M_-n_-l,lsof_-b_M_-n_-l_-c,lsof.out
@@ -753,9 +754,9 @@ main()
 
 	  # create a few basic links
 
-	  if [ ! -f "$base_dir/version.txt" ]; then touch $base_dir/version.txt; fi
+	  if [ ! -e "$base_dir/version.txt" ]; then touch $base_dir/version.txt; fi
 
-	  if [ -d $base_dir/usr/lib ] && [ ! -e $base_dir/lib ]; then ln -sr $base_dir/usr/lib $base_dir/lib 2>/dev/null; fi
+	  if [ ! -e "$base_dir/free" ] && [ ! -e "$base_dir/free" ]; then touch $base_dir/version.txt; fi
 
 	  # this section handles spacewalk-debug files
 
@@ -900,7 +901,7 @@ main()
 	# this is a list of red hat packages installed from the satellite repositories.
 	# we'll use it later to highlight conflicting third-party packages.
 
-	SATPACKAGES="dynflow|foreman|gofer|katello|mongo|passenger|pulp|qpid|satellite|^ansible-2|^ansiblerole-insights-client|^ansible-runner|^candlepin-|^candlepin-selinux|^createrepo_c-|^createrepo_c-libs-|^facter-|^hfsplus-tools-|^hiera-|^kobo-|^libmodulemd-|^libsolv-|^libstemmer-|^libwebsockets-|^liquibase-|^mod_xsendfile-|^ostree-|^pcp-mmvstatsd\-|^puppet|^pycairo-|^spacecmd-|^tracer-common-|^v8|^virt-who-|^yaml-cpp|^python2-amqp-|^python2-ansible-runner-|^python2-anyjson-|^python2-beautifulsoup4-|^python2-celery-|^python2-click-|^python2-crane-|^python2-daemon-|^python2-django-|^python2-future-|^python2-gobject-|^python2-gobject-base-|^python2-isodate-|^python2-itsdangerous-|^python2-jinja2-|^python2-jmespath-|^python2-markupsafe-|^python2-nectar-|^python2-okaara-|^python2-pexpect-|^python2-ptyprocess-|^python2-solv-|^python2-tracer-|^python2-twisted-|^python2-vine-|^python2-werkzeug-|^python-amqp-|^python-anyjson-|^python-argcomplete-|^python-billiard-|^python-blinker-|^python-bson-|^python-celery-|^python-crane-|^python-django-|^python-django-bash-completion-|^python-ecdsa-|^python-flask-|^python-fpconst-|^python-gnupg-|^python-httplib2-|^python-isodate-|^python-itsdangerous-|^python-kid-|^python-kombu-|^python-nectar-|^python-oauth2-|^python-okaara-|^python-passlib-|^python-psutil-|^python-requests-toolbelt-|^python-saslwrapper-|^python-semantic_version-|^python-simplejson-|^python-twisted-core-|^python-twisted-web-|^python-werkzeug-|^python-zope-interface-|^redhat-access-insights-puppet-|^repoview-|^rhel8-kickstart-setup-|^ruby-augeas-|^rubygem-ansi-|^rubygem-apipie-bindings-|^rubygem-awesome_print-|^rubygem-bundler_ext-|^rubygem-clamp-|^rubygem-concurrent-ruby-|^rubygem-facter-|^rubygem-faraday-|^rubygem-faraday_middleware-|^rubygem-fast_gettext-|^rubygem-ffi-|^rubygem-gssapi-|^rubygem-hashie-|^rubygem-highline-|^rubygem-infoblox-|^rubygem-journald-logger-|^rubygem-journald-native-|^rubygem-jwt-|^rubygem-kafo-|^rubygem-kafo_parsers-|^rubygem-kafo_wizards-|^rubygem-little-plugger-|^rubygem-logging-|^rubygem-logging-journald-|^rubygem-mime-types-|^rubygem-multi_json-|^rubygem-multipart-post-|^rubygem-netrc-|^rubygem-net-ssh-|^rubygem-newt-|^rubygem-oauth-|^rubygem-openscap-|^rubygem-powerbar-|^rubygem-rack-|^rubygem-rack-protection-|^rubygem-rake-|^rubygem-rb-inotify-|^rubygem-rest-client-|^rubygem-rkerberos-|^rubygem-rsec-|^rubygem-rubyipmi-|^rubygem-sinatra-|^rubygem-smart_proxy_ansible-|^rubygem-smart_proxy_discovery-|^rubygem-smart_proxy_openscap-|^rubygem-tilt-|^ruby-rgen-|^ruby-shadow-|^saslwrapper-|^SOAPpy-|^sshpass-|^tfm-ror52-rubygem-actioncable-|^tfm-ror52-rubygem-actionmailer-|^tfm-ror52-rubygem-actionpack-|^tfm-ror52-rubygem-actionview-|^tfm-ror52-rubygem-activejob-|^tfm-ror52-rubygem-activemodel-|^tfm-ror52-rubygem-activerecord-|^tfm-ror52-rubygem-activestorage-|^tfm-ror52-rubygem-activesupport-|^tfm-ror52-rubygem-arel-|^tfm-ror52-rubygem-builder-|^tfm-ror52-rubygem-coffee-rails-|^tfm-ror52-rubygem-coffee-script-|^tfm-ror52-rubygem-crass-|^tfm-ror52-rubygem-erubi-|^tfm-ror52-rubygem-execjs-|^tfm-ror52-rubygem-globalid-|^tfm-ror52-rubygem-i18n-|^tfm-ror52-rubygem-loofah-|^tfm-ror52-rubygem-mail-|^tfm-ror52-rubygem-marcel-|^tfm-ror52-rubygem-method_source-|^tfm-ror52-rubygem-mimemagic-|^tfm-ror52-rubygem-mime-types-|^tfm-ror52-rubygem-mini_mime-|^tfm-ror52-rubygem-mini_portile2-|^tfm-ror52-rubygem-multi_json-|^tfm-ror52-rubygem-mustermann-|^tfm-ror52-rubygem-nio4r-|^tfm-ror52-rubygem-nokogiri-|^tfm-ror52-rubygem-rack-|^tfm-ror52-rubygem-rack-test-|^tfm-ror52-rubygem-rails-|^tfm-ror52-rubygem-railties-|^tfm-ror52-rubygem-sinatra-|^tfm-ror52-rubygem-sprockets-|^tfm-ror52-rubygem-sqlite3-|^tfm-ror52-rubygem-thor-|^tfm-ror52-rubygem-thread_safe-|^tfm-ror52-rubygem-tilt-|^tfm-ror52-rubygem-turbolinks-|^tfm-ror52-rubygem-tzinfo-|^tfm-ror52-runtime-|^tfm-rubygem-activerecord-import-|^tfm-rubygem-addressable-|^tfm-rubygem-algebrick-|^tfm-rubygem-ancestry-|^tfm-rubygem-anemone-|^tfm-rubygem-ansi-|^tfm-rubygem-apipie-bindings-|^tfm-rubygem-apipie-params-|^tfm-rubygem-apipie-rails-|^tfm-rubygem-audited-|^tfm-rubygem-autoparse-|^tfm-rubygem-awesome_print-|^tfm-rubygem-bastion-|^tfm-rubygem-bcrypt-|^tfm-rubygem-bundler_ext-|^tfm-rubygem-clamp-|^tfm-rubygem-colorize-|^tfm-rubygem-concurrent-ruby-|^tfm-rubygem-css_parser-|^tfm-rubygem-daemons-|^tfm-rubygem-deacon-|^tfm-rubygem-declarative-|^tfm-rubygem-declarative-option-|^tfm-rubygem-deep_cloneable-|^tfm-rubygem-deface-|^tfm-rubygem-diffy-|^tfm-rubygem-docker-api-|^tfm-rubygem-domain_name-|^tfm-rubygem-ethon-|^tfm-rubygem-excon-|^tfm-rubygem-extlib-|^tfm-rubygem-facter-|^tfm-rubygem-faraday-|^tfm-rubygem-fast_gettext-|^tfm-rubygem-ffi-|^tfm-rubygem-fog-|^tfm-rubygem-fog-aws-|^tfm-rubygem-fog-core-|^tfm-rubygem-fog-digitalocean-|^tfm-rubygem-fog-google-|^tfm-rubygem-fog-json-|^tfm-rubygem-fog-kubevirt-|^tfm-rubygem-fog-libvirt-|^tfm-rubygem-fog-openstack-|^tfm-rubygem-fog-ovirt-|^tfm-rubygem-fog-rackspace-|^tfm-rubygem-fog-vsphere-|^tfm-rubygem-fog-xenserver-|^tfm-rubygem-fog-xml-|^tfm-rubygem-foreigner-|^tfm-rubygem-formatador-|^tfm-rubygem-friendly_id-|^tfm-rubygem-get_process_mem-|^tfm-rubygem-gettext-|^tfm-rubygem-gettext_i18n_rails-|^tfm-rubygem-git-|^tfm-rubygem-google-api-client-|^tfm-rubygem-googleauth-|^tfm-rubygem-graphql-|^tfm-rubygem-graphql-batch-|^tfm-rubygem-gssapi-|^tfm-rubygem-hammer_cli-|^tfm-rubygem-hammer_cli_csv-|^tfm-rubygem-hammer_cli_import-|^tfm-rubygem-hashie-|^tfm-rubygem-highline-|^tfm-rubygem-http-|^tfm-rubygem-httpclient-|^tfm-rubygem-http-cookie-|^tfm-rubygem-http-form_data-|^tfm-rubygem-http_parser-|^tfm-rubygem-i18n-|^tfm-rubygem-ipaddress-|^tfm-rubygem-jgrep-|^tfm-rubygem-journald-logger-|^tfm-rubygem-journald-native-|^tfm-rubygem-jquery-ui-rails-|^tfm-rubygem-jwt-|^tfm-rubygem-katello-|^tfm-rubygem-kubeclient-|^tfm-rubygem-launchy-|^tfm-rubygem-ldap_fluff-|^tfm-rubygem-little-plugger-|^tfm-rubygem-locale-|^tfm-rubygem-logging-|^tfm-rubygem-logging-journald-|^tfm-rubygem-memoist-|^tfm-rubygem-ms_rest-|^tfm-rubygem-multi_json-|^tfm-rubygem-multipart-post-|^tfm-rubygem-net-ldap-|^tfm-rubygem-net-ping-|^tfm-rubygem-netrc-|^tfm-rubygem-net-scp-|^tfm-rubygem-net-ssh-|^tfm-rubygem-net-ssh-krb-|^tfm-rubygem-nokogiri-|^tfm-rubygem-oauth-|^tfm-rubygem-optimist-|^tfm-rubygem-os-|^tfm-rubygem-ovirt-engine-sdk-|^tfm-rubygem-parse-cron-|^tfm-rubygem-pg-|^tfm-rubygem-polyglot-|^tfm-rubygem-powerbar-|^tfm-rubygem-prometheus-client-|^tfm-rubygem-promise-|^tfm-rubygem-public_suffix-|^tfm-rubygem-quantile-|^tfm-rubygem-rabl-|^tfm-rubygem-rack-cors-|^tfm-rubygem-rack-jsonp-|^tfm-rubygem-rails-i18n-|^tfm-rubygem-rails-observers-|^tfm-rubygem-rainbow-|^tfm-rubygem-rbovirt-|^tfm-rubygem-rbvmomi-|^tfm-rubygem-record_tag_helper-|^tfm-rubygem-redhat_access-|^tfm-rubygem-redhat_access_lib-|^tfm-rubygem-representable-|^tfm-rubygem-responders-|^tfm-rubygem-rest-client-|^tfm-rubygem-retriable-|^tfm-rubygem-roadie-|^tfm-rubygem-roadie-rails-|^tfm-rubygem-robotex-|^tfm-rubygem-ruby2ruby-|^tfm-rubygem-ruby-libvirt-|^tfm-rubygem-ruby_parser-|^tfm-rubygem-runcible-|^tfm-rubygem-safemode-|^tfm-rubygem-scoped_search-|^tfm-rubygem-secure_headers-|^tfm-rubygem-sequel-|^tfm-rubygem-sexp_processor-|^tfm-rubygem-signet-|^tfm-rubygem-sprockets-|^tfm-rubygem-sprockets-rails-|^tfm-rubygem-sshkey-|^tfm-rubygem-statsd-instrument-|^tfm-rubygem-table_print-|^tfm-rubygem-text-|^tfm-rubygem-timeliness-|^tfm-rubygem-trollop-|^tfm-rubygem-turbolinks-|^tfm-rubygem-typhoeus-|^tfm-rubygem-uber-|^tfm-rubygem-unf-|^tfm-rubygem-unf_ext-|^tfm-rubygem-unicode-|^tfm-rubygem-useragent-|^tfm-rubygem-webpack-rails-|^tfm-rubygem-wicked-|^tfm-rubygem-will_paginate-|^tfm-rubygem-x-editable-rails-|^tfm-rubygem-zest-|^tfm-runtime-"
+	SATPACKAGES="ansible|apache-commons-|avalon-framework-|avalon-logkit-|boost-|candlepin|copy-jdk-configs-|createrepo|cyrus-sasl-|deltarpm-|dwz-|dynflow|ecj-|efivar-libs62-|facter-|flac-libs-|foreman|geronimo-jms-|geronimo-jta-|giflib-|gperftools-libs-|gsm-|hammer-|hiera-|httpd|ipmitool-|ipxe-bootimgs0180825-|jabber|katello|kobo-|liquibase-|log4j-|maven|mod_ssl|mod_wsgi-|mod_xsendfile-|mokutil51-|mongodb|oracle-config-|oracle-instantclient-basic0-|oracle-instantclient-selinux0-|oracle-nofcontext-selinux-|pcre-devel-|pcsc-lite-libs-|perl-Carp-|perl-Compress-Raw-Bzip2-|perl-Compress-Raw-Zlib-|perl-constant-|perl-Data-Dumper-|perl-DBI-|perl-Digest-|perl-Digest-MD5-|perl-Encode-|perl-Error-|perl-Exporter-|perl-File-Path-|perl-File-Temp-|perl-Filter-|perl-Getopt-Long-|perl-Git-|perl-HTTP-Tiny-|perl-IO-Compress-|perl-libs-|perl-macros-|perl-Net-Daemon-|perl-parent-|perl-PathTools-|perl-PlRPC-|perl-Pod-Escapes-|perl-podlators-|perl-Pod-Perldoc-|perl-Pod-Simple-|perl-Pod-Usage-|perl-Scalar-List-Utils-|perl-Socket-|perl-srpm-macros-|perl-Storable-|perl-TermReadKey-|perl-Text-ParseWords-|perl-Thread-Queue-|perl-threads-|perl-threads-shared-|perl-Time-HiRes-|perl-Time-Local-|perl-XML-NamespaceSupport-|postgresql|psmisc2-|pulp|puppet|qpid|redhat-rpm-config-|repoview|rh-nodejs4-runtime-|rh-nodejs6-runtime-|rpm-build-|ruby-augeas-|rubygem-actioncable-|rubygem-actionmailbox-|rubygem-actionmailer-|rubygem-actionpack-|rubygem-actiontext-|rubygem-actionview-|rubygem-activejob-|rubygem-activemodel-|rubygem-activerecord-|rubygem-activerecord-import-|rubygem-activerecord-session_store-|rubygem-activestorage-|rubygem-activesupport-|rubygem-acts_as_list-|rubygem-addressable-|rubygem-algebrick-|rubygem-amazing_print-|rubygem-ancestry-|rubygem-anemone-|rubygem-angular-rails-templates-|rubygem-ansi-|rubygem-apipie-bindings-|rubygem-apipie-dsl-|rubygem-apipie-params-|rubygem-apipie-rails-|rubygem-arel-|rubygem-audited-|rubygem-audited-activerecord-|rubygem-autoparse-|rubygem-awesome_print-|rubygem-azure_mgmt_compute-|rubygem-azure_mgmt_network-|rubygem-azure_mgmt_resources-|rubygem-azure_mgmt_storage-|rubygem-azure_mgmt_subscriptions-|rubygem-bastion-|rubygem-bcrypt-|rubygem-bcrypt_pbkdf-|rubygem-bigdecimal-|rubygem-builder-|rubygem-bundler-|rubygem-bundler_ext-|rubygem-clamp-|rubygem-coffee-rails-|rubygem-coffee-script-|rubygem-coffee-script-source-|rubygem-colorize-|rubygem-concurrent-ruby-|rubygem-concurrent-ruby-edge-|rubygem-connection_pool-|rubygem-crass-|rubygem-css_parser-|rubygem-daemons-|rubygem-dalli-|rubygem-deacon-|rubygem-declarative-|rubygem-declarative-option-|rubygem-deep_cloneable-|rubygem-deface-|rubygem-did_you_mean-|rubygem-diffy-|rubygem-docker-api-|rubygem-domain_name-|rubygem-ed25519-|rubygem-erubi-|rubygem-erubis-|rubygem-ethon-|rubygem-excon-|rubygem-execjs-|rubygem-extlib-|rubygem-facter-|rubygem-faraday-|rubygem-faraday-cookie_jar-|rubygem-fast_gettext-|rubygem-ffi-|rubygem-fog-|rubygem-fog-aws-|rubygem-fog-core-|rubygem-fog-digitalocean-|rubygem-fog-google-|rubygem-fog-json-|rubygem-fog-libvirt-|rubygem-fog-openstack-|rubygem-fog-ovirt-|rubygem-fog-rackspace-|rubygem-fog-vsphere-|rubygem-fog-xenserver-|rubygem-fog-xml-|rubygem-foreigner-|rubygem-formatador-|rubygem-friendly_id-|rubygem-fx-|rubygem-get_process_mem-|rubygem-gettext-|rubygem-gettext_i18n_rails-|rubygem-git-|rubygem-gitlab-sidekiq-fetcher-|rubygem-globalid-|rubygem-google-api-client-|rubygem-googleauth-|rubygem-google-cloud-env-|rubygem-graphql-|rubygem-graphql-batch-|rubygem-gssapi-|rubygem-hashie-|rubygem-highline-|rubygem-hike-|rubygem-hocon-|rubygem-httpclient-|rubygem-http-cookie-|rubygem-i18n-|rubygem-io-console-|rubygem-ipaddress-|rubygem-irb-|rubygem-jquery-ui-rails-|rubygem-json-|rubygem-jwt-|rubygem-kafo-|rubygem-kafo_parsers-|rubygem-kafo_wizards-|rubygem-launchy-|rubygem-ldap_fluff-|rubygem-little-plugger-|rubygem-locale-|rubygem-logging-|rubygem-loofah-|rubygem-mail-|rubygem-marcel-|rubygem-memoist-|rubygem-method_source-|rubygem-mimemagic-|rubygem-mime-types-|rubygem-mime-types-data-|rubygem-mini_mime-|rubygem-mini_portile2-|rubygem-minitest-|rubygem-mqtt-|rubygem-msgpack-|rubygem-ms_rest-|rubygem-ms_rest_azure-|rubygem-multi_json-|rubygem-multipart-post-|rubygem-mustermann-|rubygem-net-http-persistent-|rubygem-net_http_unix-|rubygem-net-ldap-|rubygem-net-ping-|rubygem-netrc-|rubygem-net-scp-|rubygem-net-ssh-|rubygem-nio4r-|rubygem-nokogiri-|rubygem-oauth-|rubygem-openscap-|rubygem-openscap_parser-|rubygem-openssl-|rubygem-optimist-|rubygem-os-|rubygem-ovirt-engine-sdk-|rubygem-parallel-|rubygem-parse-cron-|passenger-|rubygem-pg-|rubygem-polyglot-|rubygem-powerbar-|rubygem-promise-|rubygem-protected_attributes-|rubygem-psych-|rubygem-public_suffix-|puma-|rubygem-rabl-|rubygem-racc-|rubygem-rack-|rubygem-rack-cors-|rubygem-rack-jsonp-|rubygem-rack-protection-|rubygem-rack-test-|rubygem-rails-|rubygem-rails-deprecated_sanitizer-|rubygem-rails-dom-testing-|rubygem-rails-html-sanitizer-|rubygem-rails-i18n-|rubygem-rails-observers-|rubygem-railties-|rubygem-rainbow-|rubygem-rake-|rubygem-rake0-|rubygem-rake2-|rubygem-rake3-|rubygem-rb-inotify-|rubygem-rbnacl-|rubygem-rbovirt-|rubygem-rbvmomi-|rubygem-rchardet-|rubygem-rdoc-|rubygem-record_tag_helper-|rubygem-redfish_client-|rubygem-redhat_access_lib-|rubygem-redis-|rubygem-representable-|rubygem-responders-|rubygem-rest-client-|rubygem-retriable-|rubygem-rkerberos-|rubygem-roadie-|rubygem-roadie-rails-|rubygem-robotex-|rubygem-rsec-|rubygem-ruby2_keywords-|rubygem-ruby2ruby-|rubygem-rubyipmi-|rubygem-ruby-libvirt-|rubygem-ruby_parser-|rubygem-runcible-|rubygems-|rubygem-safemode-|rubygem-scoped_search-|rubygem-sd_notify-|rubygem-secure_headers-|rubygem-sequel-|rubygem-server_sent_events-|rubygem-sexp_processor-|rubygem-sidekiq-|rubygem-signet-|rubygem-sinatra-|rubygem-sprockets-|rubygem-sprockets-rails-|rubygem-sqlite3-|rubygem-sshkey-|rubygem-statsd-instrument-|rubygem-stomp-|rubygem-table_print-|rubygem-text-|rubygem-thor-|rubygem-thread_safe-|rubygem-tilt-|rubygem-timeliness-|rubygem-treetop-|rubygem-trollop-|rubygem-turbolinks-|rubygem-typhoeus-|rubygem-tzinfo-|rubygem-uber-|rubygem-unf-|rubygem-unf_ext-|rubygem-unicode-|rubygem-unicode-display_width-|rubygem-useragent-|rubygem-validates_lengths_from_database-|rubygem-webpack-rails-|rubygem-websocket-driver-|rubygem-websocket-extensions-|rubygem-wicked-|rubygem-will_paginate-|rubygem-x-editable-rails-|rubygem-xmlrpc-|rubygem-zeitwerk-|rubygem-zest-|ruby-irb-|ruby-libs-|ruby-rgen-|ruby-shadow-|satellite|capsule|SOAPpy-|spacecmd|spacewalk|squid|syslinux-|syslinux-tftpboot-|tfm-runtime-|tomcat|tprdsatel1-|ttmkfdir-|v8-|v8314-runtime-|virt-who-|xalan-j2-|xerces-j2-|xml-commons-apis-|xml-commons-resolver-|yajl-|yaml-cpp-|rubygem-smart_proxy|pulpcore|proton-"
 
 
 report()
@@ -980,6 +981,8 @@ if [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ "$(egrep ^satell
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 server."
 elif [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ ! "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server"
+elif [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ "$(egrep '^foreman-1.6|^foreman-1.7' $base_dir/installed-rpms)" ]; then
+	log "Note:  Based on what's in this sosreport, this may be a Satellite 6.1 server"
 elif [ "$SATELLITE_INSTALLED" == "TRUE" ] && [ "$CAPSULE_SERVER" == "FALSE" ]; then
 
 	if [ "$EARLY_SATELLITE" == "TRUE" ]; then
@@ -1849,9 +1852,9 @@ log
 log "// fips in the logs"
 log "egrep -hir 'fips mode|fips_enabled' \$base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h"
 log "---"
-log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h | head -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '^|false'"
+log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h | head -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
 log "..."
-log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h | tail -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '^|false'"
+log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h | tail -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
 log "---"
 log
 
@@ -2193,8 +2196,15 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log
 	fi
 
-	log "// recent exit codes from satellite-installer"
 
+	log "// target-version lines with exit codes"
+	log "lines from \$base_dir/var/log/foreman-maintain/foreman-maintain.log\* and \$base_dir/var/log/foreman-installer/{satellite\*,capsule\*}"
+	log "---"
+	log_cmd "echo -e \"$(egrep -hir '\-\-target-version|Exit with status' $base_dir/var/log/foreman-maintain/foreman-maintain.log*)\n\" \"$(egrep -hir 'Exit with status code' $base_dir/var/log/foreman-installer/{satellite*,capsule*})\n\" | sed s'/I\, \[//'g | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | sort -h | egrep upgrade -A 1 | tail -50"
+	log "---"
+	log
+
+	log "// recent exit codes from satellite-installer"
 	log "grepping satellite and capsule files in foreman-installer directory for upgrade statuses"
 	log "---"
 
@@ -2243,9 +2253,9 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log
 
 	log "// check for removals of the satellite-6 package"
-	log "egrep satellite-6 \$base_dir/var/log/{yum.log,dnf*} \$base_dir/sysmgmt/messages 2>/dev/null"
+	log "egrep satellite-6 \$base_dir/var/log/{yum.log,messages*} \$base_dir/sysmgmt/messages 2>/dev/null"
 	log "---"
-	log_cmd "egrep satellite-6 $base_dir/var/log/{yum.log,dnf*} $base_dir/sysmgmt/messages 2>/dev/null"
+	log_cmd "egrep satellite-6 $base_dir/var/log/{yum.log,messages*} $base_dir/sysmgmt/messages 2>/dev/null"
 	log "---"
 	log
 
@@ -3626,6 +3636,14 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log
 
 
+		log "// redis_url setting:"
+		log "egrep -B 1 redis_url \$base_foreman/etc/foreman/settings.yaml"
+		log "---"
+		log_cmd "egrep -B 1 redis_url $base_foreman/etc/foreman/settings.yaml"
+		log "---"
+		log
+
+
 		log "// is redis listening?"
 		log "grepping netstat_-W_-neopa file"
 		log "---"
@@ -4143,7 +4161,6 @@ else
 	log "$tomcat_mem_mb"
 	log_cmd "echo java heap memory maximum: `grep tomcat $base_dir/ps 2>&1 | tr ' ' '\n' | grep Xmx`"
 
-
 	if [ -e $base_dir/etc/tomcat6/tomcat.conf ]; then
 
 		log
@@ -4175,6 +4192,8 @@ else
 		log
 
 	fi
+
+	log
 
 fi
 
