@@ -918,7 +918,7 @@ sos_version=$3
 HOSTNAME=""
 if [ "$(jq '.\"network.hostname\"' $base_dir/var/lib/rhsm/facts/facts.json 2>/dev/null)" != '' ]; then
 	HOSTNAME=$(jq '."network.hostname"' $base_dir/var/lib/rhsm/facts/facts.json | tr -d '"')
-elif [ "$(cat $base_dir/sos_commands/host/hostnamectl_status 2>/dev/null)" != '' ]; then
+elif [ "$(cat $base_dir/sos_commands/host/hostnamectl_status 2>/dev/null | egrep -v ^Failed)" != '' ]; then
 	HOSTNAME=$(egrep 'Static hostname:' $base_dir/sos_commands/host/hostnamectl_status | awk '{print $NF}')
 elif [ "$(cat $base_dir/hostname 2>/dev/null)" != '' ]; then 
 	HOSTNAME=$(cat $base_dir/hostname); 
@@ -1050,7 +1050,7 @@ log "from \$base_dir/etc/hostname:"
 log_cmd "cat $base_dir/hostname | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
 log
 log "from \$base_dir/sos_commands/host/hostnamectl_status"
-log_cmd "egrep hostname $base_dir/sos_commands/host/hostnamectl_status | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
+log_cmd "cat $base_dir/sos_commands/host/hostnamectl_status | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
 log
 log "from \$base_dir/var/lib/rhsm/facts/facts.json:"
 log_cmd "jq '. | \"hostname: \" + .\"network.hostname\",\"FQDN: \" + .\"network.fqdn\"' $base_dir/var/lib/rhsm/facts/facts.json 2>/dev/null | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
@@ -1817,7 +1817,7 @@ log "grep for selinux denials"
 log "---"
 log "from /var/log/audit/audit.log:"
 SE_DENIALS=`cat $base_dir/var/log/audit/* | sort -u | egrep '^type=(AVC|SELINUX)' | while read line; do time=\`echo $line | sed 's/.*audit(\([0-9]*\).*/\1/'\`; echo \`date -d @$time +'%Y-%m-%d.%H:%M'\` $line; done | awk '{$2=""; $3=""; $4=""; print $0}' | tail -1000`
-log_cmd "echo -E \"$SE_DENIALS\" | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | tail -30 | egrep denied | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto' | GREP_COLORS='ms=01;33' egrep --color=always '^|permissive=1'"
+log_cmd "echo -E \"$SE_DENIALS\" | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | tail -30 | egrep 'denied|failed' | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto' | GREP_COLORS='ms=01;33' egrep --color=always '^|permissive=1'"
 log "---"
 log
 log "from /var/log/messages:"
@@ -2715,19 +2715,36 @@ else
 	log "---"
 	log
 
-	log "// is postgres remote?"
-	log "grepping /etc/foreman-installer/scenarios.d/satellite-answers.yaml"
-	log "---"
-	log "foreman db:"
-	log_cmd "egrep -i 'db_username|foreman_url' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
-	log
-	log "pulpcore db:"
-	log_cmd "egrep -i 'pulpcore_postgresql' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
-	log
-	log "candlepin db:"
-	log_cmd "egrep -i 'candlepin_db_host' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
-	log "---"
-	log
+	if [ "$EARLY_SATELLITE" == "FALSE" ]; then
+		log "// is postgres remote?"
+		#log "grepping /etc/foreman-installer/scenarios.d/satellite-answers.yaml"
+		log "---"
+		log "foreman db:"
+		if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
+			log_cmd "egrep -i 'db_username|foreman_url' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
+		fi
+		if [ "$CAPSULE_SERVER" == "TRUE" ]; then
+			log_cmd "egrep -i 'db_username|foreman_url' $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
+		fi
+		log
+		log "pulpcore db:"
+		if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
+			log_cmd "egrep -i 'pulpcore_postgresql' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
+		fi
+		if [ "$CAPSULE_SERVER" == "TRUE" ]; then
+			log_cmd "egrep -i 'pulpcore_postgresql' $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
+		fi
+		log
+		log "candlepin db:"
+		if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
+			log_cmd "egrep -i 'candlepin_db_host' $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
+		fi
+		if [ "$CAPSULE_SERVER" == "TRUE" ]; then
+			log_cmd "egrep -i 'candlepin_db_host' $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|localhost'"
+		fi
+		log "---"
+		log
+	fi
 
 	log "// postgres idle process (everything)"
 	log "egrep -hc ^postgres \$base_dir/ps | grep idle$"
@@ -3970,7 +3987,7 @@ fi
 
 
 
-if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep virt-who`" ] || [ "`egrep -i 'virt-who' $base_dir/chkconfig $base_dir/installed_rpms $base_dir/ps $base_dir/var/log/rhsm/rhsm.log 2>/dev/null | head -1`" ] || [ -f "$base_dir/etc/sysconfig/virt-who" ] || [ -d "$base_dir/etc/virt-who.d" ]; then
+if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep virt-who`" ] || [ "`egrep -i 'virt-who' $base_dir/chkconfig $base_dir/installed_rpms $base_dir/ps $base_dir/var/log/rhsm/rhsm.log 2>/dev/null | head -1`" ] || [ -f "$base_dir/etc/sysconfig/virt-who" ] || [ -d "$base_dir/etc/virt-who.d" ] || [ "$(ls $base_dir/var/log/httpd/foreman-ssl_access_ssl.log &>/dev/null && egrep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log 2>/dev/null | head -1)" ]; then
 
 	log_tee "## virt-who"
 	log
@@ -5435,8 +5452,12 @@ if [ "$OPEN_IN_EDITOR_TMP_DIR" == "true" ]; then
    $EDITOR /tmp/report_${USER}_$final_name.log
 fi
 
-if [ -f "$base_dir/var/log/leapp/leapp-report.txt" ]; then
+if [ -e "$base_dir/var/log/leapp/leapp-report.txt" ]; then
     ln -s "$base_dir/var/log/leapp/leapp-report.txt" leapp-report.txt
+fi
+
+if [ -e "$base_dir/sos_commands/abrt/abrt-cli_list" ]; then
+    ln -s "$base_dir/sos_commands/abrt/abrt-cli_list" abrt-cli_list
 fi
 
 if [ "`egrep -i selinux $base_dir/sysmgmt/messages | egrep confidence`" ]; then
