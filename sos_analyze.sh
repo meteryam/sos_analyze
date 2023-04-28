@@ -769,10 +769,11 @@ main()
 
 		if [ -d $base_dir/httpd-logs/httpd ]; then ln -sr $base_dir/httpd-logs/httpd $base_dir/var/log/httpd 2>/dev/null; fi
 		if [ -d $base_dir/tomcat-logs/tomcat6 ] && [ ! -e $base_dir/var/log/tomcat6 ]; then ln -sr $base_dir/tomcat-logs/tomcat6 $base_dir/var/log/tomcat6 2>/dev/null; fi
+		if [ -d $base_dir/tomcat-logs/tomcat ] && [ ! -e $base_dir/var/log/tomcat ]; then ln -sr $base_dir/tomcat-logs/tomcat $base_dir/var/log/tomcat6 2>/dev/null; fi
 		if [ -d $base_dir/rhn-logs/rhn ]; then ln -sr $base_dir/rhn-logs/rhn $base_dir/var/log/rhn 2>/dev/null; fi
 		if [ -d $base_dir/cobbler-logs ]; then ln -sr $base_dir/cobbler-logs $base_dir/var/log/cobbler 2>/dev/null; fi
 		if [ -d $base_dir/conf/cobbler ]; then ln -sr $base_dir/conf/cobbler $base_dir/etc/cobbler 2>/dev/null; fi
-		if [ -d $base_dir/audit-log ]; then ln -sr $base_dir/audit-log i$base_dir/var/log/audit 2>/dev/null; fi
+		if [ -d $base_dir/audit-log ]; then ln -sr $base_dir/audit-log $base_dir/var/log/audit 2>/dev/null; fi
 		if [ -d $base_dir/schema-upgrade-logs ]; then ln -sr $base_dir/schema-upgrade-logs $base_dir/var/log/spacewalk/schema-upgrade 2>/dev/null; fi
 
 		if [ -d $base_dir/containers ]; then
@@ -793,6 +794,7 @@ main()
 	  if [ -d $base_dir/sos_commands/lsbrelease ]; then ln -s lsbrelease $base_dir/sos_commands/release 2>/dev/null; fi
 	  if [ -d $base_dir/sos_commands/printing ]; then ln -s printing $base_dir/sos_commands/cups 2>/dev/null; fi
 	  if [ -d $base_dir/sos_commands/sar ] && [ ! -e $base_dir/var/log/sar ]; then ln -sr $base_dir/sos_commands/sar $base_dir/var/log/sar; fi
+
 
 	  # fix the hostname file for foreman-debug packages
 
@@ -1002,12 +1004,14 @@ elif [ "$SATELLITE_INSTALLED" == "FALSE" ] && [ "$CAPSULE_SERVER" == "TRUE" ]; t
 
 elif [ "$CAPSULE_SERVER" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 	log "Note:  Based on what's in this sosreport, this server may have a mixture of Satellite and capsule files."
+elif [ "$SPACEWALK_INSTALLED" == "FALSE" ] && [ "$SATELLITE_INSTALLED" == "FALSE" ] && [ "$CAPSULE_SERVER" == "FALSE" ]; then
+	log "Note:  Based on what's in this sosreport, this server may not be a Satellite server or capsule server."
 fi
 
 
 
 if [ "$SPACEWALK_INSTALLED" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "FALSE" ] && [ "$CAPSULE_SERVER" == "FALSE" ]; then
-	log "Note:  Based on what's in this sosreport, this may be a Satellite 5 server."
+	log "Note:  Based on what's in this sosreport, this may be a Satellite 5 server or Satellite 5 proxy."
 fi
 log "---"
 log
@@ -1271,11 +1275,8 @@ log
 log "// out of memory errors"
 log "grep messages files for out of memory errors"
 log "---"
-#{ for mylog in `ls -rt $base_dir/var/log/messages* $base_dir/OOO 2>/dev/null`; do zcat $mylog 2>/dev/null || cat $mylog; done; } | grep 'Out of memory' | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | tail -200 | cut -c -10240 >> $FOREMAN_REPORT
-#log_cmd "egrep -hir 'out of memory' $base_dir/var/log/messages $base_dir/sos_commands/logs/journalctl_--no-pager $base_dir/OOO | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | tail -100"
-log_cmd "egrep -hir 'out of memory' $base_dir/var/log/messages $base_dir/sos_commands/logs/journalctl_--no-pager $base_dir/OOO 2>/dev/null | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | sort -h | tail -100"
-
-#log_cmd "egrep -hir 'out of memory' $base_dir/sysmgmt/{messages,journal.log} | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | sort -h | tail -100"
+#log_cmd "egrep -hir 'out of memory' $base_dir/var/log/messages $base_dir/sos_commands/logs/journalctl_--no-pager $base_dir/OOO 2>/dev/null | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | sort -h | tail -100"
+log_cmd "egrep -hir 'out of memory' $base_dir/var/log/messages* $base_dir/sos_commands/logs/journalctl_--no-pager $base_dir/OOO 2>/dev/null | egrep -vi '{|}|HeapDumpOnOutOfMemoryError|powershell' | sort -h | tail -100"
 log "---"
 log
 
@@ -1817,7 +1818,7 @@ log "grep for selinux denials"
 log "---"
 log "from /var/log/audit/audit.log:"
 SE_DENIALS=`cat $base_dir/var/log/audit/* | sort -u | egrep '^type=(AVC|SELINUX)' | while read line; do time=\`echo $line | sed 's/.*audit(\([0-9]*\).*/\1/'\`; echo \`date -d @$time +'%Y-%m-%d.%H:%M'\` $line; done | awk '{$2=""; $3=""; $4=""; print $0}' | tail -1000`
-log_cmd "echo -E \"$SE_DENIALS\" | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | tail -30 | egrep 'denied|failed' | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto' | GREP_COLORS='ms=01;33' egrep --color=always '^|permissive=1'"
+log_cmd "echo -E \"$SE_DENIALS\" | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | tail -30 | egrep denied | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto' | GREP_COLORS='ms=01;33' egrep --color=always '^|permissive=1'"
 log "---"
 log
 log "from /var/log/messages:"
@@ -1858,8 +1859,62 @@ log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,for
 log "---"
 log
 
+log_tee "## fapolicyd"
+log
 
+log "The fapolicyd software framework controls the execution of applications based on a user-defined policy. This is one of the most efficient ways to prevent untrusted and possibly malicious applications on the system.  As of Satellite 6.12, this is an unsupported hardening mechanism for a Satellite server."
+log
 
+if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep 'fapolicyd'`" ] || [ ! "`egrep -i fapolicyd $base_dir/installed-rpms $base_dir/sysmgmt/journalctl.log $base_dir/sysmgmt/messages 2>/dev/null | egrep -v 'units_rpm|\.rpm'`" ]; then
+
+	log "fapolicyd not found"
+	log
+
+else
+
+	SERVICE_NAME='fapolicyd'
+	log "// $SERVICE_NAME service status"
+	log "---"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log
+	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
+		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+	else
+		log
+		log_cmd "egrep $SERVICE_NAME $base_dir/ps"
+	fi
+	log "---"
+	log
+
+	log "// contents of /etc/fapolicyd/fapolicyd.conf"
+	log "---"
+	log_cmd "cat $base_dir/etc/fapolicyd/fapolicyd.conf"
+	log "---"
+	log
+
+	log "// items being denied"
+	log "grep 'deny_audit' \$base_dir/tmp/fapolicyd_debug.out | awk '{ print \$8 }' | sort | uniq -c | sort -nr"
+	log "---"
+	log_cmd "grep 'deny_audit' $base_dir/tmp/fapolicyd_debug.out | awk '{ print $8 }' | sort | uniq -c | sort -nr"
+	log "---"
+	log
+
+	log "// contents of /etc/systemd/system/fapolicyd.service.d/limits.conf"
+	log "---"
+	log_cmd "cat $base_dir/etc/systemd/system/fapolicyd.service.d/limits.conf"
+	log "---"
+	log
+	log "  Note:  The following values are recommended for RHEL 8:"
+	log
+	log "    [Service]"
+	log "    LimitNOFILE=16384"
+	log
+	log "  Then run these commands:"
+	log "    # systemctl daemon-reload"
+	log "    # foreman-maintain service restart"
+	log
+
+fi
 
 
 log_tee "## crond"
@@ -2142,13 +2197,27 @@ log "// packages provided by 3rd party vendors"
 
 log "show third-party packages from package-data and/or 3rd_party files"
 log "---"
-log_cmd "egrep -hv 'Red Hat|^$HOSTNAME|^gpg\-pubkey\-' $base_dir/sos_commands/rpm/package-data | cut -f1,4 | sort -k2 | egrep -i --color=always '^|$SATPACKAGES|Fedora|Kojii|CentOS|syslog-ng|katello-ca-consumer'"
-log_cmd "cat $base_dir/3rd_party 2>/dev/null | sort -k2 | egrep -i --color=always '^|$SATPACKAGES|Fedora|Kojii|CentOS|syslog-ng|katello-ca-consumer'"
+log_cmd "egrep -hv 'Red Hat|^$HOSTNAME|^gpg\-pubkey\-' $base_dir/sos_commands/rpm/package-data | cut -f1,4 | sort -k2 | egrep -i --color=always '^|$SATPACKAGES|curl|Fedora|Kojii|CentOS|syslog-ng|katello-ca-consumer'"
+log_cmd "cat $base_dir/3rd_party 2>/dev/null | sort -k2 | egrep -i --color=always '^|$SATPACKAGES|curl|Fedora|Kojii|CentOS|syslog-ng|katello-ca-consumer'"
 log "---"
 log
 
 log "Note:  Third party packages sometimes cause issues for Satellite servers.  The EPEL repositories are known to have newer versions of some Satellite packages (which will be signed in the above list by \"Fedora\"), as is the upstream Foreman project (which will be signed by \"Koji\").  Antivirus scanners can sometimes prevent RPM installations, causing satellite-installer to fail."
+log
 
+log "// selected incompatible packages"
+log "---"
+log_cmd "egrep -hv 'Red Hat|^$HOSTNAME|^gpg\-pubkey\-' $base_dir/sos_commands/rpm/package-data | cut -f1,4 | sort -k2 | egrep -i --color=always 'rubygem-foreman_leapp|rubygem-rgen|rubygem-abrt' | egrep -i --color=always '^|Fedora|Kojii|CentOS'"
+log_cmd "cat $base_dir/3rd_party 2>/dev/null | sort -k2 | egrep -i --color=always 'rubygem-foreman_leapp|rubygem-rgen|rubygem-abrt' | egrep -i --color=always '^|Fedora|Kojii|CentOS'"
+log
+log_cmd "cat $base_dir/sos_commands/ruby/gem_list 2>/dev/null | egrep -i --color=always 'abrt|foreman_leapp|rgen'"
+log "---"
+log
+
+log "Note:  Starting in Satellite 6.12, these packages can cause satellite-backup to throw ABRT errors:"
+log "    rubygem-foreman_leapp"
+log "    rubygem-rgen"
+log "    rubygem-abrt"
 log
 
 
@@ -3003,6 +3072,20 @@ else
 	log "---"
 	log
 
+	log "// number of /rhsm/consumers requests in the logs"
+	log "egrep -hir '/rhsm/consumers/' \$base_dir/var/log/httpd/ 2>/dev/null | egrep -vi error | awk '{print $NF}' | tr '/' '\\n' | sort -u | egrep '\-' | wc -l"
+	log "---"
+	log_cmd "egrep -hir '/rhsm/consumers/' $base_dir/var/log/httpd/ 2>/dev/null | egrep -vi error | awk '{print $NF}' | tr '/' '\n' | sort -u | egrep '\-' | wc -l"
+	log "---"
+	log
+
+	log "// number of /rhsm/consumers requests in the logs (including errors)"
+	log "egrep -hir '/rhsm/consumers/' \$base_dir/var/log/httpd/ 2>/dev/null | awk '{print $NF}' | tr '/' '\\n' | sort -u | egrep '\-' | wc -l"
+	log "---"
+	log_cmd "egrep -hir '/rhsm/consumers/' $base_dir/var/log/httpd/ 2>/dev/null | awk '{print $NF}' | tr '/' '\n' | sort -u | egrep '\-' | wc -l"
+	log "---"
+	log
+
 	log "// queues on error_log means the # of requests crossed the border - satellite inaccessible"
 	log "grep 'Request queue is full' \$base_foreman/var/log/httpd/error_log | wc -l"
 	log "---"
@@ -3076,16 +3159,16 @@ else
 		log
 
 		log "// TOP 20 IP addresses sending https requests to Satellite - not from Satellite or capsule servers (detailed)"
-		log "awk '{print \$1,\$4}' \$base_foreman/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '\$SATELLITE_IP|\$CAPSULE_IPS' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
+		log "awk '{print \$1,\$4}' \$base_dir/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
 		log "---"
-		log_cmd "awk '{print \$1,\$4}' $base_foreman/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20 | egrep --color=always \"^|$CAPSULE_IPS\""
+		log_cmd "awk '{print \$1,\$4}' $base_dir/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
 		log "---"
 		log
 
 		log "// TOP 50 URIs sending https requests to Satellite - not from Satellite or capsule servers"
-		log "awk '{print \$1, \$6, \$7}' \$base_foreman/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '\$SATELLITE_IP|\$CAPSULE_IPS' | sort | uniq -c | sort -nr | head -n 50"
+		log "awk '{print \$1, \$6, \$7}' \$base_dir/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | sort | uniq -c | sort -nr | head -n 50"
 		log "---"
-		log_cmd "awk '{print \$1, \$6, \$7}' $base_foreman/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | sort | uniq -c | sort -nr | head -n 50 | egrep --color=always \"^|$CAPSULE_IPS\""
+		log_cmd "awk '{print \$1, \$6, \$7}' $base_dir/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | sort | uniq -c | sort -nr | head -n 50"
 		log "---"
 		log
 
@@ -4534,31 +4617,6 @@ else
 	log "---"
 	log
 
-	if [ "egrep -v ConnectionError $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate"  ]; then
-		log "// Total number of configured pulp agents"
-		log "grep -h pulp.agent \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate | wc -l"
-		log "---"
-		log_cmd "grep -h pulp.agent $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate | wc -l"
-		log "---"
-		log
-
-		log "// Total number of (active) pulp agents"
-		log "egrep -h 'pulp.agent|Anonymous connections disabled|AuthenticationFailure' \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate | grep \" 1.*1\$\" | wc -l"
-		log "---"
-		log_cmd "egrep -h 'pulp.agent|Anonymous connections disabled|AuthenticationFailure' $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate | grep \" 1.*1\$\" | wc -l"
-		log "---"
-		log
-	else
-
-		log "// output of qpid-stat_-q command"
-		log "cat \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate"
-		log "---"
-		log_cmd "cat $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate"
-		log "---"
-		log
-
-	fi
-
 	log "// unfinished pulp tasks"
 	log "grep -E '(\"finish_time\" : null|\"start_time\"|\"state\"|\"pulp:|^})' \$base_dir/sos_commands/pulp/pulp-running_tasks"
 	log "---"
@@ -4793,6 +4851,31 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log_cmd "grep LimitNOFILE $base_dir/etc/systemd/system/qpidd.service.d/90-limits.conf"
 		log "---"
 		log
+
+		if [ "egrep -v ConnectionError $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate"  ]; then
+			log "// Total number of configured pulp agents"
+			log "grep -h pulp.agent \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate | wc -l"
+			log "---"
+			log_cmd "grep -h pulp.agent $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate | wc -l"
+			log "---"
+			log
+
+			log "// Total number of (active) pulp agents"
+			log "egrep -h 'pulp.agent|Anonymous connections disabled|AuthenticationFailure' \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate | grep \" 1.*1\$\" | wc -l"
+			log "---"
+			log_cmd "egrep -h 'pulp.agent|Anonymous connections disabled|AuthenticationFailure' $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate | grep \" 1.*1\$\" | wc -l"
+			log "---"
+			log
+		else
+
+			log "// output of qpid-stat_-q command"
+			log "cat \$base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate"
+			log "---"
+			log_cmd "cat $base_dir/sos_commands/katello/qpid-stat_-q_--ssl-certificate"
+			log "---"
+			log
+
+		fi
 
 	fi
 fi
