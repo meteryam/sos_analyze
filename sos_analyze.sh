@@ -942,6 +942,9 @@ if [ "$PRIMARYNIC" != '' ]; then SATELLITE_IP=`egrep "$PRIMARYNIC" $base_dir/ip_
 if [ "$SATELLITE_IP" == '' ] && [ "$HOSTNAME" != '' ] ; then SATELLITE_IP=$(egrep $HOSTNAME $base_dir/etc/hosts | egrep -v \# | head -1);fi
 IPADDRLIST=$SATELLITE_IP
 
+memory_usage=$(cat $base_dir/ps 2>/dev/null | sort -nr | awk '{print $6}' | egrep -v '^RSS|\-|^$' | paste -s -d+ | bc)
+memory_usage_gb=$(echo "scale=2;$memory_usage/1024/1024" | bc)
+
 SATELLITE_INSTALLED=FALSE
 EARLY_SATELLITE=FALSE
 CAPSULE_SERVER=FALSE
@@ -949,12 +952,14 @@ SPACEWALK_INSTALLED=FALSE
 
 # these checks will be used later on to include or exclude certain sections, as appropriate
 
-if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i capsule)" ] || [ "$(egrep '^foreman-proxy|^foreman-proxy' $base_dir/installed-rpms)" ] || [ "$(egrep '^satellite-capsule-6' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | egrep name | head -1)" ]; then
+:answer_file: "/etc/foreman-installer/scenarios.d/capsule-answers.yaml"
+
+if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i capsule-answers.yaml)" ] || [ "$(egrep '^foreman-proxy|^foreman-proxy' $base_dir/installed-rpms)" ] || [ "$(egrep '^satellite-capsule-6' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | egrep name | head -1)" ]; then
 	if [ ! "$(egrep '^satellite-6' $base_dir/installed-rpms)" ]; then
 		CAPSULE_SERVER='TRUE'
 	fi
 fi
-if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | egrep -i satellite)" ] || [ "$(egrep '^passenger|^puma|^foreman|^candlepin|^satellite-6' $base_dir/installed-rpms 2>/dev/null)" ] || [ `egrep "$HOSTNAME$" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml 2>/dev/null | egrep servername | head -1` ] || [ -e $base_dir/sos_commands/foreman/smart_proxies ]; then
+if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | egrep -i satellite-answers.yaml)" ] || [ "$(egrep '^passenger|^puma|^foreman|^candlepin|^satellite-6' $base_dir/installed-rpms 2>/dev/null)" ] || [ `egrep "$HOSTNAME$" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml 2>/dev/null | egrep servername | head -1` ] || [ -e $base_dir/sos_commands/foreman/smart_proxies ]; then
 	SATELLITE_INSTALLED='TRUE'
 fi
 if [ "$(egrep '^foreman-1.6|^foreman-1.7|^foreman-proxy-1.6|^foreman-proxy-1.7' $base_dir/installed-rpms)" ]; then EARLY_SATELLITE='TRUE'; fi
@@ -979,7 +984,12 @@ log
 
 log "// is this a Satellite server?"
 log "---"
-if [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ ! "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
+
+if [ -e "$base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml" ] && [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | egrep -i satellite-answers.yaml)" ]; then
+	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 server."
+elif [ -e "$base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml" ] && [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i capsule-answers.yaml)" ]; then
+	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server"
+elif [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ ! "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 server."
 elif [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ ! "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server"
@@ -1302,8 +1312,6 @@ log "cat $base_dir/free"
 log "---"
 log_cmd "cat $base_dir/free"
 log " "
-memory_usage=$(cat $base_dir/ps 2>&1 | sort -nr | awk '{print $6}' | grep -v ^RSS | grep -v ^$ | paste -s -d+ | bc)
-memory_usage_gb=$(echo "scale=2;$memory_usage/1024/1024" | bc)
 log "Total Memory Consumed in GiB: $memory_usage_gb"
 log "---"
 log
@@ -1639,7 +1647,7 @@ log
 log "are yum.conf and dnf.conf the same?"
 log "ls -l \$base_dir/etc/yum.conf \$base_dir/etc/dnf/dnf.conf 2>/dev/null"
 log "---"
-log_cmd "ls -l $base_dir/etc/yum.conf $base_dir/etc/dnf/dnf.conf 2>/dev/null"
+log_cmd "ls -l $base_dir/etc/yum.conf $base_dir/etc/dnf/dnf.conf 2>/dev/null | sort -r -k9"
 log "---"
 log
 
@@ -1793,9 +1801,8 @@ log_cmd "egrep locale $base_dir/var/lib/pgsql/data/postgresql.conf"
 log "---"
 log
 
-log_tee "## SELinux"
+log_tee "## selinux"
 log
-
 
 log "// SELinux status"
 log "display SELinux status"
@@ -1859,6 +1866,22 @@ log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,for
 log "---"
 log
 
+
+log
+log_tee "## crypto-policies"
+log
+
+log "// check for crypto-policies mode"
+log "cat \$base_dir/etc/crypto-policies/state/current"
+log "---"
+log_cmd "cat $base_dir/etc/crypto-policies/state/current | egrep --color=always '^|FUTURE'"
+log "---"
+log
+
+
+
+
+log
 log_tee "## fapolicyd"
 log
 
@@ -1916,7 +1939,7 @@ else
 
 fi
 
-
+log
 log_tee "## crond"
 log
 
@@ -2051,10 +2074,11 @@ log "---"
 log
 
 log "// list rhsm targets"
-log "egrep \"baseurl\" \$base_dir/etc/rhsm/rhsm.conf*"
+log "egrep '^baseurl|^hostname|^repo_ca_cert' \$base_dir/etc/rhsm/rhsm.conf*"
 log "---"
-log_cmd "egrep \"baseurl\" $base_dir/etc/rhsm/rhsm.conf*"
-log "---"
+for i in $(find $base_dir/etc/rhsm/ | egrep rhsm.conf | sort); do log_cmd "egrep -H '^baseurl|^hostname|^repo_ca_cert' $i"; log '---'; done
+# log_cmd "egrep '^baseurl|^hostname|^repo_ca_cert' $base_dir/etc/rhsm/rhsm.conf*"
+# log "---"
 log
 
 log "// subsman list installed"
@@ -2169,7 +2193,7 @@ log
 log "// disabled modules"
 log "egrep '\[x|x\]' \$base_dir/sos_commands/dnf/dnf_--assumeno_module_list"
 log "---"
-log_cmd "egrep '\[x|x\]' \$base_dir/sos_commands/dnf/dnf_--assumeno_module_list | sed 's/^[ \t]*//;s/[ \t]*$//'"
+log_cmd "egrep '\[x|x\]' \$base_dir/sos_commands/dnf/dnf_--assumeno_module_list | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | uniq"
 log "---"
 log
 
@@ -2292,7 +2316,15 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log "---"
 	log
 
-	log "Note:  Exit codes of 0 indicate success, and exit codes of 2 indicate success accompanied by changes to Satellite."
+	#log "Note:  Exit codes of 0 indicate success, and exit codes of 2 indicate success accompanied by changes to Satellite."
+	#log
+
+	log "Exit code 0: The run succeeded with no changes or failures; the system was already in the desired state."
+	log "Exit code 2: The run succeeded, and some resources were changed."
+	log
+	log "Exit code 1: The run failed, or wasn't attempted due to another run already in progress."
+	log "Exit code 4: The run succeeded, and some resources failed."
+	log "Exit code 6: The run succeeded, and included both changes and failures."
 	log
 
 	#if [ -f "$base_foreman/var/log/foreman-installer/satellite.log" ]; then
@@ -2828,6 +2860,13 @@ else
 	log "---"
 	log
 
+	log "// current tuned-adm profile"
+	log "cat \$base_dir/sos_commands/tuned/tuned-adm_active"
+	log "---"
+	log_cmd "cat $base_dir/sos_commands/tuned/tuned-adm_active"
+	log "---"
+	log
+
 	log "// postgres storage consumption"
 	log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var.opt.rh.rh-postgresql12.lib.pgsql"
 	log "---"
@@ -3072,17 +3111,15 @@ else
 	log "---"
 	log
 
-	log "// number of /rhsm/consumers requests in the logs"
-	log "egrep -hir '/rhsm/consumers/' \$base_dir/var/log/httpd/ 2>/dev/null | egrep -vi error | awk '{print $NF}' | tr '/' '\\n' | sort -u | egrep '\-' | wc -l"
+	log "// number of unique /rhsm/consumers requests in the logs (excluding errors)"
 	log "---"
 	log_cmd "egrep -hir '/rhsm/consumers/' $base_dir/var/log/httpd/ 2>/dev/null | egrep -vi error | awk '{print $NF}' | tr '/' '\n' | sort -u | egrep '\-' | wc -l"
 	log "---"
 	log
 
-	log "// number of /rhsm/consumers requests in the logs (including errors)"
-	log "egrep -hir '/rhsm/consumers/' \$base_dir/var/log/httpd/ 2>/dev/null | awk '{print $NF}' | tr '/' '\\n' | sort -u | egrep '\-' | wc -l"
+	log "// number of unique /rhsm/consumers requests in the logs (only errors)"
 	log "---"
-	log_cmd "egrep -hir '/rhsm/consumers/' $base_dir/var/log/httpd/ 2>/dev/null | awk '{print $NF}' | tr '/' '\n' | sort -u | egrep '\-' | wc -l"
+	log_cmd "egrep -hir '/rhsm/consumers/' $base_dir/var/log/httpd/ 2>/dev/null | egrep -i error | awk '{print $NF}' | tr '/' '\n' | sort -u | egrep '\-' | wc -l"
 	log "---"
 	log
 
@@ -4160,7 +4197,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 
 	log "// virt-who errors in messages log and journalctl"
 	log "---"
-	log_cmd "egrep -hi virt-who $base_dir/sysmgmt/{journal.log,messages} | egrep -i 'fail|error'"
+	log_cmd "egrep -hi virt-who $base_dir/sysmgmt/{journal.log,messages} | egrep -i 'fail|error| fault'"
 	log "---"
 	log
 
@@ -4332,7 +4369,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log "// is candlepin listening?"
 		log "egrep file netstat_-W_-neopa for subscription-manager port 8443"
 		log "---"
-		log_cmd "egrep '^Active|^Proto|\:8443' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+		log_cmd "egrep '^Active|^Proto|\:8443' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep -v 'Bluetooth' | egrep '^Active|^Proto|LISTEN' | uniq"
 		log "---"
 		log
 
@@ -4494,6 +4531,13 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log "---"
 		log
 
+		log "// current tuned-adm profile"
+		log "cat \$base_dir/sos_commands/tuned/tuned-adm_active"
+		log "---"
+		log_cmd "cat $base_dir/sos_commands/tuned/tuned-adm_active"
+		log "---"
+		log
+
 		log "// mongodb errors in messages file (last 50)"
 		log "grep messages files for errors"
 		log "---"
@@ -4571,6 +4615,12 @@ else
 	log "---"
 	log
 
+	log "// gunicorn processes"
+	log "egrep gunicorn \$base_dir/ps"
+	log "---"
+	log_cmd "egrep gunicorn $base_dir/ps"
+	log "---"
+	log
 
 	log "// resource_manager status"
 	log "from output of qpid-stat_-q_--ssl-certificate"
@@ -4826,7 +4876,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log "// is qpidd listening?"
 		log "grepping netstat_-W_-neopa file"
 		log "---"
-		log_cmd "egrep '^Active|^Proto|qpidd' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+		log_cmd "egrep '^Active|^Proto|qpidd' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep -v 'Bluetooth' | egrep '^Active|^Proto|LISTEN' | uniq"
 		log "---"
 		log
 
@@ -5179,8 +5229,13 @@ else
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+
+		SERVICE_NAME='puppetserver'
+		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 	else
 		log
+		log_cmd "egrep $SERVICE_NAME $base_dir/ps"
+		SERVICE_NAME='puppetserver'
 		log_cmd "egrep $SERVICE_NAME $base_dir/ps"
 	fi
 	log "---"
