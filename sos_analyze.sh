@@ -1683,6 +1683,32 @@ export GREP_COLORS='ms=01;31'
 log "---"
 log
 
+if [ -d "$base_dir/etc/NetworkManager/system-connections" ]; then
+	log "// list of NetworkManager connections"
+	log "ls \$base_dir/etc/NetworkManager/system-connections"
+	log "---"
+	log_cmd "ls $base_dir/etc/NetworkManager/system-connections | egrep . --color='NEVER'"
+	log "---"
+	log
+else
+	log "// list of NetworkManager connections"
+	log "cat \$base_dir/sos_commands/networkmanager/nmcli_con"
+	log "---"
+	log_cmd "cat $base_dir/sos_commands/networkmanager/nmcli_con"
+	log "---"
+	log
+fi
+
+log "// list of active NetworkManager connections"
+log "cat \$base_dir/sos_commands/networkmanager/nmcli_con_show_--active"
+log "cat \$base_dir/sos_commands/networkmanager/nmcli_general_status"
+log "---"
+log_cmd "cat $base_dir/sos_commands/networkmanager/nmcli_con_show_--active"
+log
+log_cmd "cat $base_dir/sos_commands/networkmanager/nmcli_general_status"
+log "---"
+log
+
 log "// check dhcp and dns interfaces in satellite-answers"
 log "grep _interface: \$base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml | egrep 'dhcp|dns'"
 log "---"
@@ -1911,7 +1937,7 @@ else
 
 	log "// contents of /etc/fapolicyd/fapolicyd.conf"
 	log "---"
-	log_cmd "cat $base_dir/etc/fapolicyd/fapolicyd.conf"
+	log_cmd "cat $base_dir/etc/fapolicyd/fapolicyd.conf | egrep . | egrep -v \#"
 	log "---"
 	log
 
@@ -1936,6 +1962,22 @@ else
 	log "    # systemctl daemon-reload"
 	log "    # foreman-maintain service restart"
 	log
+
+	log "// last 20 entries from fapolicyd.log"
+	log "tail -20 \$base_dir/var/log/fapolicyd.log"
+	log "---"
+	log_cmd "tail -20 $base_dir/var/log/fapolicyd.log 2>&1"
+	log "---"
+	log
+
+	log "// last 100 entries from fapolicyd-access.log"
+	log "tail -100 \$base_dir/var/log/fapolicyd-access.log"
+	log "---"
+	log_cmd "tail -100 $base_dir/var/log/fapolicyd-access.log 2>&1"
+	log "---"
+	log
+
+
 
 fi
 
@@ -2062,6 +2104,11 @@ if [ "$ORG" ]; then
 	log_cmd "echo org ID:  $ORG"
 	log_cmd "echo environment name:  $LCE/$CV"
 	log "---"
+	log
+else
+	log
+	log_cmd "unable to extract information from file \$base_dir/etc/yum.repos.d/redhat.repo"
+	log_cmd "ls $base_dir/etc/yum.repos.d/redhat.repo"
 	log
 fi
 
@@ -2356,7 +2403,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log "// check for removals of the satellite-6 package"
 	log "egrep satellite-6 \$base_dir/var/log/{yum.log,messages*} \$base_dir/sysmgmt/messages 2>/dev/null"
 	log "---"
-	log_cmd "egrep satellite-6 $base_dir/var/log/{yum.log,messages*} $base_dir/sysmgmt/messages 2>/dev/null"
+	log_cmd "egrep satellite-6 $base_dir/var/log/{yum.log,messages*} $base_dir/sysmgmt/messages 2>/dev/null | egrep -v 'aide: removed:'"
 	log "---"
 	log
 
@@ -3806,7 +3853,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	export GREP_COLORS='ms=01;31'
 	log
 
-	if [ ! "`egrep -i ansible $base_dir/installed_rpms $base_dir/sos_commands/foreman/foreman_tasks_tasks 2>/dev/null | head -1`" ] && [ ! "`ls -d $base_dir/etc/ansible/roles/* $base_dir/usr/share/ansible/roles/* 2>/dev/null | egrep -v 0$ | head -1`" ]; then
+	if [ ! "`egrep -i ansible $base_dir/installed-rpms $base_dir/sos_commands/foreman/foreman_tasks_tasks 2>/dev/null | head -1`" ] && [ ! "`ls -d $base_dir/etc/ansible/roles/* $base_dir/usr/share/ansible/roles/* 2>/dev/null | egrep -v 0$ | head -1`" ]; then
 
 		log "ansible not found"
 		log
@@ -4987,13 +5034,30 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 fi
 
 
+
 if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep goferd`" ] || [ "`egrep -i goferd $base_dir/chkconfig`" ]; then
 
-	export GREP_COLORS='ms=01;32'
-	log_cmd "echo '## goferd and katello-agent' | grep --color=always \#"
-	echo '## goferd and katello-agent' | grep --color=always \#
-	export GREP_COLORS='ms=01;31'
-	log
+    export GREP_COLORS='ms=01;32'
+    log_cmd "echo '## goferd and katello-agent' | grep --color=always \#"
+    echo '## goferd and katello-agent' | grep --color=always \#
+    export GREP_COLORS='ms=01;31'
+    log
+
+	if [ "$(egrep '^gofer' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME')" ]; then
+		log "// goferd packages"
+		log "egrep '^gofer|proton' \$base_dir/sos_commands/yum/yum_list_installed"
+		log "---"
+		log_cmd "egrep '^gofer|proton' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME'"
+		log "---"
+		log
+	else
+		log "// goferd packages"
+		log "egrep '^gofer|proton' \$base_dir/installed-rpms"
+		log "---"
+		log_cmd "egrep '^gofer|proton' $base_dir/installed-rpms | egrep -v '$HOSTNAME'"
+		log "---"
+		log
+	fi
 
 	log "// installed katello-agent and/or gofer packages"
 	log "from file $base_dir/installed-rpms"
@@ -5028,23 +5092,6 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep goferd`" ] || [ "`egre
 	fi
 	log "---"
 	log
-
-	if [ "$(egrep '^gofer' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME')" ]; then
-		log "// goferd packages"
-		log "egrep '^gofer|proton' \$base_dir/sos_commands/yum/yum_list_installed"
-		log "---"
-		log_cmd "egrep '^gofer|proton' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME'"
-		log "---"
-		log
-	else
-		log "// goferd packages"
-		log "egrep '^gofer|proton' \$base_dir/installed-rpms"
-		log "---"
-		log_cmd "egrep '^gofer|proton' $base_dir/installed-rpms | egrep -v '$HOSTNAME'"
-		log "---"
-		log
-	fi
-
 
 	log "// are katello/gofer listening?"
 	log "grepping netstat_-W_-neopa file for katello-agent port 5646 and goferd port 5647"
