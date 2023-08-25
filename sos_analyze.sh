@@ -112,9 +112,9 @@ main()
 		ln -s -r $NEWJOURNALFILE $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot
 	  fi
 
-	  echo "The sosreport is: $base_dir"												| tee -a $FOREMAN_REPORT
+	  echo "The sosreport is: $base_dir" | tee -a $FOREMAN_REPORT
 
-	  if [ ! -f "$base_dir/sysmgmt/links.txt" ] && [ "$FORCE_GENERATE" != 'TRUE' ]; then
+	  if [ ! -f "$base_dir/sysmgmt/links.txt" ] || [ "$FORCE_GENERATE" != 'TRUE' ]; then
 	  	consolidate_differences
 	  fi
 
@@ -137,8 +137,12 @@ main()
 
 	log_cmd()
 	{
-	  # echo "$@" | bash 2>&1 >> $FOREMAN_REPORT
-	  echo "$@" | bash 2>/dev/null >> $FOREMAN_REPORT
+		if [ "$ANSI_COLOR_CODES" == "false" ] && [ "$(which ansifilter)" ] ; then
+			# echo "$@" | bash 2>&1 >> $FOREMAN_REPORT
+			echo "$@" | bash 2>/dev/null | ansifilter >> $FOREMAN_REPORT
+		else
+			echo "$@" | bash 2>/dev/null >> $FOREMAN_REPORT
+		fi
 	}
 
 	# ref: https://unix.stackexchange.com/questions/44040/a-standard-tool-to-convert-a-byte-count-into-human-kib-mib-etc-like-du-ls1
@@ -1010,6 +1014,16 @@ log_cmd "head -1 $base_dir/date"
 log "---"
 log
 
+if [ -e "$base_dir/var/lib/pgsql/data/postgresql.conf" ]; then
+	log "// timezone used in postgres"
+	log "cat \$base_dir/var/lib/pgsql/data/postgresql.conf | egrep ^timezone"
+	log "ls -l \$base_dir/etc/localtime"
+	log "---"
+	log_cmd "cat $base_dir/var/lib/pgsql/data/postgresql.conf | egrep ^timezone"
+	log_cmd "ls -l $base_dir/etc/localtime"
+	log "---"
+	log
+fi
 
 
 log "// is this a Satellite server?"
@@ -1113,12 +1127,13 @@ if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ]; then
 	log "check certificates in \$base_dir/etc/foreman-proxy/ for beginning and ending dates"
 	log
 
-	#OUTPUT=$(MYDATE=`date -d "\`cat $base_dir/date\`" +"%Y%m%d%H%M"`;
+	#OUTPUT=$(date -d "\`cat $base_dir/date\`" +"%Y%m%d%H%M");
 	OUTPUT=$(for i in `find $base_dir/etc/foreman-proxy -type f -exec file {} \; | egrep -v key | egrep 'certificate|\.pem|\.crt' | awk -F":" '{print $1}' | sort`; do 
+	MYDATE_EPOCH=`date -d now +"%Y%m%d%H%M"`;
 	echo $i; 
 	START_DATE=`openssl x509 -in $i -noout -text | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
 	END_DATE=`openssl x509 -in $i -noout -text | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
-	if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -gt "$MYDATE" ]; then 
+	if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -ge "$MYDATE_EPOCH" ]; then 
 		echo -n 'Not Before: ';
 		echo "$START_DATE" | egrep . --color='ALWAYS'; 
 	else 
@@ -1126,7 +1141,7 @@ if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ]; then
 		echo "$START_DATE"; 
 	fi; 
 	#echo -n 'Not After : '; 
-	if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -lt "$MYDATE" ]; then 
+	if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -le "$MYDATE_EPOCH" ]; then 
 		echo -n 'Not After: ';
 		echo "$END_DATE" | egrep . --color='ALWAYS'; 
 	else 
@@ -1703,6 +1718,13 @@ if [ -f $base_dir/bash_proxy ]; then
 	log
 fi
 
+log "// check rhsm.conf file for package_profile settings"
+log "from file \$base_dir/etc/rhsm/rhsm.conf"
+log "---"
+log_cmd "cat $base_dir/etc/rhsm/rhsm.conf | egrep 'package_profile_on_trans|report_package_profile'"
+log "---"
+log
+
 log_tee "## network information"
 log
 
@@ -2094,17 +2116,29 @@ log_tee "## subscriptions"
 log
 
 log "// subscription identity"
-log "cat \$base_dir/sos_commands/subscription_manager/subscription-manager_identity"
-log "---"
-log_cmd "cat $base_dir/sos_commands/subscription_manager/subscription-manager_identity"
-log "---"
+if [ -e $base_dir/sos_commands/subscription_manager/subscription-manager_identity ]; then
+	log "cat \$base_dir/sos_commands/subscription_manager/subscription-manager_identity"
+	log "---"
+	log_cmd "cat $base_dir/sos_commands/subscription_manager/subscription-manager_identity"
+	log "---"
+elif [ -e $base_dir/sysmgmt/messages ]; then
+	log "egrep identity \$base_dir/sysmgmt/messages | tail"
+	log "---"
+	log_cmd "egrep identity $base_dir/sysmgmt/messages | tail"
+	log "---"
+else
+	log "---"
+	log "no identity information found"
+	log "---"
+fi
 log
 
 
 ORG=''; LCE=$ORG; CV=$ORG; COUNT=0;
-for i in `grep baseurl $base_dir/etc/yum.repos.d/redhat.repo 2>/dev/null | head -1 | sed s'/baseurl = https:\/\///'g | tr '/' ' '`; do 
+for i in `cat $base_dir/etc/yum.repos.d/redhat.repo 2>/dev/null | grep baseurl | head -1 | sed s'/baseurl = https:\/\///'g | tr '/' ' '`; do 
 	COUNT=`expr $COUNT + 1`;
-	if [ "$i" == "content" ] || [ "$i" == "cdn.redhat.com" ]; then 
+#	if [ "$i" == "content" ] || [ "$i" == "cdn.redhat.com" ]; then 
+	if [ "$i" == "cdn.redhat.com" ]; then 
 		break; 
 	elif [ "$COUNT" -eq 4 ]; then 
 		ORG=$i;  
@@ -2155,9 +2189,11 @@ log
 
 log "// check for simple content access (SCA)"
 log "jq '.' \$base_dir/var/lib/rhsm/cache/content_access_mode.json | egrep 'org_environment'"
+log "egrep -hir 'org_environment' \$base_dir/sos_commands/yum/ | egrep -i contentAccessMode | sort -u"
 log "egrep 'Content Access' \$base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | tail"
 log "---"
 log_cmd "jq '.' $base_dir/var/lib/rhsm/cache/content_access_mode.json | egrep 'org_environment'"
+log_cmd "egrep -hir 'org_environment' $base_dir/sos_commands/yum/ | egrep -i contentAccessMode | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u"
 log_cmd "egrep 'Content Access' $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | egrep -v 'pushcount' | tail"
 log "---"
 log
@@ -2241,6 +2277,13 @@ log_cmd "egrep '\[id:' $base_dir/var/log/rhsm/rhsm.log | sort -u"
 log "---"
 log
 
+log "// repository overrides"
+log "jq '.[] | select(.contentLabel |contains(\"rhel-8\")) ' var/lib/rhsm/cache/content_overrides.json"
+log "---"
+log_cmd "jq '.[] | select(.contentLabel |contains(\"rhel-8\")) ' var/lib/rhsm/cache/content_overrides.json"
+log "---"
+log
+
 log "// yum/dnf exclusions"
 log "egrep -r exclude \$base_dir/etc/yum* \$base_dir/etc/dnf/dnf.conf"
 log "---"
@@ -2255,7 +2298,7 @@ log_cmd "egrep '\[x|x\]' \$base_dir/sos_commands/dnf/dnf_--assumeno_module_list 
 log "---"
 log
 
-log "// contents of /etc/yum/pluginconf.d/versionlock.list"
+log "// contents of versionlock.list"
 log "cat \$base_dir/etc/yum/pluginconf.d/versionlock.list"
 log "cat \$base_dir/etc/dnf/plugins/versionlock.list"
 log "---"
@@ -2925,6 +2968,15 @@ else
 	log "egrep -hc ^postgres \$base_dir/ps | grep idle$"
 	log "---"
 	log_cmd "if [ -f $base_dir/ps ]; then egrep -hc ^postgres $base_dir/ps 2>&1 | grep idle$; fi"
+	log "---"
+	log
+
+	log "// timezone used in postgres"
+	log "cat \$base_dir/var/lib/pgsql/data/postgresql.conf | egrep ^timezone"
+	log "ls -l \$base_dir/etc/localtime"
+	log "---"
+	log_cmd "cat $base_dir/var/lib/pgsql/data/postgresql.conf | egrep ^timezone"
+	log_cmd "ls -l $base_dir/etc/localtime"
 	log "---"
 	log
 
@@ -3974,9 +4026,16 @@ else
 	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 
 		log "// openscap values in answers files"
-		log "egrep openscap \$base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
+		log "egrep openscap -ir \$base_dir/etc/foreman-installer/scenarios.d/ | egrep -v '\.rpm'"
 		log "---"
-		log_cmd "egrep openscap $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
+		log_cmd "egrep openscap -ir $base_dir/etc/foreman-installer/scenarios.d/ | egrep -v '\.rpm'"
+		log "---"
+		log
+
+		log "// is satellite listening on port 9090?"
+		log "grepping netstat_-W_-neopa file for ports 9090"
+		log "---"
+		log_cmd "egrep '^Active|^Proto|9090' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
 		log "---"
 		log
 
@@ -5092,13 +5151,6 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep goferd`" ] || [ "`egre
 	export GREP_COLORS='ms=01;31'
 	log
 
-	log "// installed katello-agent and/or gofer packages"
-	log "from file $base_dir/installed-rpms"
-	log "---"
-	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host)' $base_dir/installed-rpms 2>&1"
-	log "---"
-	log
-
 	log "The goferd service reports currently installed packages and erratas to the Satellite server, and it keeps the hosts up to date with the current state of its enabled repositories.  The goferd service has a long-standing memory leak issue that arises whenever it is unable to reach the Satellite server (or capsule server), including when network timeouts arise.  Restarting the service will temporarily fix this issue.  This tool has been deprecated as of Satellite 6.7, and the qpidd and qdrouterd services which communicate with it have been disabled by default as of Satellite 6.11."
 	log
 	log "The katello-agent package enables a form of remote execution from Red Hat Satellite servers, and its primary purpose is to remotely install packages on registered hosts.  Deploying the katello-agent to a host imposes a 2 Mb disk space penalty on the Satellite server (per content host).  Deploying the katello-agent to all registered hosts will also dramatically reduce the number of supportable hosts; on a minimum configuration (20 Gb of RAM, 4 Gb of swap and 4 CPUs), the supported host limit drops from 5000 to 500.  This tool has been deprecated as of Satellite 6.7, and the qpidd and qdrouterd services which communicate with it have been disabled by default as of Satellite 6.11."
@@ -5110,6 +5162,19 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep goferd`" ] || [ "`egre
 	log "These packages should be installed on capsule servers and other Satellite-registered hosts, and never on the Satellite server itself, because they cannot communicate properly with the Customer Portal and will generate errors."
 	log
 
+	log "// installed katello-agent and/or gofer packages"
+	log "from file \$base_dir/installed-rpms"
+	log "---"
+	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host)' $base_dir/installed-rpms 2>&1"
+	log "---"
+	log
+
+	log "// check rhsm.conf file for package_profile settings"
+	log "from file \$base_dir/etc/rhsm/rhsm.conf"
+	log "---"
+	log_cmd "cat $base_dir/etc/rhsm/rhsm.conf | egrep 'package_profile_on_trans|report_package_profile'"
+	log "---"
+	log
 
 	SERVICE_NAME='goferd'
 	log "// $SERVICE_NAME service status"
@@ -5374,13 +5439,13 @@ else
 			START_DATE=`openssl x509 -in $i -noout -text | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
 			END_DATE=`openssl x509 -in $i -noout -text | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
 			echo -n 'Not Before: '; 
-			if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -gt "$MYDATE" ]; then 
+			if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -ge "$MYDATE" ]; then 
 				echo "$START_DATE" | egrep . --color=always; 
 			else 
 				echo $START_DATE; 
 			fi; 
 			echo -n 'Not After : '; 
-			if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -lt "$MYDATE" ]; then 
+			if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -le "$MYDATE" ]; then 
 				echo "$END_DATE" | egrep . --color=always; 
 			else 
 				echo $END_DATE; 
@@ -5394,13 +5459,13 @@ else
 			START_DATE=`openssl x509 -in $i -noout -text | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
 			END_DATE=`openssl x509 -in $i -noout -text | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
 			echo -n 'Not Before: '; 
-			if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -gt "$MYDATE" ]; then 
+			if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -ge "$MYDATE" ]; then 
 				echo "$START_DATE" | egrep . --color=always; 
 			else 
 				echo $START_DATE; 
 			fi; 
 			echo -n 'Not After : '; 
-			if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -lt "$MYDATE" ]; then 
+			if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -le "$MYDATE" ]; then 
 				echo "$END_DATE" | egrep . --color=always; 
 			else 
 				echo $END_DATE; 
@@ -5414,13 +5479,13 @@ else
 			START_DATE=`openssl x509 -in $i -noout -text | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
 			END_DATE=`openssl x509 -in $i -noout -text | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
 			echo -n 'Not Before: '; 
-			if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -gt "$MYDATE" ]; then 
+			if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -ge "$MYDATE" ]; then 
 				echo "$START_DATE" | egrep . --color=always; 
 			else 
 				echo $START_DATE; 
 			fi; 
 			echo -n 'Not After : '; 
-			if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -lt "$MYDATE" ]; then 
+			if [ "`date -d \"$END_DATE\" +\"%Y%m%d%H%M\"`" -le "$MYDATE" ]; then 
 				echo "$END_DATE" | egrep . --color=always; 
 			else 
 				echo $END_DATE; 
@@ -5548,17 +5613,17 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	log
 
 	SERVICE_NAME='cloud-init'
-	log "// $SERVICE_NAME service status"
+	log "// cloud-init service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h 'cloud-init' $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
-		log_cmd "egrep -h $SERVICE_NAME -A 20 $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sysmgmt/services.txt | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+		log_cmd "egrep -h 'cloud-init' -A 20 $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sysmgmt/services.txt | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 		log
-		log_cmd "egrep -v '\|-' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+		log_cmd "egrep -v '\|-' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep \"^\* cloud-init\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 	else
 		log
-		log_cmd "egrep $SERVICE_NAME $base_dir/ps"
+		log_cmd "egrep 'cloud-init' $base_dir/ps"
 	fi
 	log "---"
 	log
@@ -5661,37 +5726,67 @@ fi
 
 echo
 echo
-echo "## The output has been saved in these locations:"
+export GREP_COLORS='ms=01;33'
+echo "## The output has been saved in these locations:" | egrep --color=always "^|\#"
+export GREP_COLORS='ms=01;31'
 
 # generate local copy with or without ansi color codes
 
-cat $FOREMAN_REPORT | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' | tr -d '\033' | sed 's/\[K//g' | sed 's/\[m//g' > ./report_${USER}_$final_name.log
+if [ "$(which ansifilter)" ] ; then
+	cat $FOREMAN_REPORT | ansifilter > ./report_${USER}_$final_name.log
+else
+	# cat $FOREMAN_REPORT | sed 's/\x1b\[[0-9;]*[mGKHF]//g' > ./report_${USER}_$final_name.log
+	cat $FOREMAN_REPORT | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' | tr -d '\033' | sed 's/\[K//g' | sed 's/\[m//g' > ./report_${USER}_$final_name.log
+fi
+
+
+
 
 if [ "$ANSI_COLOR_CODES" == "false" ]; then
-# cat $FOREMAN_REPORT | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' > ./report_${USER}_$final_name.log
-rm -f $FOREMAN_REPORT 2>/dev/null
+	# cat $FOREMAN_REPORT | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' > ./report_${USER}_$final_name.log
+	rm -f $FOREMAN_REPORT 2>/dev/null
 else
-mv $FOREMAN_REPORT ./report_color_${USER}_$final_name.log
-chmod 666 ./report_color_${USER}_$final_name.log
-# cat ./report_color_${USER}_$final_name.log | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g' > ./report_${USER}_$final_name.log
+	mv -f $FOREMAN_REPORT ./report_color_${USER}_$final_name.log
+	chmod 666 ./report_color_${USER}_$final_name.log
+	# cat ./report_color_${USER}_$final_name.log | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g' > ./report_${USER}_$final_name.log
 fi
 
 chmod 666 ./report_${USER}_$final_name.log
 
 
 # either move or copy report to /tmp directory
-if [ "$COPY_TO_CURRENT_DIR" == "false" ] && [ "$OPEN_IN_VIM_RO_LOCAL_DIR" == "false" ]; then
-mv report_${USER}_$final_name.log /tmp/
-elif [ "$ANSI_COLOR_CODES" == "true" ]; then
-mv report_${USER}_$final_name.log /tmp/
-echo "    ./report_color_${USER}_$final_name.log"
-else
-cp -f report_${USER}_$final_name.log /tmp/
-echo "    ./report_${USER}_$final_name.log"
-fi
 
-echo "    /tmp/report_${USER}_$final_name.log"
-echo ""
+
+
+if [ "$ANSI_COLOR_CODES" == "false" ]; then
+
+	if [ "$COPY_TO_CURRENT_DIR" == "false" ] && [ "$OPEN_IN_VIM_RO_LOCAL_DIR" == "false" ]; then
+		mv report_${USER}_$final_name.log /tmp/
+	else
+		cp -f report_${USER}_$final_name.log /tmp/
+	fi
+
+	rm -f report_color_${USER}_$final_name.log
+
+	echo "    ./report_${USER}_$final_name.log"
+	echo "    /tmp/report_${USER}_$final_name.log"
+	echo ""
+
+else
+
+	if [ "$COPY_TO_CURRENT_DIR" == "false" ] && [ "$OPEN_IN_VIM_RO_LOCAL_DIR" == "false" ]; then
+		mv report_color_${USER}_$final_name.log /tmp/
+	else
+		cp -f report_color_${USER}_$final_name.log /tmp/
+	fi
+
+	rm -f report_${USER}_$final_name.log
+
+	echo "    ./report_color_${USER}_$final_name.log"
+	echo "    /tmp/report_color_${USER}_$final_name.log"
+	echo ""
+
+fi
 
 
 
