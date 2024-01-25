@@ -11,12 +11,13 @@ exec 2>/dev/null
 
 FOREMAN_REPORT="/tmp/$$.log"
 
-# the following while block captures three flags from the command line
+# the following while block captures several flags from the command line
 # -a enables ANSI color codes in the current directory, but not the copy in /tmp (has no effect unless -c or -l is also used)
 # -c copies the output file from the /tmp directory to the current directory
 # -l opens the output file from the current directory (implies -c by default)
 # -t opens the output file from the /tmp directory
 # -x generates a separate xsos report in the current directory, but not in /tmp
+# -f forces sos_analyze to re-create the soft links
 
 ANSI_COLOR_CODES=false
 COPY_TO_CURRENT_DIR=false
@@ -72,11 +73,11 @@ main()
 
 	    base_dir=`pwd`
 
-	  elif [ "$FORCE_GENERATE" == "true" ] || [ -d $1/conf ] || [ -d $1/sos_commands ] || [ -f $1/version.txt ] || [ -f $1/hammer-ping ]; then
+	  elif [ "$FORCE_GENERATE" == "true" ] || [ -d $1/conf ] || [ -d $1/sos_commands ] || [ -e $1/version.txt ] || [ -e $1/hammer-ping ]; then
 
 	    base_dir="$1"
 
-	  elif [ -d $sos_subdir/conf ] || [ -d $sos_subdir/sos_commands ] || [ -f $sos_subdir/version.txt ] || [ -f $sos_subdir/hammer-ping ]; then
+	  elif [ -d $sos_subdir/conf ] || [ -d $sos_subdir/sos_commands ] || [ -e $sos_subdir/version.txt ] || [ -e $sos_subdir/hammer-ping ]; then
 
 	    base_dir="$sos_subdir"
 
@@ -304,6 +305,7 @@ main()
 	sos_commands/devicemapper/dmstats_print_--allregions
 	sos_commands/devicemapper/rpm_-V_device-mapper
 	sos_commands/devices/udevadm_info_--export-db
+	sos_commands/dnf/dnf_--assumeno_module_list,dnf_module_list
 	sos_commands/docker/journalctl_--no-pager_--unit_docker
 	sos_commands/docker/ls_-alhR_.etc.docker
 	sos_commands/dracut/dracut_--list-modules
@@ -1132,6 +1134,7 @@ if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ]; then
 	echo $i; 
 	START_DATE=`openssl x509 -in $i -noout -text | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
 	END_DATE=`openssl x509 -in $i -noout -text | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
+	KEY_LENGTH=$(openssl x509 -in $i -noout -text | egrep -i "bit\)" | sed s'/Public-Key://'g | sed 's/^[ \t]*//;s/[ \t]*$//');
 	if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -ge "$MYDATE_EPOCH" ]; then 
 		echo -n 'Not Before: ';
 		echo "$START_DATE" | egrep . --color='ALWAYS'; 
@@ -1146,7 +1149,9 @@ if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ]; then
 	else 
 		echo -n 'Not After: ';
 		echo "$END_DATE"; 
-	fi; 
+	fi;
+	echo -n 'Key Length: ';
+	echo "$KEY_LENGTH";
 	echo; 
 	done;)
 
@@ -1229,11 +1234,11 @@ if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ] && [ -f "$base_dir/etc/fore
 	log "---"
 	log "from \$base_dir/etc/foreman-proxy/ssl_cert.pem and \$base_dir/etc/foreman/proxy_ca.pem"
 	log
-	SSL_CERT=`openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -text -noout 2>&1 | grep -A 1 'Authority Key Identifier' | tail -1 | awk '{print $1}' | sed s'/keyid://'g`
-	PROXY_CA=`openssl x509 -in $base_dir/etc/foreman/proxy_ca.pem -text -noout 2>&1 | grep -A 1 'Subject Key Identifier' | tail -1 | awk '{print $1}'`
+	SSL_CERT=`openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -text -noout |& grep -A 1 'Authority Key Identifier' | tail -1 | awk '{print $1}' | sed s'/keyid://'g`
+	PROXY_CA=`openssl x509 -in $base_dir/etc/foreman/proxy_ca.pem -text -noout |& grep -A 1 'Subject Key Identifier' | tail -1 | awk '{print $1}'`
 	log "$SSL_CERT"
 	log "$PROXY_CA"
-	diff <(echo $SSL_CERT) <(echo $PROXY_CA);if [ "$?" -eq 0 ]; then log "certificates match"; else log "certificates differ"; fi
+	diff <(echo $SSL_CERT) <(echo $PROXY_CA) &>/dev/null;if [ "$?" -eq 0 ]; then log "certificates match"; else log "certificates differ"; fi
 	log "---"
 	log
 fi
@@ -1588,7 +1593,9 @@ if [ -d $base_dir/sos_commands/stratis ]; then
 	log "// stratis filesystems within /etc/fstab"
 	log "---"
 	STRATIS_UUIDS=`egrep -v '^Pool Name' $base_dir/sos_commands/stratis/stratis_filesystem_list | awk '{print $NF}' | tr '\n' '|' | rev | cut -c2- | rev`
-	log_cmd "egrep -i '^|stratis|$STRATIS_UUIDS' $base_dir/etc/fstab"
+	if [ "$STRATIS_UUIDS" ]; then
+		log_cmd "egrep -i '^|stratis|$STRATIS_UUIDS' $base_dir/etc/fstab"
+	fi
 	log "---"
 	log
 
@@ -1683,6 +1690,13 @@ log_cmd "grep proxy $base_dir/etc/rhsm/rhsm.conf | grep -v ^#"
 log "---"
 log
 
+log "// yggdrasil Proxy"
+log "grep PROXY \$base_dir/etc/systemd/system/rhcd.service.d/proxy.conf | grep -v ^#"
+log "---"
+log_cmd "grep PROXY \$base_dir/etc/systemd/system/rhcd.service.d/proxy.conf | grep -v ^#"
+log "---"
+log
+
 log "// yum/dnf proxy"
 log "grep proxy \$base_dir/etc/yum.conf \$base_dir/etc/dnf/dnf.conf | grep -v ^#"
 log "---"
@@ -1732,6 +1746,15 @@ log "sort \$base_dir/ip_addr"
 log "---"
 export GREP_COLORS='ms=01;33'
 log_cmd "sort $base_dir/ip_addr | egrep --color=always '^|$IPADDRLIST'"
+export GREP_COLORS='ms=01;31'
+log "---"
+log
+
+log "// nmcli connections"
+log "egrep -v '  \-\-' \$base_dir/sos_commands/networkmanager/nmcli_con"
+log "---"
+export GREP_COLORS='ms=01;33'
+log_cmd "egrep -v '  \-\-' $base_dir/sos_commands/networkmanager/nmcli_con | egrep --color=always '^|$IPADDRLIST'"
 export GREP_COLORS='ms=01;31'
 log "---"
 log
@@ -1893,9 +1916,9 @@ log "---"
 log
 
 log "// setroubleshoot package"
-log "grep setroubleshoot \$base_dir/installed-rpms"
+log "egrep 'setroubleshoot-[0-9]' \$base_dir/installed-rpms"
 log "---"
-log_cmd "grep setroubleshoot $base_dir/installed-rpms 2>&1"
+log_cmd "egrep 'setroubleshoot-[0-9]' $base_dir/installed-rpms 2>&1"
 log "---"
 log
 
@@ -1939,9 +1962,9 @@ log
 log "// fips in the logs"
 log "egrep -hir 'fips mode|fips_enabled' \$base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h"
 log "---"
-log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h | head -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
+log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep -vi 'searching|resolving|List of resolvable facts' | egrep '^....-..-..' | sort -h | head -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
 log "..."
-log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h | tail -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
+log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep -vi 'searching|resolving|List of resolvable facts' | egrep '^....-..-..' | sort -h | tail -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
 log "---"
 log
 
@@ -2068,7 +2091,7 @@ log
 log_tee "## cockpit"
 log
 
-log "Cockpit is a web-based server administration tool sponsored by Red Hat.  It was included in Fedora 21 by default, and later in RHEL 8 (although it can be installed in RHEL 7).  Cockpit listens on port 9090 by default, and therefore it conflicts with the foreman-proxy service.  Cockpit can be reconfigured to use another port to prevent this conflict."
+log "Cockpit is a web-based server administration tool sponsored by Red Hat.  It was included in Fedora 21 by default, and later in RHEL 8 (although it can be installed in RHEL 7).  Cockpit listens on port 9090 by default, and therefore it conflicts with the foreman-proxy service.  Cockpit can be reconfigured to use another port (eg 10090) to prevent this conflict."
 log
 
 if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep 'cockpit'`" ] || [ ! "`egrep -i cockpit $base_dir/installed-rpms $base_dir/sysmgmt/journalctl.log $base_dir/sysmgmt/messages 2>/dev/null | egrep -v 'units_rpm|\.rpm'`" ]; then
@@ -2082,11 +2105,17 @@ else
 	log "// $SERVICE_NAME service status"
 	log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|foreman-cockpit' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
 	log
 	log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 	log "---"
 	log
+
+	log "port workaround check"
+	log "cat \$base_dir/etc/systemd/system/cockpit.socket.d/port.conf"
+	log "---"
+	log_cmd "cat $base_dir/etc/systemd/system/cockpit.socket.d/port.conf"
+	log "---"
 
 	log "// log errors for cockpit-ws"
 	if [ -f "$base_dir/sysmgmt/journal.log" ]; then
@@ -2234,6 +2263,46 @@ log "// subscription-manager activity from lvmdump messages"
 log "grep subscription-manager \$base_dir/sos_commands/lvm2/lvmdump/messages"
 log "---"
 log_cmd "grep subscription-manager $base_dir/sos_commands/lvm2/lvmdump/messages 2>&1"
+log "---"
+log
+
+
+if [ "$(ls $base_dir/etc/dnf/plugins $base_dir/etc/yum/pluginconf.d | egrep rhui)" ] || [ "$(egrep -i 'rhui-client' $base_dir/installed-rpms 2>/dev/null | head -1)" ]; then
+
+	log_tee '## rhui plugin for yum'
+	log
+
+	log "The RHUI plugin for yum is used in conjunction with RHUI (Red Hat Update Infrastructure), commonly used by cloud providers."
+	log
+
+	log "// client package"
+	log "egrep rhui \$base_dir/installed-rpms"
+	log "---"
+	log_cmd "egrep rhui $base_dir/installed-rpms"
+	log "---"
+	log
+
+	log "// related plugins"
+	log "ls \$base_dir/etc/yum/pluginconf.d/\* | egrep 'rhui|amazon'"
+	log "---"
+	log_cmd "ls $base_dir/etc/yum/pluginconf.d/* | egrep 'rhui|amazon'"
+	log "---"
+	log
+
+	log "// RHUI plugin enabled or disabled?"
+	log "---"
+	log_cmd "ls $base_dir/etc/yum/pluginconf.d/* | egrep 'rhui|amazon'"
+	log_cmd "cat $(ls $base_dir/etc/yum/pluginconf.d/* | egrep 'rhui|amazon') | egrep enabled"
+	log_cmd
+	log "---"
+	log
+
+fi
+
+log "// subscription-manager plugin enabled or disabled?"
+log "egrep enabled \$base_dir/etc/yum/pluginconf.d/subscription-manager.conf"
+log "---"
+log_cmd "egrep enabled $base_dir/etc/yum/pluginconf.d/subscription-manager.conf"
 log "---"
 log
 
@@ -3762,13 +3831,15 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|masked|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
-			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED|x2a.service'"
 			SERVICE_NAME='smart_proxy_dynflow_core'
-			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED|x2a.service'"
 		else
 			log
 			log_cmd "egrep $SERVICE_NAME $base_dir/ps"
 		fi
+		log
+		log "Note:  The service 'dynflow-sidekiq@\x2a.service' appears to be erroneous and can cause problems with large remote execution jobs."
 		log "---"
 		log
 
@@ -3875,8 +3946,8 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 			log "// number of dynflow workers"
 			log "list workers in \$base_dir/etc/foreman/dynflow/"
 			log "---"
-			log_cmd "echo `ls $base_dir/etc/foreman/dynflow/worker* | grep -v hosts | wc -l` workers"
-			log_cmd "find $base_dir/etc/foreman/dynflow/ -type f | grep worker | grep -v hosts"
+			log_cmd "echo `ls $base_dir/etc/foreman/dynflow/worker* | grep -v hosts | egrep yml$ | wc -l` workers"
+			log_cmd "find $base_dir/etc/foreman/dynflow/ -type f | grep worker | egrep yml$ | grep -v hosts"
 			log "---"
 			log
 
@@ -4103,6 +4174,58 @@ else
 
 fi
 
+
+
+if [ ! "$(egrep '^foreman-discovery-image' $base_dir/installed-rpms 2>/dev/null | head -1)" ]; then
+
+	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
+
+		export GREP_COLORS='ms=01;32'
+		log_cmd "echo '## discovery' | grep --color=always \#"
+		echo '## discovery' | grep --color=always \#
+		export GREP_COLORS='ms=01;31'
+		log
+
+		log "Discovery is a Satellite component that finds bare-metal hosts on the network, for which ISO images can be generated for provisioning purposes.  This is not to be confused with the standalone Discovery tool, which detects which Red Hat products are installed on the hosts of a customer's network."
+		log
+
+		log "discovery not found"
+		log
+
+	fi
+
+else
+
+	export GREP_COLORS='ms=01;32'
+	log_cmd "echo '## discovery' | grep --color=always \#"
+	echo '## discovery' | grep --color=always \#
+	export GREP_COLORS='ms=01;31'
+	log
+
+	log "Discovery is a Satellite component that finds bare-metal hosts on the network, for which ISO images can be generated for provisioning purposes.  This is not to be confused with the standalone Discovery tool, which detects which Red Hat products are installed on the hosts of a customer's network."
+	log
+
+	log "// version of discovery package"
+	log "grepping netstat_-W_-neopa file for ports 9090"
+	log "---"
+	log_cmd "egrep '^foreman-discovery-image' $base_dir/installed-rpms"
+	log "---"
+	log
+
+	log "// discovery enabled?"
+	log "---"
+	log_cmd "egrep 'enable-foreman-plugin-discovery|enable-foreman-proxy-plugin-discovery' $base_dir/sos_commands/foreman/foreman_settings_table | sed s'/  //'g"
+	log "---"
+	log
+
+	log "// discovery log mentions"
+	log "egrep 'Discover' \$base_dir/var/log/foreman-proxy/proxy.log 2>/dev/null"
+	log "---"
+	log_cmd "egrep 'Discover' \$base_dir/var/log/foreman-proxy/proxy.log 2>/dev/null | tail -50"
+	log "---"
+	log
+
+fi
 
 
 
@@ -4708,7 +4831,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log "---"
 		log
 
-		log "// hugepages tuning settings"
+		log "// transparent hugepages tuning settings"
 		log "---"
 		log_cmd "grep hugepages $base_dir/etc/default/grub;if [ \"`grep hugepages $base_dir/etc/tuned/* 2>/dev/null`\"]; then echo; grep hugepages $base_dir/etc/tuned/* 2>/dev/null; echo active tuned profile; cat $base_dir/sos_commands/tuned/tuned-adm_active; fi"
 		log "---"
@@ -4840,6 +4963,15 @@ else
 	log_cmd "if [ -f $base_dir/sos_commands/processor/lscpu ]; then egrep '^CPU\(s\):' $base_dir/sos_commands/processor/lscpu; elif [ -f $base_dir/proc/cpuinfo ]; then grep processor $base_dir/proc/cpuinfo | wc -l; elif [ -f $base_dir/procs ]; then cat $base_dir/procs; fi"
 	log "---"
 	log
+
+
+	log "// max-requests setting for pulpcore-api service"
+	log "egrep 'max-requests' \$base_dir/etc/systemd/system/pulpcore-api.service"
+	log "---"
+	log_cmd "egrep 'max-requests' $base_dir/etc/systemd/system/pulpcore-api.service"
+	log "---"
+	log
+
 
 	log "// pulp squid port"
 	log "egrep pulp -A 1 \$base_dir/etc/squid/squid.conf"
@@ -5176,15 +5308,15 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		export GREP_COLORS='ms=01;31'
 		log
 
-		log "The mosquitto service uses MQTT as its messaging protocol, and is intended to replace qpidd and qdrouterd as katello-agent and goferd are replaced by yggdrasild on the host side."
-		log
-
 	if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep mosquitto`" ] && [ ! "`egrep -i 'mosquitto' $base_dir/installed-rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -e "$base_dir/etc/mosquitto" ]; then
 
 		log "mosquitto not found"
 		log
 
 	else
+
+		log "The mosquitto service uses MQTT as its messaging protocol, and is intended to replace qpidd and qdrouterd as katello-agent and goferd are replaced by yggdrasild on the host side."
+		log
 
 		SERVICE_NAME='mosquitto'
 		log "// $SERVICE_NAME service status"
@@ -5243,9 +5375,11 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep 'goferd|yggdrasild'`" 
 	log
 
 	log "// installed katello-agent and/or gofer packages"
-	log "from file \$base_dir/installed-rpms"
+	log "from files \$base_dir/installed-rpms and \$base_dir/sos_commands/yum/yum_list_installed"
 	log "---"
-	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate)' $base_dir/installed-rpms 2>&1"
+	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate|^katello-package-upload|^katello-host-update|proton)' $base_dir/installed-rpms 2>&1 | egrep -v '$HOSTNAME'"
+	log
+	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate|^katello-package-upload|^katello-host-update|proton)' $base_dir/sos_commands/yum/yum_list_installed 2>&1 | egrep -v '$HOSTNAME'"
 	log "---"
 	log
 
@@ -5284,23 +5418,6 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep 'goferd|yggdrasild'`" 
 	fi
 	log "---"
 	log
-
-	if [ "$(egrep '^gofer' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME')" ]; then
-		log "// goferd packages"
-		log "egrep '^gofer|proton' \$base_dir/sos_commands/yum/yum_list_installed"
-		log "---"
-		log_cmd "egrep '^gofer|proton' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME'"
-		log "---"
-		log
-	else
-		log "// goferd packages"
-		log "egrep '^gofer|proton' \$base_dir/installed-rpms"
-		log "---"
-		log_cmd "egrep '^gofer|proton' $base_dir/installed-rpms | egrep -v '$HOSTNAME'"
-		log "---"
-		log
-	fi
-
 
 	log "// are katello/gofer listening?"
 	log "grepping netstat_-W_-neopa file for katello-agent port 5646 and goferd port 5647"
