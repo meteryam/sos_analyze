@@ -3722,25 +3722,39 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 			log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
 			log "---"
 			#log_cmd "grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks  | cut -d, -f3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -k 7 | tail -100 | egrep --color=always '^|paused|running|error|pending|warning|scheduled' | sed s'/  //'g"
-			tasks_top=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning'`
+			tasks_top=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | tr ',' '|' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused'`
 			log "$tasks_top"
 			log "---"
 			log
 
 
-			log "// paused foreman tasks"
-			log "grepping foreman_tasks_tasks for paused tasks"
-			log "---"
-			log_cmd "grep -E '(^                  id|paused)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed 's/  //g' | sed -e 's/ |/|/g' | sed -e 's/| /|/g' | sed -e 's/^ //g' | sed -e 's/|/,/g' | sort -t ',' -k 3"
-			log "---"
-			log
-
 			log "// Failed Tasks TOP"
 			log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
 			log "---"
-			failed_tasks_top=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -v "success|running|scheduled" | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//'`
+#			failed_tasks_top=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -v "success|running|scheduled" | tr ',' '|' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//'`
+			failed_tasks_top=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -v 'success|running|scheduled' | tr ',' '|' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused|pending'`
 			log "$failed_tasks_top"
 			log "---"
+			log
+
+			log "// paused foreman tasks"
+			log "grepping foreman_tasks_tasks for paused tasks"
+			log "---"
+#			log_cmd "grep -E '(^                  id|paused)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed 's/  //g' | sed -e 's/ |/|/g' | sed -e 's/| /|/g' | sed -e 's/^ //g' | sed -e 's/|/,/g' | tr ',' '|' | sort -t '|' -k 3"
+			tasks_paused=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | tr ',' '|' | sort -t "|" -k 10 | egrep paused | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused'`
+			log "$tasks_paused"
+			log "---"
+			log
+
+			log "// invalid foreman tasks"
+			log "grepping foreman_tasks_tasks for paused tasks"
+			log "---"
+#			log_cmd "grep -E '(^                  id|paused)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed 's/  //g' | sed -e 's/ |/|/g' | sed -e 's/| /|/g' | sed -e 's/^ //g' | sed -e 's/|/,/g' | tr ',' '|' | sort -t '|' -k 3"
+			tasks_invalid=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | tr ',' '|' | sort -t "|" -k 10 | egrep pending | egrep stopped | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//'`
+			log "$tasks_invalid"
+			log "---"
+			log
+			log "Note:  An invalid task status is the status 'pending|stopped'."
 			log
 
 			log "// dynflow log errors"
