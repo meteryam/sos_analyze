@@ -69,17 +69,38 @@ main()
 	  base_dir=""
 	  sos_subdir=`ls -d $1/sosreport-* $1/foreman-debug-* $1/spacewalk-debug 2>/dev/null | grep . | head -1`
 
-	  if [ -d conf ] || [ -d sos_commands ] || [ -f version.txt ] || [ -f hammer-ping ]; then
+	  if [ -d conf ] || [ -d sos_commands ] || [ -e version.txt ] || [ -f hammer-ping ]; then
 
 	    base_dir=`pwd`
 
-	  elif [ "$FORCE_GENERATE" == "true" ] || [ -d $1/conf ] || [ -d $1/sos_commands ] || [ -e $1/version.txt ] || [ -e $1/hammer-ping ]; then
+	  elif [ -d $1/conf ] || [ -d $1/sos_commands ] || [ -e $1/version.txt ] || [ -e $1/hammer-ping ]; then
 
 	    base_dir="$1"
 
 	  elif [ -d $sos_subdir/conf ] || [ -d $sos_subdir/sos_commands ] || [ -e $sos_subdir/version.txt ] || [ -e $sos_subdir/hammer-ping ]; then
 
 	    base_dir="$sos_subdir"
+
+	  elif [ "$FORCE_GENERATE" == "true" ]; then
+
+		  if [ -d conf ] || [ -d sos_commands ] || [ -e version.txt ] || [ -f hammer-ping ]; then
+
+			base_dir=`pwd`
+
+		  elif [ -d $1 ]; then
+
+			base_dir="$1"
+
+		  elif [ -d $sos_subdir/conf ] || [ -d $sos_subdir/sos_commands ] || [ -e $sos_subdir/version.txt ] || [ -e $sos_subdir/hammer-ping ]; then
+
+			base_dir="$sos_subdir"
+
+		  else
+
+			echo "This is not a sosreport directory.  Please provide the path to a correct sosreport directory."
+			exit 1
+
+		  fi
 
 	  else
 
@@ -1181,7 +1202,7 @@ if [ -f "$base_dir/sos_commands/foreman/foreman_tasks_tasks" ]; then
 	log "// Satellite's organization list"
 	log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
 	log "---"
-	SATORGS=`egrep organization $base_dir/sos_commands/foreman/foreman_tasks_tasks | awk -F"'" '{print $6}' | sort -u`
+	SATORGS=`egrep organization $base_dir/sos_commands/foreman/foreman_tasks_tasks | awk -F"'" '{print $6}' | sort -u | egrep .`
 	log_cmd "echo -e \"$SATORGS\""
 	log "---"
 	log
@@ -1461,7 +1482,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log
 	log "Note: The checkpoint_segments parameter is incompatible with Satellite 6.8 and above."
 	log "Note: The qpid file limits were introduced in Satellite 6.4."
-	log "Note:  The setting \"apache::purge_configs: false\" is incompatible with Satellite 6.10 and above."
+	log "Note: The setting \"apache::purge_configs: false\" is incompatible with Satellite 6.10 and above."
 	log
 fi
 
@@ -1884,9 +1905,10 @@ log_cmd "cat $base_dir/etc/environment"
 log
 
 log "// kernel locale setting"
-log "cat \$base_dir/proc/cmdline | tr ' ' '\n' | grep LANG"
-log
+log "cat \$base_dir/proc/cmdline | tr ' ' '\\\n' | grep LANG"
+log "---"
 log_cmd "cat $base_dir/proc/cmdline | tr ' ' '\n' | grep LANG"
+log "---"
 log
 
 log "// contents of /etc/locale.conf"
@@ -2310,10 +2332,26 @@ log
 log_tee "## repos and packages"
 log
 
-log "// enabled repos"
-log "cat \$base_dir/sos_commands/yum/yum_-C_repolist"
+if [ ! -e "$base_dir/sos_commands/dnf/dnf_-C_repolist" ]; then
+	log "// enabled repos"
+	log "cat \$base_dir/sos_commands/yum/yum_-C_repolist"
+	log "---"
+	log_cmd "cat $base_dir/sos_commands/yum/yum_-C_repolist | egrep -i --color=always \"^|epel|fedora\""
+	log "---"
+	log
+else
+	log "// enabled repos"
+	log "cat \$base_dir/sos_commands/dnf/dnf_-C_repolist"
+	log "---"
+	log_cmd "cat $base_dir/sos_commands/dnf/dnf_-C_repolist | egrep -i --color=always \"^|epel|fedora\""
+	log "---"
+	log
+fi
+
+log "// repository overrides"
+log "jq '.[] | select(.contentLabel |contains("rhel-8")) ' \$base_dir//var/lib/rhsm/cache/content_overrides.json"
 log "---"
-log_cmd "cat $base_dir/sos_commands/yum/yum_-C_repolist | egrep -i --color=always \"^|epel|fedora\""
+log_cmd "jq '.[] | select(.contentLabel |contains("rhel-8")) ' $base_dir//var/lib/rhsm/cache/content_overrides.json"
 log "---"
 log
 
@@ -2366,6 +2404,7 @@ log_cmd "cat $base_dir/etc/yum/pluginconf.d/versionlock.list || echo file '/etc/
 log_cmd "cat $base_dir/etc/dnf/plugins/versionlock.list || echo file '/etc/dnf/plugins/versionlock.list' is absent"
 log "---"
 log
+
 
 if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ] || [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 	log "// all installed satellite packages"
@@ -2461,20 +2500,20 @@ log_cmd "grep yum $base_dir/sos_commands/lvm2/lvmdump/messages 2>&1"
 log "---"
 log
 
+log "// disabled modules"
+log "egrep '\[x|x\]' \$base_dir/sos_commands/dnf/dnf_--assumeno_module_list"
+log "---"
+log_cmd "egrep '\[x|x\]' $base_dir/sos_commands/dnf/dnf_--assumeno_module_list | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | uniq | egrep -v Hint"
+log "---"
+log_cmd "egrep '\[x|x\]' $base_dir/sos_commands/dnf/dnf_--assumeno_module_list | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | uniq | egrep Hint"
+log
+
 
 if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log_tee "## Satellite Upgrade"
 	log
 
 	if [ -e "$base_dir/sos_commands/dnf/dnf_--assumeno_module_list" ]; then
-
-		log "// disabled modules"
-		log "egrep '\[x|x\]' \$base_dir/sos_commands/dnf/dnf_--assumeno_module_list"
-		log "---"
-		log_cmd "egrep '\[x|x\]' $base_dir/sos_commands/dnf/dnf_--assumeno_module_list | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | uniq | egrep -v Hint"
-		log "---"
-		log_cmd "egrep '\[x|x\]' $base_dir/sos_commands/dnf/dnf_--assumeno_module_list | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | uniq | egrep Hint"
-		log
 
 		log "// satellite modules"
 		log "egrep 'satellite' \$base_dir/sos_commands/dnf/dnf_--assumeno_module_list"
@@ -3741,7 +3780,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 			log "grepping foreman_tasks_tasks for paused tasks"
 			log "---"
 #			log_cmd "grep -E '(^                  id|paused)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed 's/  //g' | sed -e 's/ |/|/g' | sed -e 's/| /|/g' | sed -e 's/^ //g' | sed -e 's/|/,/g' | tr ',' '|' | sort -t '|' -k 3"
-			tasks_paused=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | tr ',' '|' | sort -t "|" -k 10 | egrep paused | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused'`
+			tasks_paused=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep paused | tr ',' '|' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused'`
 			log "$tasks_paused"
 			log "---"
 			log
@@ -3750,7 +3789,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 			log "grepping foreman_tasks_tasks for paused tasks"
 			log "---"
 #			log_cmd "grep -E '(^                  id|paused)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed 's/  //g' | sed -e 's/ |/|/g' | sed -e 's/| /|/g' | sed -e 's/^ //g' | sed -e 's/|/,/g' | tr ',' '|' | sort -t '|' -k 3"
-			tasks_invalid=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | tr ',' '|' | sort -t "|" -k 10 | egrep pending | egrep stopped | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//'`
+			tasks_invalid=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep pending | tr ',' '|' | sort -t "|" -k 10 | egrep stopped | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//'`
 			log "$tasks_invalid"
 			log "---"
 			log
@@ -5562,22 +5601,7 @@ fi
 
 
 
-if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep puppet`" ] && [ ! "`egrep puppet $base_dir/chkconfig $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/puppetlabs" ] && [ ! -d "$base_dir/var/log/puppet" ] && [ ! -d "$base_dir/etc/puppet" ] && [ ! -d "$base_dir/etc/puppetlabs" ]; then
-
-	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
-
-		export GREP_COLORS='ms=01;32'
-		log_cmd "echo '## puppet' | grep --color=always \#"
-		echo '## puppet' | grep --color=always \#
-		export GREP_COLORS='ms=01;31'
-		log
-
-		log "puppet not found"
-		log
-
-	fi
-
-else
+if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep puppet`" ] || [ "`egrep puppet $base_dir/chkconfig $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] || [ -d "$base_dir/var/log/puppetlabs" ] && [ -d "$base_dir/var/log/puppet" ] && [ -d "$base_dir/etc/puppet" ] || [ -d "$base_dir/etc/puppetlabs" ]; then
 
 	export GREP_COLORS='ms=01;32'
 	log_cmd "echo '## puppet' | grep --color=always \#"
@@ -5775,6 +5799,21 @@ else
 	log_cmd "egrep 'puppetserver|puppetmaster' $base_dir/sysmgmt/foreman-maintain.log 2>/dev/null | tail"
 	log "---"
 	log
+
+else
+
+	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
+
+		export GREP_COLORS='ms=01;32'
+		log_cmd "echo '## puppet' | grep --color=always \#"
+		echo '## puppet' | grep --color=always \#
+		export GREP_COLORS='ms=01;31'
+		log
+
+		log "puppet not found"
+		log
+
+	fi
 
 fi
 
