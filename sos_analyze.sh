@@ -54,7 +54,6 @@ shift "$(($OPTIND -1))"
 
 MYPWD=`pwd`
 
-
 main()
 {
 
@@ -67,33 +66,58 @@ main()
 	  # detect base directory
 
 	  base_dir=""
-	  sos_subdir=`ls -d $1/sosreport-* $1/foreman-debug-* $1/spacewalk-debug 2>/dev/null | grep . | head -1`
+	  last_arg=$(echo $@ | awk '{print $NF}')
+	  sos_subdir=`ls -d $last_arg/sosreport-* $last_arg/foreman-debug-* $last_arg/spacewalk-debug 2>/dev/null | grep . | head -1`
 
-	  if [ -d conf ] || [ -d sos_commands ] || [ -e version.txt ] || [ -f hammer-ping ]; then
+	  if [ "$FORCE_GENERATE" == "true" ]; then
+#		if [ -d "$last_arg" ]; then 
+#			touch $last_arg/version.txt;
+#		else
+#			touch version.txt;
+#		fi;
 
-	    base_dir=`pwd`
+		if [ "$sos_subdir" ]; then 
+			base_dir="$sos_subdir";
+		elif [ -d "$last_arg" ]; then
+			base_dir="$last_arg";
+		else
+			base_dir=`pwd`;
+		fi;
 
-	  elif [ -d $1/conf ] || [ -d $1/sos_commands ] || [ -e $1/version.txt ] || [ -e $1/hammer-ping ]; then
-
-	    base_dir="$1"
-
-	  elif [ -d $sos_subdir/conf ] || [ -d $sos_subdir/sos_commands ] || [ -e $sos_subdir/version.txt ] || [ -e $sos_subdir/hammer-ping ]; then
-
-	    base_dir="$sos_subdir"
-
-	  elif [ "$FORCE_GENERATE" == "true" ]; then
+	  else
 
 		  if [ -d conf ] || [ -d sos_commands ] || [ -e version.txt ] || [ -f hammer-ping ]; then
 
 			base_dir=`pwd`
 
-		  elif [ -d $1 ]; then
+		  elif [ -d $last_arg/conf ] || [ -d $last_arg/sos_commands ] || [ -e $last_arg/version.txt ] || [ -e $last_arg/hammer-ping ]; then
 
-			base_dir="$1"
+			base_dir="$last_arg"
 
 		  elif [ -d $sos_subdir/conf ] || [ -d $sos_subdir/sos_commands ] || [ -e $sos_subdir/version.txt ] || [ -e $sos_subdir/hammer-ping ]; then
 
 			base_dir="$sos_subdir"
+
+	#	  elif [ "$FORCE_GENERATE" == "true" ]; then
+
+	#		  if [ -d conf ] || [ -d sos_commands ] || [ -e version.txt ] || [ -f hammer-ping ]; then
+
+	#			base_dir=`pwd`
+
+	#		  elif [ -d $sos_subdir/conf ] || [ -d $sos_subdir/sos_commands ] || [ -e $sos_subdir/version.txt ] || [ -e $sos_subdir/hammer-ping ]; then
+
+	#			base_dir="$sos_subdir"
+
+	#		  elif [ -d "$last_arg" ]; then
+
+	#			base_dir="$last_arg"
+
+	#		  else
+
+	#			echo "This is not a sosreport directory.  Please provide the path to a correct sosreport directory."
+	#			exit 1
+
+	#		  fi
 
 		  else
 
@@ -101,11 +125,6 @@ main()
 			exit 1
 
 		  fi
-
-	  else
-
-	    echo "This is not a sosreport directory.  Please provide the path to a correct sosreport directory."
-	    exit 1
 
 	  fi
 
@@ -1001,21 +1020,21 @@ IPADDRLIST=$SATELLITE_IP
 memory_usage=$(cat $base_dir/ps 2>/dev/null | sort -nr | awk '{print $6}' | egrep -v '^RSS|\-|^$' | paste -s -d+ | bc)
 memory_usage_gb=$(echo "scale=2;$memory_usage/1024/1024" | bc)
 
-SATELLITE_INSTALLED=FALSE
-EARLY_SATELLITE=FALSE
-CAPSULE_SERVER=FALSE
-SPACEWALK_INSTALLED=FALSE
+SATELLITE_INSTALLED='FALSE'
+EARLY_SATELLITE='FALSE'
+CAPSULE_SERVER='FALSE'
+SPACEWALK_INSTALLED='FALSE'
 
 # these checks will be used later on to include or exclude certain sections, as appropriate
 
 :answer_file: "/etc/foreman-installer/scenarios.d/capsule-answers.yaml"
 
-if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i capsule-answers.yaml)" ] || [ "$(egrep '^foreman-proxy|^foreman-proxy' $base_dir/installed-rpms)" ] || [ "$(egrep '^satellite-capsule-6' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | egrep name | head -1)" ]; then
+if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i capsule-answers.yaml)" ] || [ "$(egrep '^foreman-proxy|^satellite-capsule' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | egrep name | head -1)" ]; then
 	if [ ! "$(egrep '^satellite-6' $base_dir/installed-rpms)" ]; then
 		CAPSULE_SERVER='TRUE'
 	fi
 fi
-if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | egrep -i satellite-answers.yaml)" ] || [ "$(egrep '^passenger|^puma|^foreman|^candlepin|^satellite-6' $base_dir/installed-rpms 2>/dev/null)" ] || [ `egrep "$HOSTNAME$" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml 2>/dev/null | egrep servername | head -1` ] || [ -e $base_dir/sos_commands/foreman/smart_proxies ]; then
+if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | egrep -i satellite-answers.yaml)" ] || [ "$(egrep '^passenger|^puma|^candlepin|^satellite-6' $base_dir/installed-rpms 2>/dev/null)" ] || [ `egrep "$HOSTNAME$" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml 2>/dev/null | egrep servername | head -1` ] || [ -e $base_dir/sos_commands/foreman/smart_proxies ]; then
 	SATELLITE_INSTALLED='TRUE'
 fi
 if [ "$(egrep '^foreman-1.6|^foreman-1.7|^foreman-proxy-1.6|^foreman-proxy-1.7' $base_dir/installed-rpms)" ]; then EARLY_SATELLITE='TRUE'; fi
@@ -1032,7 +1051,7 @@ log
 
 log "// date sosreport was collected"
 log "---"
-log_cmd "head -1 $base_dir/date"
+log_cmd "head -1 $base_dir/date | sed 's/^[ \t]*//;s/[ \t]*$//'"
 log "---"
 log
 
@@ -1966,15 +1985,18 @@ if [ -f "$base_dir/foreman_filecontexts" ]; then
 	log
 fi
 
-
+$base_dir/sos_commands/crypto/fips-mode-setup_--check
 
 log_tee "## fips mode"
 log
 
 log "// check for fips status"
+log "cat \$base_dir/sos_commands/crypto/fips-mode-setup_--check"
 log "cat \$base_dir/proc/sys/crypto/fips_enabled"
 log "egrep fips_enabled \$base_dir/var/log/foreman-installer/satellite* -h | egrep resolved"
 log "---"
+log_cmd "cat $base_dir/sos_commands/crypto/fips-mode-setup_--check"
+log
 log_cmd "echo fips_enabled flag:  \"`cat $base_dir/proc/sys/crypto/fips_enabled`\" | egrep --color=always '^|fips_enabled flag: 1'"
 log
 log_cmd "egrep fips_enabled $base_dir/sysmgmt/{satellite.log,capsule.log,katello-installer.log} -h | egrep resolved | egrep --color=always '^|true'"
@@ -2012,7 +2034,7 @@ log
 log "The fapolicyd software framework controls the execution of applications based on a user-defined policy. This is one of the most efficient ways to prevent untrusted and possibly malicious applications on the system.  As of Satellite 6.12, this is an unsupported hardening mechanism for a Satellite server."
 log
 
-if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep 'fapolicyd'`" ] || [ ! "`egrep -i fapolicyd $base_dir/installed-rpms $base_dir/sysmgmt/journalctl.log $base_dir/sysmgmt/messages 2>/dev/null | egrep -v 'units_rpm|\.rpm'`" ]; then
+if [ ! "`egrep 'fapolicyd.service' -r $base_dir/sos_commands/systemd`" ] && [ ! "`egrep -i fapolicyd $base_dir/installed-rpms $base_dir/sysmgmt/journalctl.log $base_dir/sysmgmt/messages 2>/dev/null | egrep -v 'units_rpm|\.rpm'`" ]; then
 
 	log "fapolicyd not found"
 	log
@@ -2218,9 +2240,10 @@ log
 log "// list rhsm targets"
 log "egrep '^baseurl|^hostname|^repo_ca_cert' \$base_dir/etc/rhsm/rhsm.conf*"
 log "---"
-for i in $(find $base_dir/etc/rhsm/ | egrep rhsm.conf | sort); do log_cmd "egrep -H '^baseurl|^hostname|^repo_ca_cert' $i | egrep --color=always '^|$HOSTNAME'"; log '---'; done
-if [ "$i" == '' ]; then log "---"; fi
+for i in $(find $base_dir/etc/rhsm/ | egrep rhsm.conf | sort); do log_cmd "egrep -H '^baseurl|^hostname|^repo_ca_cert' $i | egrep --color=always '^|$HOSTNAME'"; log '---'; SETDASH='TRUE'; done
+if [ "$SETDASH" == 'TRUE' ]; then log "---"; fi
 log
+SETDASH='FALSE'
 
 log "// subsman list installed"
 log "cat \$base_dir/sos_commands/subscription_manager/subscription-manager_list_--installed"
@@ -2240,10 +2263,12 @@ log "// check for simple content access (SCA)"
 log "jq '.' \$base_dir/var/lib/rhsm/cache/content_access_mode.json | egrep 'org_environment'"
 log "egrep -hir 'org_environment' \$base_dir/sos_commands/yum/ | egrep -i contentAccessMode | sort -u"
 log "egrep 'Content Access' \$base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | tail"
+log "egrep -hir 'Added subscription for product' \$base_dir/var/log/messages* | egrep 'Content Access' | sort -h"
 log "---"
 log_cmd "jq '.' $base_dir/var/lib/rhsm/cache/content_access_mode.json | egrep 'org_environment'"
 log_cmd "egrep -hir 'org_environment' $base_dir/sos_commands/yum/ | egrep -i contentAccessMode | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u"
 log_cmd "egrep 'Content Access' $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | egrep -v 'pushcount' | tail"
+log_cmd "egrep -hir 'Added subscription for product' $base_dir/var/log/messages* | egrep 'Content Access' | sort -h"
 log "---"
 log
 
@@ -2475,6 +2500,41 @@ fi
 if [ ! -e $base_dir/sos_commands/yum/yum_history ] && [ ! -e $base_dir/sos_commands/dnf/dnf_history ]; then
 	log "no yum/dnf history found"
 	log
+fi
+
+if [ "`egrep '^\*' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep 'dnf-automatic'`" ] || [ "`egrep -i 'dnf-automatic' $base_dir/chkconfig`" ] || [ "`egrep -i '^dnf-automatic' $base_dir/installed-rpms`" ]; then
+
+	log "// installed dnf-automatic packages"
+	log "from files \$base_dir/installed-rpms and \$base_dir/sos_commands/yum/yum_list_installed"
+	log "---"
+	log_cmd "egrep '^dnf-automatic' $base_dir/installed-rpms 2>&1"
+	log
+	log_cmd "egrep '^dnf-automatic' $base_dir/sos_commands/yum/yum_list_installed 2>&1"
+	log "---"
+	log
+
+	log "// check automatic.conf file for update settings"
+	log "from file \$base_dir/etc/dnf/automatic.conf"
+	log "---"
+	log_cmd "cat $base_dir/etc/dnf/automatic.conf | egrep -v '\#' | sed -n '/\[commands\]/,/\[emitters\]/p' | egrep -v '\[emitters\]' | egrep ."
+	log "---"
+	log
+
+	SERVICE_NAME='dnf-automatic'
+	log "// $SERVICE_NAME service status"
+	#log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
+	log "---"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log
+	if [ -e $base_dir/sos_commands/systemd/systemctl_show_service_--all ]; then
+		log_cmd "egrep -v '\|-' $base_dir/sos_commands/systemd/systemctl_show_service_--all | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+	else
+		log
+		log_cmd "egrep $SERVICE_NAME $base_dir/ps"
+	fi
+	log "---"
+	log
+
 fi
 
 if [ ! -e $base_dir/var/log/dnf.rpm.log ]; then
@@ -3458,7 +3518,8 @@ else
 	log
 
 	#if [ -f "$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log" ]; then
-	if [ -f "$base_dir/sysmgmt/foreman-ssl_access_ssl.log" ]; then
+#	if [ -f "$base_dir/sysmgmt/foreman-ssl_access_ssl.log" ]; then
+	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; then
 
 		log "// TOP 20 IP addresses sending https requests to Satellite (Satellite and capsule servers highlighted)"
 		#log "awk '{print \$1}' \$base_foreman/var/log/httpd/foreman-ssl_access_ssl.log | sort | uniq -c | sort -nr | head -n20"
@@ -3469,36 +3530,101 @@ else
 		log
 
 		log "// TOP 20 IP addresses sending https requests to Satellite - not from Satellite or capsule servers (detailed)"
-		log "awk '{print \$1,\$4}' \$base_dir/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
+		log "awk '{print \$1,\$4}' \$base_dir/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '\$SATELLITE_IP|\$CAPSULE_IPS' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
 		log "---"
 		log_cmd "awk '{print \$1,\$4}' $base_dir/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
 		log "---"
 		log
 
 		log "// TOP 50 URIs sending https requests to Satellite - not from Satellite or capsule servers"
-		log "awk '{print \$1, \$6, \$7}' \$base_dir/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | sort | uniq -c | sort -nr | head -n 50"
+		log "awk '{print \$1, \$6, \$7}' \$base_dir/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '\$SATELLITE_IP|\$CAPSULE_IPS' | sort | uniq -c | sort -nr | head -n 50"
 		log "---"
 		log_cmd "awk '{print \$1, \$6, \$7}' $base_dir/sysmgmt/foreman-ssl_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | sort | uniq -c | sort -nr | head -n 50"
 		log "---"
 		log
 
-
 		log "// General HTTP return codes in apache logs"
-		log "\$n;grep -P '\" \$n\d\d ' \$base_foreman/sysmgmt/foreman-ssl_access_ssl.log | awk '{print \$9}' | sort | uniq -c | sort -nr"
+		log "\$n;grep -P '\" \$n\d\d ' \$base_foreman/sysmgmt/foreman-ssl_access_ssl.log | awk '{print \$9}' | sort | egrep ^[[:digit:]] | uniq -c | sort -nr"
 		log "---"
-		log_cmd "grep -P '\" 2\d\d ' $base_foreman/sysmgmt/foreman-ssl_access_ssl.log | awk '{print \$9}' | sort | uniq -c | sort -nr"
+		log_cmd "grep -P '\" 2\d\d ' $base_foreman/sysmgmt/foreman-ssl_access_ssl.log | awk '{print \$9}' | sort | egrep ^[[:digit:]] | uniq -c | sort -nr"
 		log
-		log_cmd "grep -P '\" 3\d\d ' $base_foreman/sysmgmt/foreman-ssl_access_ssl.log | awk '{print \$9}' | sort | uniq -c | sort -nr"
+		log_cmd "grep -P '\" 3\d\d ' $base_foreman/sysmgmt/foreman-ssl_access_ssl.log | awk '{print \$9}' | sort | egrep ^[[:digit:]] | uniq -c | sort -nr"
 		log
-		log_cmd "grep -P '\" 4\d\d ' $base_foreman/sysmgmt/foreman-ssl_access_ssl.log | awk '{print \$9}' | sort | uniq -c | sort -nr"
+		log_cmd "grep -P '\" 4\d\d ' $base_foreman/sysmgmt/foreman-ssl_access_ssl.log | awk '{print \$9}' | sort | egrep ^[[:digit:]] | uniq -c | sort -nr"
 		log
-		log_cmd "grep -P '\" 5\d\d ' $base_foreman/sysmgmt/foreman-ssl_access_ssl.log | awk '{print \$9}' | sort | uniq -c | sort -nr"
+		log_cmd "grep -P '\" 5\d\d ' $base_foreman/sysmgmt/foreman-ssl_access_ssl.log | awk '{print \$9}' | sort | egrep ^[[:digit:]] | uniq -c | sort -nr"
 		log "---"
 		log
 		log "2xx: success:  the request was successfully received, understood, and accepted"
 		log "3xx: redirect:  further action needs to be taken in order to complete the request"
 		log "4xx: client error:  the request contains bad syntax or cannot be fulfilled"
 		log "5xx: server error:  the server failed to fulfil an apparently valid request"
+		log
+		log "HTTP code reference:  https://en.wikipedia.org/wiki/List_of_HTTP_status_codes"
+		log
+
+	elif [ "$CAPSULE_SERVER" == "TRUE" ]; then
+
+		log "// TOP 20 IP addresses sending https requests to capsule server"
+		log "awk '{print \$1}' \$base_dir/var/log/httpd/rhsm-pulpcore-https-443_access_ssl.log | sort | uniq -c | sort -nr | head -n20"
+		log "---"
+		log_cmd "awk '{print \$1}' $base_dir/var/log/httpd/rhsm-pulpcore-https-443_access_ssl.log | sort | uniq -c | sort -nr | head -n20"
+		log "---"
+		log
+
+		log "// TOP 20 IP addresses sending https requests to capsule server"
+		log "awk '{print \$1,\$4}' \$base_dir/var/log/httpd/rhsm-pulpcore-https-443_access_ssl.log | egrep -v '\$SATELLITE_IP|\$CAPSULE_IPS' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
+		log "---"
+		log_cmd "awk '{print \$1,\$4}' $base_dir/var/log/httpd/rhsm-pulpcore-https-443_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | cut -d: -f1,2,3 | uniq -c | sort -nr | head -n20"
+		log "---"
+		log
+
+		log "// TOP 50 URIs sending https requests to capsule server"
+		log "awk '{print \$1, \$6, \$7}' \$base_dir/var/log/httpd/rhsm-pulpcore-https-443_access_ssl.log | egrep -v '\$SATELLITE_IP|\$CAPSULE_IPS' | sort | uniq -c | sort -nr | head -n 50"
+		log "---"
+		log_cmd "awk '{print \$1, \$6, \$7}' $base_dir/var/log/httpd/rhsm-pulpcore-https-443_access_ssl.log | egrep -v '$SATELLITE_IP|$CAPSULE_IPS' | sort | uniq -c | sort -nr | head -n 50"
+		log "---"
+		log
+
+		log "// General HTTP return codes in apache logs"
+		log "\$n;grep -P '\" \$n\d\d ' \$base_foreman/var/log/httpd/rhsm-pulpcore-https-443_access_ssl.log | awk '{print \$9}' | sort | egrep ^[[:digit:]] | uniq -c | sort -nr"
+		log "---"
+		log_cmd "grep -P '\" 2\d\d ' $base_foreman/var/log/httpd/rhsm-pulpcore-https-443_access_ssl.log | awk '{print \$9}' | sort | egrep ^[[:digit:]] | uniq -c | sort -nr"
+		log
+		log_cmd "grep -P '\" 3\d\d ' $base_foreman/var/log/httpd/rhsm-pulpcore-https-443_access_ssl.log | awk '{print \$9}' | sort | egrep ^[[:digit:]] | uniq -c | sort -nr"
+		log
+		log_cmd "grep -P '\" 4\d\d ' $base_foreman/var/log/httpd/rhsm-pulpcore-https-443_access_ssl.log | awk '{print \$9}' | sort | egrep ^[[:digit:]] | uniq -c | sort -nr"
+		log
+		log_cmd "grep -P '\" 5\d\d ' $base_foreman/var/log/httpd/rhsm-pulpcore-https-443_access_ssl.log | awk '{print \$9}' | sort | egrep ^[[:digit:]] | uniq -c | sort -nr"
+		log "---"
+		log
+		log "2xx: success:  the request was successfully received, understood, and accepted"
+		log "3xx: redirect:  further action needs to be taken in order to complete the request"
+		log "4xx: client error:  the request contains bad syntax or cannot be fulfilled"
+		log "5xx: server error:  the server failed to fulfil an apparently valid request"
+		log
+		log "HTTP code reference:  https://en.wikipedia.org/wiki/List_of_HTTP_status_codes"
+		log
+
+	else
+
+		log "// General HTTP return codes in apache logs"
+		log "\$n;egrep -h 'HTTP\/1\.1' \$base_foreman/var/log/secure | grep -P '\" \$n\d\d ' | awk '{print \$9}' | sort | uniq -c | sort -nr"
+		log "---"
+		log_cmd "egrep -h 'HTTP\/1\.1' $base_foreman/var/log/secure | grep -P '\" 2\d\d' | awk '{print $11}' | egrep ^[[:digit:]] | uniq -c"
+		log
+		log_cmd "egrep -h 'HTTP\/1\.1' $base_foreman/var/log/secure | grep -P '\" 3\d\d' | awk '{print $11}' | egrep ^[[:digit:]] | uniq -c"
+		log
+		log_cmd "egrep -h 'HTTP\/1\.1' $base_foreman/var/log/secure | grep -P '\" 4\d\d' | awk '{print $11}' | egrep ^[[:digit:]] | uniq -c"
+		log
+		log_cmd "egrep -h 'HTTP\/1\.1' $base_foreman/var/log/secure | grep -P '\" 5\d\d' | awk '{print $11}' | egrep ^[[:digit:]] | uniq -c"
+		log "---"
+		log
+		log "2xx: success:  the request was successfully received, understood, and accepted"
+		log "3xx: redirect:  further action needs to be taken in order to complete the request"
+		log "4xx: client error:  the request contains bad syntax or cannot be fulfilled"
+		log "5xx: server error:  the server failed to fulfil an apparently valid request"
+		log
 		log "HTTP code reference:  https://en.wikipedia.org/wiki/List_of_HTTP_status_codes"
 		log
 
@@ -3727,21 +3853,20 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log "---"
 		log
 
+		log "// maintenance mode check"
+		log "egrep 'maintenance_mode' \$base_dir/var/log/foreman-maintain/foreman-maintain.log | tail"
+		#log "zgrep maintenance_mode \$base_dir/var/log/foreman-maintain/foreman-maintain.log* | sort -k2 | tail"
+		log "cat \$base_dir/sos_commands/networking/iptables_-vnxL | sed -n '/FOREMAN_MAINTAIN/,/^$/p'"
+		log "---"
+		log_cmd "egrep 'maintenance_mode' $base_dir/sysmgmt/foreman-maintain.log* | sort -k2 -k3 | tail"
+		#log_cmd "zgrep maintenance_mode $base_dir/var/log/foreman-maintain/foreman-maintain.log* | sort -k2 | tail"
+		log
+		log_cmd "cat $base_dir/sos_commands/networking/iptables_-vnxL | sed -n '/FOREMAN_MAINTAIN/,/^$/p'"
+		log "---"
+		log
+
 		# exclude satellite-specific entries on capsule servers
 		if [ -f "$base_dir/etc/cron.d/foreman-tasks" ] || [ -f "$base_foreman/etc/foreman/settings.yaml" ] || [ -d "$base_foreman/var/log/foreman" ]; then
-
-
-			log "// maintenance mode check"
-			log "egrep 'maintenance_mode' \$base_dir/var/log/foreman-maintain/foreman-maintain.log | tail"
-			#log "zgrep maintenance_mode \$base_dir/var/log/foreman-maintain/foreman-maintain.log* | sort -k2 | tail"
-			log "cat \$base_dir/sos_commands/networking/iptables_-vnxL | sed -n '/FOREMAN_MAINTAIN/,/^$/p'"
-			log "---"
-			log_cmd "egrep 'maintenance_mode' $base_dir/sysmgmt/foreman-maintain.log* | sort -k2 -k3 | tail"
-			#log_cmd "zgrep maintenance_mode $base_dir/var/log/foreman-maintain/foreman-maintain.log* | sort -k2 | tail"
-			log
-			log_cmd "cat $base_dir/sos_commands/networking/iptables_-vnxL | sed -n '/FOREMAN_MAINTAIN/,/^$/p'"
-			log "---"
-			log
 
 			log "// foreman tasks cleanup script"
 			log "cat \$base_dir/etc/cron.d/foreman-tasks"
@@ -3860,7 +3985,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 	fi
 fi
 
-if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
+if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; then
 	log_tee "## dynflow"
 	log
 
@@ -4486,6 +4611,13 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	log "---"
 	log
 
+	log "// runtime frequency"
+	log "egrep -i interval \$base_dir/etc/{virt-who.conf,sysconfig/virt-who,virt-who.d/*.conf}"
+	log "---"
+	log_cmd "egrep -i interval $base_dir/etc/{virt-who.conf,sysconfig/virt-who,virt-who.d/*.conf}"
+	log "---"
+	log
+
 	log "// Virt-who Proxy"
 	log "grep -i proxy \$base_dir/etc/sysconfig/virt-who"
 	log "---"
@@ -4575,7 +4707,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 fi
 
 
-if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep tomcat`" ] && [ ! "`egrep -i 'tomcat' $base_dir/chkconfig $base_dir/installed-rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/tomcat" ] && [ ! -d "$base_dir/var/log/tomcat6" ]; then
+if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep tomcat`" ] && [ ! "`egrep -i 'tomcat|pki-servlet-engine|idm-jss|idm-tomcat' $base_dir/chkconfig $base_dir/installed-rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/tomcat" ] && [ ! -d "$base_dir/var/log/tomcat6" ]; then
 
 	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 
@@ -4600,28 +4732,32 @@ else
 	log
 
 
-	if [ "`grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data 2>/dev/null | grep tomcat | egrep -v 'Red Hat|none'`" ]; then
+	if [ "`grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data 2>/dev/null | egrep 'tomcat|pki-servlet-engine' | egrep -v 'Red Hat|none'`" ]; then
 		log "// 3rd party qpidd packages"
 		log "from file $base_dir/sos_commands/rpm/package-data"
 		log "---"
-		log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | grep tomcat | grep -v ^$HOSTNAME | cut -f1,4 | sort -k2"
+		log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | egrep 'tomcat|pki-servlet-engine|idm-jss|idm-tomcat' | grep -v ^$HOSTNAME | cut -f1,4 | sort -k2"
 		log "---"
 		log
-	elif [ "$(egrep 'tomcat' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME')" ]; then
+	elif [ "$(egrep 'tomcat|pki-servlet-engine' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME')" ]; then
 		log "// tomcat packages"
-		log "egrep 'tomcat' \$base_dir/sos_commands/yum/yum_list_installed"
+		log "egrep 'tomcat|pki-servlet-engine|idm-jss|idm-tomcat' \$base_dir/sos_commands/yum/yum_list_installed"
 		log "---"
-		log_cmd "egrep 'tomcat' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME'"
+		log_cmd "egrep 'tomcat|pki-servlet-engine|idm-jss|idm-tomcat' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME'"
 		log "---"
 		log
 	else
 		log "// tomcat packages"
-		log "egrep 'tomcat' \$base_dir/installed-rpms"
+		log "egrep 'tomcat|pki-servlet-engine|idm-jss|idm-tomcat' \$base_dir/installed-rpms"
 		log "---"
-		log_cmd "egrep 'tomcat' $base_dir/installed-rpms | egrep -v '$HOSTNAME'"
+		log_cmd "egrep 'tomcat|pki-servlet-engine|idm-jss|idm-tomcat' $base_dir/installed-rpms | egrep -v '$HOSTNAME'"
 		log "---"
 		log
 	fi
+
+
+	log "Note:  In RHEL 8, the package pki-servlet-engine provides the tomcat component."
+	log
 
 
 
@@ -4760,7 +4896,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 			log "// verify whether simple content access (SCA) is enabled for hosts"
 			log "from candlepin, foreman and insights logs"
 			log "---"
-			log_cmd "egrep -m 5 --color=ALWAYS 'org_environment|simple_content_access|simple content access' $base_dir/var/log/candlepin/audit.log $base_dir/var/log/httpd/foreman-ssl_access_ssl.log $base_dir/var/log/candlepin/candlepin.log $base_dir/var/log/candlepin/error.log $base_dir/sos_commands/insights/insights-client-dump/data/insights_commands/sudo_-iu_postgres_.usr.bin.psql_-d_candlepin_-c_select_displayname_content_access_mode_from_cp_owner_--csv 2>/dev/null"
+			log_cmd "egrep -m 5 --color=ALWAYS 'org_environment|simple_content_access|simple content access' $base_dir/var/log/candlepin/audit.log $base_dir/var/log/httpd/foreman-ssl_access_ssl.log $base_dir/var/log/candlepin/candlepin.log $base_dir/var/log/candlepin/error.log $base_dir/sos_commands/insights/insights-client-dump/data/insights_commands/sudo_-iu_postgres_.usr.bin.psql_-d_candlepin_-c_select_displayname_content_access_mode_from_cp_owner_--csv 2>/dev/null | egrep -vi eligible"
 			log "---"
 			log
 		fi
@@ -5024,7 +5160,6 @@ else
 	log_cmd "egrep 'max-requests' $base_dir/etc/systemd/system/pulpcore-api.service"
 	log "---"
 	log
-
 
 	log "// pulp squid port"
 	log "egrep pulp -A 1 \$base_dir/etc/squid/squid.conf"
@@ -5601,11 +5736,11 @@ fi
 
 
 
-if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep puppet`" ] || [ "`egrep puppet $base_dir/chkconfig $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] || [ -d "$base_dir/var/log/puppetlabs" ] && [ -d "$base_dir/var/log/puppet" ] && [ -d "$base_dir/etc/puppet" ] || [ -d "$base_dir/etc/puppetlabs" ]; then
+if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep puppet`" ] || [ "`egrep puppet $base_dir/chkconfig $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] || [ "$(find $base_dir/{etc,var,usr} 2>/dev/null | egrep puppet | egrep -v 'selinux|foreman-installer|ansible|ruby|share\/doc|yumdb|redis|katello|plugins')" ]; then
 
 	export GREP_COLORS='ms=01;32'
-	log_cmd "echo '## puppet' | grep --color=always \#"
-	echo '## puppet' | grep --color=always \#
+	log_cmd "echo '## puppet (puppetserver phase-out began in 6.10, disabled in 6.11)' | grep --color=always \#"
+	echo '## puppet (puppetserver phase-out began in 6.10, disabled in 6.11)' | grep --color=always \#
 	export GREP_COLORS='ms=01;31'
 	log
 
