@@ -67,7 +67,7 @@ main()
 
 	  base_dir=""
 	  last_arg=$(echo $@ | awk '{print $NF}')
-	  sos_subdir=`ls -d $last_arg/sosreport-* $last_arg/foreman-debug-* $last_arg/spacewalk-debug 2>/dev/null | grep . | head -1`
+	  sos_subdir=`ls -d $last_arg/sosreport-* $last_arg/foreman-debug-* $last_arg/spacewalk-debug $last_arg/soscleaner* 2>/dev/null | grep . | head -1`
 
 	  if [ "$FORCE_GENERATE" == "true" ]; then
 #		if [ -d "$last_arg" ]; then 
@@ -180,9 +180,9 @@ main()
 	{
 		if [ "$ANSI_COLOR_CODES" == "false" ] && [ "$(which ansifilter)" ] ; then
 			# echo "$@" | bash 2>&1 >> $FOREMAN_REPORT
-			echo "$@" | bash 2>/dev/null | ansifilter >> $FOREMAN_REPORT
+			echo "$@" | bash 2>/dev/null | ansifilter | sed s'/\/\//\//'g | sed -r s"/$sos_path/"g >> $FOREMAN_REPORT
 		else
-			echo "$@" | bash 2>/dev/null >> $FOREMAN_REPORT
+			echo "$@" | bash 2>/dev/null | sed s'/\/\//\//'g | sed -r s"/$sos_path/"g >> $FOREMAN_REPORT
 		fi
 	}
 
@@ -978,7 +978,7 @@ main()
 	# this is a list of red hat packages installed from the satellite repositories.
 	# we'll use it later to highlight conflicting third-party packages.
 
-	SATPACKAGES="ansible|apache-commons-|avalon-framework-|avalon-logkit-|boost-|candlepin|copy-jdk-configs-|createrepo|cyrus-sasl-|deltarpm-|dwz-|dynflow|ecj-|efivar-libs62-|facter-|flac-libs-|foreman|geronimo-jms-|geronimo-jta-|giflib-|gperftools-libs-|gsm-|hammer-|hiera-|httpd|ipmitool-|ipxe-bootimgs0180825-|jabber|katello|kobo-|liquibase-|log4j-|maven|mod_ssl|mod_wsgi-|mod_xsendfile-|mokutil51-|mongodb|oracle-config-|oracle-instantclient-basic0-|oracle-instantclient-selinux0-|oracle-nofcontext-selinux-|pcre-devel-|pcsc-lite-libs-|perl-Carp-|perl-Compress-Raw-Bzip2-|perl-Compress-Raw-Zlib-|perl-constant-|perl-Data-Dumper-|perl-DBI-|perl-Digest-|perl-Digest-MD5-|perl-Encode-|perl-Error-|perl-Exporter-|perl-File-Path-|perl-File-Temp-|perl-Filter-|perl-Getopt-Long-|perl-Git-|perl-HTTP-Tiny-|perl-IO-Compress-|perl-libs-|perl-macros-|perl-Net-Daemon-|perl-parent-|perl-PathTools-|perl-PlRPC-|perl-Pod-Escapes-|perl-podlators-|perl-Pod-Perldoc-|perl-Pod-Simple-|perl-Pod-Usage-|perl-Scalar-List-Utils-|perl-Socket-|perl-srpm-macros-|perl-Storable-|perl-TermReadKey-|perl-Text-ParseWords-|perl-Thread-Queue-|perl-threads-|perl-threads-shared-|perl-Time-HiRes-|perl-Time-Local-|perl-XML-NamespaceSupport-|postgresql|psmisc2-|pulp|puppet|qpid|redhat-rpm-config-|repoview|rh-nodejs4-runtime-|rh-nodejs6-runtime-|rpm-build-|ruby-augeas-|rubygem-actioncable-|rubygem-actionmailbox-|rubygem-actionmailer-|rubygem-actionpack-|rubygem-actiontext-|rubygem-actionview-|rubygem-activejob-|rubygem-activemodel-|rubygem-activerecord-|rubygem-activerecord-import-|rubygem-activerecord-session_store-|rubygem-activestorage-|rubygem-activesupport-|rubygem-acts_as_list-|rubygem-addressable-|rubygem-algebrick-|rubygem-amazing_print-|rubygem-ancestry-|rubygem-anemone-|rubygem-angular-rails-templates-|rubygem-ansi-|rubygem-apipie-bindings-|rubygem-apipie-dsl-|rubygem-apipie-params-|rubygem-apipie-rails-|rubygem-arel-|rubygem-audited-|rubygem-audited-activerecord-|rubygem-autoparse-|rubygem-awesome_print-|rubygem-azure_mgmt_compute-|rubygem-azure_mgmt_network-|rubygem-azure_mgmt_resources-|rubygem-azure_mgmt_storage-|rubygem-azure_mgmt_subscriptions-|rubygem-bastion-|rubygem-bcrypt-|rubygem-bcrypt_pbkdf-|rubygem-bigdecimal-|rubygem-builder-|rubygem-bundler-|rubygem-bundler_ext-|rubygem-clamp-|rubygem-coffee-rails-|rubygem-coffee-script-|rubygem-coffee-script-source-|rubygem-colorize-|rubygem-concurrent-ruby-|rubygem-concurrent-ruby-edge-|rubygem-connection_pool-|rubygem-crass-|rubygem-css_parser-|rubygem-daemons-|rubygem-dalli-|rubygem-deacon-|rubygem-declarative-|rubygem-declarative-option-|rubygem-deep_cloneable-|rubygem-deface-|rubygem-did_you_mean-|rubygem-diffy-|rubygem-docker-api-|rubygem-domain_name-|rubygem-ed25519-|rubygem-erubi-|rubygem-erubis-|rubygem-ethon-|rubygem-excon-|rubygem-execjs-|rubygem-extlib-|rubygem-facter-|rubygem-faraday-|rubygem-faraday-cookie_jar-|rubygem-fast_gettext-|rubygem-ffi-|rubygem-fog-|rubygem-fog-aws-|rubygem-fog-core-|rubygem-fog-digitalocean-|rubygem-fog-google-|rubygem-fog-json-|rubygem-fog-libvirt-|rubygem-fog-openstack-|rubygem-fog-ovirt-|rubygem-fog-rackspace-|rubygem-fog-vsphere-|rubygem-fog-xenserver-|rubygem-fog-xml-|rubygem-foreigner-|rubygem-formatador-|rubygem-friendly_id-|rubygem-fx-|rubygem-get_process_mem-|rubygem-gettext-|rubygem-gettext_i18n_rails-|rubygem-git-|rubygem-gitlab-sidekiq-fetcher-|rubygem-globalid-|rubygem-google-api-client-|rubygem-googleauth-|rubygem-google-cloud-env-|rubygem-graphql-|rubygem-graphql-batch-|rubygem-gssapi-|rubygem-hashie-|rubygem-highline-|rubygem-hike-|rubygem-hocon-|rubygem-httpclient-|rubygem-http-cookie-|rubygem-i18n-|rubygem-io-console-|rubygem-ipaddress-|rubygem-irb-|rubygem-jquery-ui-rails-|rubygem-json-|rubygem-jwt-|rubygem-kafo-|rubygem-kafo_parsers-|rubygem-kafo_wizards-|rubygem-launchy-|rubygem-ldap_fluff-|rubygem-little-plugger-|rubygem-locale-|rubygem-logging-|rubygem-loofah-|rubygem-mail-|rubygem-marcel-|rubygem-memoist-|rubygem-method_source-|rubygem-mimemagic-|rubygem-mime-types-|rubygem-mime-types-data-|rubygem-mini_mime-|rubygem-mini_portile2-|rubygem-minitest-|rubygem-mqtt-|rubygem-msgpack-|rubygem-ms_rest-|rubygem-ms_rest_azure-|rubygem-multi_json-|rubygem-multipart-post-|rubygem-mustermann-|rubygem-net-http-persistent-|rubygem-net_http_unix-|rubygem-net-ldap-|rubygem-net-ping-|rubygem-netrc-|rubygem-net-scp-|rubygem-net-ssh-|rubygem-nio4r-|rubygem-nokogiri-|rubygem-oauth-|rubygem-openscap-|rubygem-openscap_parser-|rubygem-openssl-|rubygem-optimist-|rubygem-os-|rubygem-ovirt-engine-sdk-|rubygem-parallel-|rubygem-parse-cron-|passenger-|rubygem-pg-|rubygem-polyglot-|rubygem-powerbar-|rubygem-promise-|rubygem-protected_attributes-|rubygem-psych-|rubygem-public_suffix-|puma-|rubygem-rabl-|rubygem-racc-|rubygem-rack-|rubygem-rack-cors-|rubygem-rack-jsonp-|rubygem-rack-protection-|rubygem-rack-test-|rubygem-rails-|rubygem-rails-deprecated_sanitizer-|rubygem-rails-dom-testing-|rubygem-rails-html-sanitizer-|rubygem-rails-i18n-|rubygem-rails-observers-|rubygem-railties-|rubygem-rainbow-|rubygem-rake-|rubygem-rake0-|rubygem-rake2-|rubygem-rake3-|rubygem-rb-inotify-|rubygem-rbnacl-|rubygem-rbovirt-|rubygem-rbvmomi-|rubygem-rchardet-|rubygem-rdoc-|rubygem-record_tag_helper-|rubygem-redfish_client-|rubygem-redhat_access_lib-|rubygem-redis-|rubygem-representable-|rubygem-responders-|rubygem-rest-client-|rubygem-retriable-|rubygem-rkerberos-|rubygem-roadie-|rubygem-roadie-rails-|rubygem-robotex-|rubygem-rsec-|rubygem-ruby2_keywords-|rubygem-ruby2ruby-|rubygem-rubyipmi-|rubygem-ruby-libvirt-|rubygem-ruby_parser-|rubygem-runcible-|rubygems-|rubygem-safemode-|rubygem-scoped_search-|rubygem-sd_notify-|rubygem-secure_headers-|rubygem-sequel-|rubygem-server_sent_events-|rubygem-sexp_processor-|rubygem-sidekiq-|rubygem-signet-|rubygem-sinatra-|rubygem-sprockets-|rubygem-sprockets-rails-|rubygem-sqlite3-|rubygem-sshkey-|rubygem-statsd-instrument-|rubygem-stomp-|rubygem-table_print-|rubygem-text-|rubygem-thor-|rubygem-thread_safe-|rubygem-tilt-|rubygem-timeliness-|rubygem-treetop-|rubygem-trollop-|rubygem-turbolinks-|rubygem-typhoeus-|rubygem-tzinfo-|rubygem-uber-|rubygem-unf-|rubygem-unf_ext-|rubygem-unicode-|rubygem-unicode-display_width-|rubygem-useragent-|rubygem-validates_lengths_from_database-|rubygem-webpack-rails-|rubygem-websocket-driver-|rubygem-websocket-extensions-|rubygem-wicked-|rubygem-will_paginate-|rubygem-x-editable-rails-|rubygem-xmlrpc-|rubygem-zeitwerk-|rubygem-zest-|ruby-irb-|ruby-libs-|ruby-rgen-|ruby-shadow-|satellite|capsule|SOAPpy-|spacecmd|spacewalk|squid|syslinux-|syslinux-tftpboot-|tfm-runtime-|tomcat|tprdsatel1-|ttmkfdir-|v8-|v8314-runtime-|virt-who-|xalan-j2-|xerces-j2-|xml-commons-apis-|xml-commons-resolver-|yajl-|yaml-cpp-|rubygem-smart_proxy|pulpcore|proton-"
+	SATPACKAGES="ansible|apache-commons-|avalon-framework-|avalon-logkit-|boost-|candlepin|copy-jdk-configs-|createrepo|cyrus-sasl-|deltarpm-|dwz-|dynflow|ecj-|efivar-libs62-|facter-|flac-libs-|foreman|geronimo-jms-|geronimo-jta-|giflib-|gperftools-libs-|gsm-|hammer-|hiera-|httpd|ipmitool-|ipxe-bootimgs0180825-|jabber|katello|kobo-|liquibase-|log4j-|maven|mod_ssl|mod_wsgi-|mod_xsendfile-|mokutil51-|mongodb|oracle-config-|oracle-instantclient-basic0-|oracle-instantclient-selinux0-|oracle-nofcontext-selinux-|pcre-devel-|pcsc-lite-libs-|perl-Carp-|perl-Compress-Raw-Bzip2-|perl-Compress-Raw-Zlib-|perl-constant-|perl-Data-Dumper-|perl-DBI-|perl-Digest-|perl-Digest-MD5-|perl-Encode-|perl-Error-|perl-Exporter-|perl-File-Path-|perl-File-Temp-|perl-Filter-|perl-Getopt-Long-|perl-Git-|perl-HTTP-Tiny-|perl-IO-Compress-|perl-libs-|perl-macros-|perl-Net-Daemon-|perl-parent-|perl-PathTools-|perl-PlRPC-|perl-Pod-Escapes-|perl-podlators-|perl-Pod-Perldoc-|perl-Pod-Simple-|perl-Pod-Usage-|perl-Scalar-List-Utils-|perl-Socket-|perl-srpm-macros-|perl-Storable-|perl-TermReadKey-|perl-Text-ParseWords-|perl-Thread-Queue-|perl-threads-|perl-threads-shared-|perl-Time-HiRes-|perl-Time-Local-|perl-XML-NamespaceSupport-|postgresql|psmisc2-|pulp|puppet|qpid|redhat-rpm-config-|repoview|rh-nodejs4-runtime-|rh-nodejs6-runtime-|rpm-build-|ruby-augeas-|rubygem-actioncable-|rubygem-actionmailbox-|rubygem-actionmailer-|rubygem-actionpack-|rubygem-actiontext-|rubygem-actionview-|rubygem-activejob-|rubygem-activemodel-|rubygem-activerecord-|rubygem-activerecord-import-|rubygem-activerecord-session_store-|rubygem-activestorage-|rubygem-activesupport-|rubygem-acts_as_list-|rubygem-addressable-|rubygem-algebrick-|rubygem-amazing_print-|rubygem-ancestry-|rubygem-anemone-|rubygem-angular-rails-templates-|rubygem-ansi-|rubygem-apipie-bindings-|rubygem-apipie-dsl-|rubygem-apipie-params-|rubygem-apipie-rails-|rubygem-arel-|rubygem-audited-|rubygem-audited-activerecord-|rubygem-autoparse-|rubygem-awesome_print-|rubygem-azure_mgmt_compute-|rubygem-azure_mgmt_network-|rubygem-azure_mgmt_resources-|rubygem-azure_mgmt_storage-|rubygem-azure_mgmt_subscriptions-|rubygem-bastion-|rubygem-bcrypt-|rubygem-bcrypt_pbkdf-|rubygem-bigdecimal-|rubygem-builder-|rubygem-bundler-|rubygem-bundler_ext-|rubygem-clamp-|rubygem-coffee-rails-|rubygem-coffee-script-|rubygem-coffee-script-source-|rubygem-colorize-|rubygem-concurrent-ruby-|rubygem-concurrent-ruby-edge-|rubygem-connection_pool-|rubygem-crass-|rubygem-css_parser-|rubygem-daemons-|rubygem-dalli-|rubygem-deacon-|rubygem-declarative-|rubygem-declarative-option-|rubygem-deep_cloneable-|rubygem-deface-|rubygem-did_you_mean-|rubygem-diffy-|rubygem-docker-api-|rubygem-domain_name-|rubygem-ed25519-|rubygem-erubi-|rubygem-erubis-|rubygem-ethon-|rubygem-excon-|rubygem-execjs-|rubygem-extlib-|rubygem-facter-|rubygem-faraday-|rubygem-faraday-cookie_jar-|rubygem-fast_gettext-|rubygem-ffi-|rubygem-fog-|rubygem-fog-aws-|rubygem-fog-core-|rubygem-fog-digitalocean-|rubygem-fog-google-|rubygem-fog-json-|rubygem-fog-libvirt-|rubygem-fog-openstack-|rubygem-fog-ovirt-|rubygem-fog-rackspace-|rubygem-fog-vsphere-|rubygem-fog-xenserver-|rubygem-fog-xml-|rubygem-foreigner-|rubygem-formatador-|rubygem-friendly_id-|rubygem-fx-|rubygem-get_process_mem-|rubygem-gettext-|rubygem-gettext_i18n_rails-|rubygem-git-|rubygem-gitlab-sidekiq-fetcher-|rubygem-globalid-|rubygem-google-api-client-|rubygem-googleauth-|rubygem-google-cloud-env-|rubygem-graphql-|rubygem-graphql-batch-|rubygem-gssapi-|rubygem-hashie-|rubygem-highline-|rubygem-hike-|rubygem-hocon-|rubygem-httpclient-|rubygem-http-cookie-|rubygem-i18n-|rubygem-io-console-|rubygem-ipaddress-|rubygem-irb-|rubygem-jquery-ui-rails-|rubygem-json-|rubygem-jwt-|rubygem-kafo-|rubygem-kafo_parsers-|rubygem-kafo_wizards-|rubygem-launchy-|rubygem-ldap_fluff-|rubygem-little-plugger-|rubygem-locale-|rubygem-logging-|rubygem-loofah-|rubygem-mail-|rubygem-marcel-|rubygem-memoist-|rubygem-method_source-|rubygem-mimemagic-|rubygem-mime-types-|rubygem-mime-types-data-|rubygem-mini_mime-|rubygem-mini_portile2-|rubygem-minitest-|rubygem-mqtt-|rubygem-msgpack-|rubygem-ms_rest-|rubygem-ms_rest_azure-|rubygem-multi_json-|rubygem-multipart-post-|rubygem-mustermann-|rubygem-net-http-persistent-|rubygem-net_http_unix-|rubygem-net-ldap-|rubygem-net-ping-|rubygem-netrc-|rubygem-net-scp-|rubygem-net-ssh-|rubygem-nio4r-|rubygem-nokogiri-|rubygem-oauth-|rubygem-openscap-|rubygem-openscap_parser-|rubygem-openssl-|rubygem-optimist-|rubygem-os-|rubygem-ovirt-engine-sdk-|rubygem-parallel-|rubygem-parse-cron-|passenger-|rubygem-pg-|rubygem-polyglot-|rubygem-powerbar-|rubygem-promise-|rubygem-protected_attributes-|rubygem-psych-|rubygem-public_suffix-|puma-|rubygem-rabl-|rubygem-racc-|rubygem-rack-|rubygem-rack-cors-|rubygem-rack-jsonp-|rubygem-rack-protection-|rubygem-rack-test-|rubygem-rails-|rubygem-rails-deprecated_sanitizer-|rubygem-rails-dom-testing-|rubygem-rails-html-sanitizer-|rubygem-rails-i18n-|rubygem-rails-observers-|rubygem-railties-|rubygem-rainbow-|rubygem-rake-|rubygem-rake0-|rubygem-rake2-|rubygem-rake3-|rubygem-rb-inotify-|rubygem-rbnacl-|rubygem-rbovirt-|rubygem-rbvmomi-|rubygem-rchardet-|rubygem-rdoc-|rubygem-record_tag_helper-|rubygem-redfish_client-|rubygem-redhat_access_lib-|rubygem-redis-|rubygem-representable-|rubygem-responders-|rubygem-rest-client-|rubygem-retriable-|rubygem-rkerberos-|rubygem-roadie-|rubygem-roadie-rails-|rubygem-robotex-|rubygem-rsec-|rubygem-ruby2_keywords-|rubygem-ruby2ruby-|rubygem-rubyipmi-|rubygem-ruby-libvirt-|rubygem-ruby_parser-|rubygem-runcible-|rubygems-|rubygem-safemode-|rubygem-scoped_search-|rubygem-sd_notify-|rubygem-secure_headers-|rubygem-sequel-|rubygem-server_sent_events-|rubygem-sexp_processor-|rubygem-sidekiq-|rubygem-signet-|rubygem-sinatra-|rubygem-sprockets-|rubygem-sprockets-rails-|rubygem-sqlite3-|rubygem-sshkey-|rubygem-statsd-instrument-|rubygem-stomp-|rubygem-table_print-|rubygem-text-|rubygem-thor-|rubygem-thread_safe-|rubygem-tilt-|rubygem-timeliness-|rubygem-treetop-|rubygem-trollop-|rubygem-turbolinks-|rubygem-typhoeus-|rubygem-tzinfo-|rubygem-uber-|rubygem-unf-|rubygem-unf_ext-|rubygem-unicode-|rubygem-unicode-display_width-|rubygem-useragent-|rubygem-validates_lengths_from_database-|rubygem-webpack-rails-|rubygem-websocket-driver-|rubygem-websocket-extensions-|rubygem-wicked-|rubygem-will_paginate-|rubygem-x-editable-rails-|rubygem-xmlrpc-|rubygem-zeitwerk-|rubygem-zest-|ruby-irb-|ruby-libs-|ruby-rgen-|ruby-shadow-|satellite|capsule|SOAPpy-|spacecmd|spacewalk|squid|syslinux-|syslinux-tftpboot-|tfm-runtime-|tomcat|tprdsatel1-|ttmkfdir-|v8-|v8314-runtime-|virt-who-|xalan-j2-|xerces-j2-|xml-commons-apis-|xml-commons-resolver-|yajl-|yaml-cpp-|rubygem-smart_proxy|pulpcore|proton-|yggdrasil|mosquitto|host0"
 
 
 report()
@@ -1030,11 +1030,11 @@ SPACEWALK_INSTALLED='FALSE'
 :answer_file: "/etc/foreman-installer/scenarios.d/capsule-answers.yaml"
 
 if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i capsule-answers.yaml)" ] || [ "$(egrep '^foreman-proxy|^satellite-capsule' $base_dir/installed-rpms)" ] || [ "$(egrep \"$HOSTNAME$\" $base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml | egrep name | head -1)" ]; then
-	if [ ! "$(egrep '^satellite-6' $base_dir/installed-rpms)" ]; then
+	if [ ! "$(egrep '^satellite-6|^host0-6' $base_dir/installed-rpms)" ]; then
 		CAPSULE_SERVER='TRUE'
 	fi
 fi
-if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | egrep -i satellite-answers.yaml)" ] || [ "$(egrep '^passenger|^puma|^candlepin|^satellite-6' $base_dir/installed-rpms 2>/dev/null)" ] || [ `egrep "$HOSTNAME$" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml 2>/dev/null | egrep servername | head -1` ] || [ -e $base_dir/sos_commands/foreman/smart_proxies ]; then
+if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | egrep -i satellite-answers.yaml)" ] || [ "$(egrep '^passenger|^puma|^candlepin|^satellite-6|^host0-6' $base_dir/installed-rpms 2>/dev/null)" ] || [ `egrep "$HOSTNAME$" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml 2>/dev/null | egrep servername | head -1` ] || [ -e $base_dir/sos_commands/foreman/smart_proxies ]; then
 	SATELLITE_INSTALLED='TRUE'
 fi
 if [ "$(egrep '^foreman-1.6|^foreman-1.7|^foreman-proxy-1.6|^foreman-proxy-1.7' $base_dir/installed-rpms)" ]; then EARLY_SATELLITE='TRUE'; fi
@@ -1074,9 +1074,9 @@ if [ -e "$base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml" ] && [ 
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 server."
 elif [ -e "$base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml" ] && [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml | egrep -i capsule-answers.yaml)" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server"
-elif [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ ! "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
+elif [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ "$(egrep '^satellite-6|^host0-6' $base_dir/installed-rpms)" ] && [ ! "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 server."
-elif [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ ! "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
+elif [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ ! "$(egrep '^satellite-6|^host0-6' $base_dir/installed-rpms)" ] && [ "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6 capsule server"
 elif [ "$(cat $base_dir/installed-rpms 2>/dev/null)" != '' ] && [ "$(egrep '^foreman-1.6|^foreman-1.7' $base_dir/installed-rpms)" ]; then
 	log "Note:  Based on what's in this sosreport, this may be a Satellite 6.1 server"
@@ -1124,7 +1124,7 @@ log "---"
 log "ENVIRONMENT:"
 log
 if [ -f "$base_dir/installed-rpms" ]; then
-	log_cmd "egrep '^satellite-6|^satellite-capsule-6|^spacewalk-backend-server|rhui|rhua|clientrpmtest' $base_dir/installed-rpms | awk '{print \$1}' | egrep -v 'tfm-rubygem'"
+	log_cmd "egrep '^satellite-6|^host0-6|^satellite-capsule-6|^spacewalk-backend-server|rhui|rhua|clientrpmtest' $base_dir/installed-rpms | awk '{print \$1}' | egrep -v 'tfm-rubygem' | sed s'/host0/satellite/'g"
 else
 	log_cmd "cat $base_dir/etc/redhat-release"
 fi
@@ -1397,7 +1397,7 @@ log "---"
 log
 
 log "// memory usage"
-log "cat $base_dir/free"
+log "cat \$base_dir/free"
 log "---"
 log_cmd "cat $base_dir/free"
 log " "
@@ -1438,7 +1438,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 
 	log "// is a tuning profile enabled?"
 	NO_SCENARIO='FALSE'
-	if [ "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ ! "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
+	if [ "$(egrep '^satellite-6|^host0-6' $base_dir/installed-rpms)" ] && [ ! "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
 		if [ -e $base_dir/etc/foreman-installer/scenarios.d/satellite.yaml ]; then
 			log "egrep -H tuning \$base_dir/etc/foreman-installer/scenarios.d/satellite.yaml"
 			log "---"
@@ -1447,7 +1447,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 			NO_SCENARIO='TRUE'
 		fi
 
-	elif [ ! "$(egrep ^satellite-6 $base_dir/installed-rpms)" ] && [ "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
+	elif [ ! "$(egrep '^satellite-6|^host0-6' $base_dir/installed-rpms)" ] && [ "$(egrep ^satellite-capsule-6 $base_dir/installed-rpms)" ]; then
 		if [ -e $base_dir/etc/foreman-installer/scenarios.d/capsule.yaml ]; then
 			log "egrep -H tuning \$base_dir/etc/foreman-installer/scenarios.d/capsule.yaml"
 			log "---"
@@ -2004,11 +2004,11 @@ log "---"
 log
 
 log "// fips in the logs"
-log "egrep -hir 'fips mode|fips_enabled' \$base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep '^....-..-..' | sort -h"
+log "egrep -hir 'fips mode|fips_enabled' \$base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*,foreman-installer/capsule*} | egrep '^....-..-..' | sort -h"
 log "---"
-log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep -vi 'searching|resolving|List of resolvable facts' | egrep '^....-..-..' | sort -h | head -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
+log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*,foreman-installer/capsule*} | egrep -vi 'searching|resolving|List of resolvable facts' | egrep '^....-..-..' | sort -h | head -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
 log "..."
-log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*} | egrep -vi 'searching|resolving|List of resolvable facts' | egrep '^....-..-..' | sort -h | tail -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
+log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*,foreman-installer/capsule*} | egrep -vi 'searching|resolving|List of resolvable facts' | egrep '^....-..-..' | sort -h | tail -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
 log "---"
 log
 
@@ -2111,10 +2111,12 @@ log "---"
 log
 
 log "// checking the contents of crontabs in /var/spool/cron"
-log "for b in \$(ls -1 \$base_dir/var/spool/cron/*); do echo; echo \$b; echo \"===\"; cat \$b; echo \"===\"; done"
+log "for b in \$(ls \$base_dir/var/spool/cron/*); do echo; echo \$b; echo \"===\"; cat \$b; echo \"===\"; done"
 log "---"
-CRONRESULTS=`for b in $(ls -1 $base_dir/var/spool/cron/* 2>/dev/null); do echo; echo $b; echo "==="; cat $b; echo "==="; done`
+export GREP_COLORS='ms=01;30'
+CRONRESULTS=`for b in $(ls $base_dir/var/spool/cron/* 2>/dev/null); do echo; echo $b | sed s'/\/\//\//'g | sed -r s"/$sos_path/"g; echo "==="; cat $b | egrep --color=always '^|^#'; echo "==="; done`
 log "$CRONRESULTS"
+export GREP_COLORS='ms=01;31'
 log "---"
 log
 
@@ -2240,7 +2242,7 @@ log
 log "// list rhsm targets"
 log "egrep '^baseurl|^hostname|^repo_ca_cert' \$base_dir/etc/rhsm/rhsm.conf*"
 log "---"
-for i in $(find $base_dir/etc/rhsm/ | egrep rhsm.conf | sort); do log_cmd "egrep -H '^baseurl|^hostname|^repo_ca_cert' $i | egrep --color=always '^|$HOSTNAME'"; log '---'; SETDASH='TRUE'; done
+for i in $(find $base_dir/etc/rhsm/ | egrep rhsm.conf | sort); do log_cmd "egrep -H '^baseurl|^hostname|^repo_ca_cert' $i | sed s'/\/\//\//'g | sed -r s"/$sos_path/"g | egrep --color=always '^|$HOSTNAME'"; log '---'; SETDASH='TRUE'; done
 if [ "$SETDASH" == 'TRUE' ]; then log "---"; fi
 log
 SETDASH='FALSE'
@@ -3245,21 +3247,21 @@ else
 		log "// pre-Satellite 6.8, or 6.11+ on RHEL 8"
 		log
 
-		log "// Current Configuration"
-		log "grep -v -h \# \$base_foreman/var/lib/pgsql/data/postgresql.conf | grep -v ^$ | grep -v -P ^\"\\t\\t\".*#"
+		log "// postgres configuration"
+		log "egrep '^[[:alpha:]]' \$base_foreman/var/lib/pgsql/data/postgresql.conf | sort"
 		log "---"
-		log_cmd "grep -v -h \# $base_foreman/var/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v ^$ | grep -v -P ^\"\\t\\t\".*#"
+		log_cmd "egrep '^[[:alpha:]]' $base_foreman/var/lib/pgsql/data/postgresql.conf | sort"
 		log
 		log "---"
 		log
 
-		log "// postgres configuration"
-		log "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target\|autovacuum_cost_limit\|effective_cache_size' \$base_dir/var/lib/pgsql/data/postgresql.conf | grep -v '^#'"
+		log "// postgres tuning settings"
+		log "egrep '^[[:alpha:]]' \$base_foreman/var/lib/pgsql/data/postgresql.conf | egrep 'max_connections|shared_buffers|work_mem|checkpoint_segments|checkpoint_completion_target|autovacuum_cost_limit|autovacuum_vacuum_cost_limit|effective_cache_size' | sort"
 		log "---"
-		log_cmd "grep -h 'max_connections\|shared_buffers\|work_mem\|checkpoint_segments\|checkpoint_completion_target\|autovacuum_cost_limit\|effective_cache_size' $base_dir/var/lib/pgsql/data/postgresql.conf 2>/dev/null | grep -v '^#' | egrep --color=always '^|autovacuum_cost_limit'"
+		log_cmd "egrep '^[[:alpha:]]' $base_foreman/var/lib/pgsql/data/postgresql.conf | egrep 'max_connections|shared_buffers|work_mem|checkpoint_segments|checkpoint_completion_target|autovacuum_cost_limit|autovacuum_vacuum_cost_limit|effective_cache_size' | sort | GREP_COLORS='ms=01;33' egrep -i --color=always '^|checkpoint_segment|autovacuum_cost_limit'"
 		log "---"
 		log
-		log "Note:  The parameters checkpoint_segment and autovacuum_cost_limit can cause errors upgrading to Satellite 6.7"
+		log "Note:  The parameters checkpoint_segment and autovacuum_cost_limit can cause errors when upgrading to Satellite 6.7"
 		log
 
 
@@ -3879,6 +3881,13 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 			log "cat \$base_foreman/etc/foreman/settings.yaml"
 			log "---"
 			log_cmd "cat $base_foreman/etc/foreman/settings.yaml | egrep --color=always '^|journald'"
+			log "---"
+			log
+
+			log "// bulk_load_size settings"
+			log "egrep -ir 'bulk_load_size|foreman_tasks_polling_multiplier' \$base_foreman/sos_commands/foreman/foreman_settings_table"
+			log "---"
+			log_cmd "egrep -ir 'bulk_load_size|foreman_tasks_polling_multiplier' $base_foreman/sos_commands/foreman/foreman_settings_table | sort -k3"
 			log "---"
 			log
 
@@ -4577,16 +4586,13 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 fi
 
 
+log_tee "## virt-who"
+log
 
+log "The virt-who agent interrogates the hypervisor infrastructure and provides the host/guest mapping to the subscription service. It uses read-only commands to gather the host/guest associations for the subscription services. This way, the guest subscriptions offered by a subscription can be unlocked and available for the guests to use."
+log
 
 if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep virt-who`" ] || [ "`egrep -i 'virt-who' $base_dir/chkconfig $base_dir/installed-rpms $base_dir/ps $base_dir/var/log/rhsm/rhsm.log 2>/dev/null | head -1`" ] || [ -f "$base_dir/etc/sysconfig/virt-who" ] || [ -d "$base_dir/etc/virt-who.d" ] || [ "$(ls $base_dir/var/log/httpd/foreman-ssl_access_ssl.log &>/dev/null && egrep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log 2>/dev/null | head -1)" ]; then
-
-	log_tee "## virt-who"
-	log
-
-	log "The virt-who agent interrogates the hypervisor infrastructure and provides the host/guest mapping to the subscription service. It uses read-only commands to gather the host/guest associations for the subscription services. This way, the guest subscriptions offered by a subscription can be unlocked and available for the guests to use."
-	log
-
 
 	log "// virt-who update sources"
 	log "grep cmd=virt-who \$base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u"
@@ -4618,7 +4624,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	log "---"
 	log
 
-	log "// Virt-who Proxy"
+	log "// virt-who proxy"
 	log "grep -i proxy \$base_dir/etc/sysconfig/virt-who"
 	log "---"
 	log_cmd "grep -i proxy $base_dir/etc/sysconfig/virt-who 2>&1"
@@ -4702,6 +4708,22 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	log "---"
 	log_cmd "for b in \$(ls -1 $base_dir/etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat -vet \$b; echo \"===\"; done"
 	log "---"
+	log
+
+elif [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
+
+	log "// virt-who update sources"
+	log "grep cmd=virt-who \$base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u"
+	log "---"
+	export GREP_COLORS='ms=01;33'   # temporarily change hilight color to yellow
+	log_cmd "grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u | egrep --color=always '^|$IPADDRLIST'"
+	export GREP_COLORS='ms=01;31'
+	log "---"
+	log
+
+else
+
+	log "virt-who not found"
 	log
 
 fi
