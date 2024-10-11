@@ -1221,7 +1221,7 @@ if [ -f "$base_dir/sos_commands/foreman/foreman_tasks_tasks" ]; then
 	log "// Satellite's organization list"
 	log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
 	log "---"
-	SATORGS=`egrep organization $base_dir/sos_commands/foreman/foreman_tasks_tasks | awk -F"'" '{print $6}' | sort -u | egrep .`
+	SATORGS=`cat $base_dir/sos_commands/foreman/foreman_tasks_tasks | awk -F";" '{print $NF}' | egrep organization | awk -F"'" '{print $2}' | sort -u | egrep .`
 	log_cmd "echo -e \"$SATORGS\""
 	log "---"
 	log
