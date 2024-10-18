@@ -1600,10 +1600,12 @@ log
 log "// read-only volumes"
 log "egrep \"/dev/sd|/dev/mapper\" \$base_dir/mount | grep -v rw"
 log "---"
-log_cmd "egrep \"/dev/sd|/dev/mapper\" $base_dir/mount | grep -v rw | egrep --color=always \"^|\/tmp\""
+log_cmd "egrep \"/dev/sd|/dev/mapper\" $base_dir/mount | grep -v rw | egrep --color=always '^|\/tmp|\/var\/tmp|noexec'"
+log
+log_cmd "egrep -v '^\#' $base_dir/etc/foreman-installer/custom-hiera.yaml $base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml | GREP_COLORS='ms=01;33' egrep --color=always 'tmpdir|local_working_dir|remote_working_dir' "
 log "---"
 
-log "Note:  The satellite-installer tool (because it uses puppet) can fail when /tmp and/or /var/tmp are mounted read-only, so look for that."
+log "Note:  The satellite-installer tool (because it uses puppet) can fail when /tmp and/or /var/tmp are mounted read-only, so look for that.  REX can also fail if /var/tmp is configured with the noexec property on the target system."
 log
 
 log "// check noexec property on tmp directories"
@@ -1680,16 +1682,18 @@ if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 	log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 	log
 	log "chrony.conf:"
-	log_cmd "egrep ^server $base_dir/etc/chrony.conf 2>/dev/null | grep -v :\# | awk -F\"/\" '{print $NF}'"
+	log_cmd "egrep '^server|^pool' $base_dir/etc/chrony.conf 2>/dev/null | grep -v :\# | awk -F\"/\" '{print $NF}'"
 else
 	log
 	log_cmd "egrep $SERVICE_NAME $base_dir/ps"
 fi
 log
-log "ntp.conf:"
-log_cmd "egrep ^server $base_dir/etc/ntp.conf 2>/dev/null | grep -v :\# | awk -F\"/\" '{print $NF}'"
-log "---"
-log
+if [ -e $base_dir/etc/ntp.conf ]; then
+	log "ntp.conf:"
+	log_cmd "egrep '^server|^pool' $base_dir/etc/ntp.conf 2>/dev/null | grep -v :\# | awk -F\"/\" '{print $NF}'"
+	log "---"
+	log
+fi
 
 
 
