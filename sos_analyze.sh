@@ -4343,15 +4343,6 @@ else
 		log "---"
 		log
 
-		log "// top openscap tasks"
-		log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
-		log "---"
-		openscap_tasks=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -i 'Run scan for all OpenSCAP policies|Run scan for specified OVAL Policies|foreman_scap_client' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning'`
-		log "$openscap_tasks"
-		log "---"
-		log
-
-
 	elif [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 
 		log "// openscap settings in RHN tables"
