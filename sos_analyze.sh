@@ -2246,10 +2246,13 @@ log
 log "// list rhsm targets"
 log "egrep '^baseurl|^hostname|^repo_ca_cert' \$base_dir/etc/rhsm/rhsm.conf*"
 log "---"
-for i in $(find $base_dir/etc/rhsm/ | egrep rhsm.conf | sort); do log_cmd "egrep -H '^baseurl|^hostname|^repo_ca_cert' $i | sed s'/\/\//\//'g | sed -r s"/$sos_path/"g | egrep --color=always '^|$HOSTNAME'"; log '---'; SETDASH='TRUE'; done
+for i in $(find $base_dir/etc/rhsm/ | egrep rhsm.conf | sort); do log_cmd "egrep -H '^baseurl|^hostname|^repo_ca_cert|^prefix' $i | sed s'/\/\//\//'g | sed -r s"/$sos_path/"g | egrep --color=always '^|$HOSTNAME'"; log '---'; SETDASH='TRUE'; done
 if [ "$SETDASH" == 'TRUE' ]; then log "---"; fi
 log
 SETDASH='FALSE'
+
+log "Note:  For clients registered to Satellite on RHEL 9, the prefix should be /subscription rather than /rhsm"
+log
 
 log "// subsman list installed"
 log "cat \$base_dir/sos_commands/subscription_manager/subscription-manager_list_--installed"
@@ -2379,7 +2382,7 @@ else
 	log
 fi
 
-log "// repository overrides"
+log "// rhel8 repository overrides (for leapp upgrades)"
 log "jq '.[] | select(.contentLabel |contains("rhel-8")) ' \$base_dir//var/lib/rhsm/cache/content_overrides.json"
 log "---"
 log_cmd "jq '.[] | select(.contentLabel |contains("rhel-8")) ' $base_dir//var/lib/rhsm/cache/content_overrides.json"
@@ -2410,13 +2413,6 @@ log "// available repositories listed in rhsm.log"
 log "egrep '\[id:' \$base_dir/var/log/rhsm/rhsm.log | sort -u"
 log "---"
 log_cmd "egrep '\[id:' $base_dir/var/log/rhsm/rhsm.log | sort -u"
-log "---"
-log
-
-log "// repository overrides"
-log "jq '.[] | select(.contentLabel |contains(\"rhel-8\")) ' var/lib/rhsm/cache/content_overrides.json"
-log "---"
-log_cmd "jq '.[] | select(.contentLabel |contains(\"rhel-8\")) ' var/lib/rhsm/cache/content_overrides.json"
 log "---"
 log
 
@@ -3899,7 +3895,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 			log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
 			log "---"
 			#log_cmd "grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks  | cut -d, -f3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -k 7 | tail -100 | egrep --color=always '^|paused|running|error|pending|warning|scheduled' | sed s'/  //'g"
-			tasks_top=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | tr ',' '|' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused'`
+			tasks_top=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | tr ',' '|' | sort -t "|" -k 10 | tail -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused'`
 			log "$tasks_top"
 			log "---"
 			log
@@ -3909,7 +3905,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 			log "from file \$base_dir/sos_commands/foreman/foreman_tasks_tasks"
 			log "---"
 #			failed_tasks_top=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -v "success|running|scheduled" | tr ',' '|' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//'`
-			failed_tasks_top=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -v 'success|running|scheduled' | tr ',' '|' | sort -t "|" -k 10 | head -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused|pending'`
+			failed_tasks_top=`grep Actions $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -v 'success|running|scheduled' | tr ',' '|' | sort -t "|" -k 10 | tail -50 | awk -F"|" '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused|pending'`
 			log "$failed_tasks_top"
 			log "---"
 			log
@@ -5513,15 +5509,15 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		export GREP_COLORS='ms=01;31'
 		log
 
+		log "The mosquitto service uses MQTT as its messaging protocol, and is intended to replace qpidd and qdrouterd as katello-agent and goferd are replaced by yggdrasild on the host side."
+		log
+
 	if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep mosquitto`" ] && [ ! "`egrep -i 'mosquitto' $base_dir/installed-rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -e "$base_dir/etc/mosquitto" ]; then
 
 		log "mosquitto not found"
 		log
 
 	else
-
-		log "The mosquitto service uses MQTT as its messaging protocol, and is intended to replace qpidd and qdrouterd as katello-agent and goferd are replaced by yggdrasild on the host side."
-		log
 
 		SERVICE_NAME='mosquitto'
 		log "// $SERVICE_NAME service status"
