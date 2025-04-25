@@ -1154,6 +1154,9 @@ log
 log "from \$base_dir/var/lib/rhsm/facts/facts.json:"
 log_cmd "jq '. | \"hostname: \" + .\"network.hostname\",\"FQDN: \" + .\"network.fqdn\"' $base_dir/var/lib/rhsm/facts/facts.json 2>/dev/null | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
 log
+log "from \$base_dir/etc/rhsm/facts/insights-client.facts"
+log_cmd "python -m json.tool $base_dir/etc/rhsm/facts/insights-client.facts 2>/dev/null | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
+log
 log "from \$base_dir/etc/sysconfig/network (useful for RHEL 6):"
 log_cmd "cat $base_dir/etc/sysconfig/network | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|HOSTNAME'"
 
@@ -1258,7 +1261,7 @@ fi
 log
 log "// cloned hostname check"
 log "---"
-log "ls \$base_dir/etc/machine-id \$base_dir/etc/rhsm/facts/katello.facts"
+log "\# ls \$base_dir/etc/machine-id \$base_dir/etc/rhsm/facts/katello.facts"
 log
 log_cmd "ls $base_dir/etc/machine-id $base_dir/etc/rhsm/facts/katello.facts"
 log
@@ -1340,11 +1343,14 @@ fi
 log "// release version (for version locking)"
 log "jq '.' \$base_dir/var/lib/rhsm/cache/releasever.json"
 log "cat \$base_dir/etc/yum/vars/releasever 2>/dev/null"
+log "cat \$base_dir/etc/dnf/vars/releasever 2>/dev/null"
 log "cat \$base_dir/sos_commands/subscription_manager/subscription-manager_release_--show 2>/dev/null"
 log "---"
 log_cmd "jq '.' $base_dir/var/lib/rhsm/cache/releasever.json 2>/dev/null"
 log "---"
 log_cmd "cat $base_dir/etc/yum/vars/releasever $base_dir/etc/dnf/vars 2>/dev/null | sort -u 2>/dev/null; echo"
+log "---"
+log_cmd "cat $base_dir/etc/dnf/vars/releasever $base_dir/etc/dnf/vars 2>/dev/null | sort -u 2>/dev/null; echo"
 log "---"
 log_cmd "cat $base_dir/sos_commands/subscription_manager/subscription-manager_release_--show 2>/dev/null"
 log "---"
@@ -1547,10 +1553,20 @@ log
 log "// no space left on device"
 #log "'no space left on device' errors in \$base_dir"
 log "---"
+log "messages logs:"
+log_cmd "egrep -hir 'No space left on device$' $base_dir/var/log/messages* | sort -k4h -k3M -k2h -k5 | tail -10"
+log
+
+log "foreman production logs:"
+log_cmd "egrep -hir 'No space left on device$' $base_dir/var/log/foreman/production.log* | sort -k4h -k3M -k2h -k5 | tail -10"
+log
+
+
 #log_cmd "egrep -hir 'no space left on device' $base_dir 2>/dev/null | egrep -v '{|}' | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | sed s'/\\n/\n/'g | sed s'/\[Sun //'g | sed s'/\[Mon //'g | sed s'/\[Tue //'g | sed s'/\[Wed //'g | sed s'/\[Thu //'g | sed s'/\[Fri //'g | sed s'/\[Sat //'g | sort -h"
 log "postgres logs:"
 log_cmd "egrep -hir 'No space left on device$' $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log $base_dir/var/lib/pgsql/data/log 2>/dev/null | sort -k1 -k2 | tail -10"
 log
+
 
 log "redis logs:"
 log_cmd "egrep -hir 'No space left on device$' $base_dir/var/log/redis | sort -k4h -k3M -k2h -k5 | tail -10"
@@ -1605,7 +1621,7 @@ log
 log_cmd "egrep -v '^\#' $base_dir/etc/foreman-installer/custom-hiera.yaml $base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml | GREP_COLORS='ms=01;33' egrep --color=always 'tmpdir|local_working_dir|remote_working_dir' "
 log "---"
 
-log "Note:  The satellite-installer tool (because it uses puppet) can fail when /tmp and/or /var/tmp are mounted read-only, so look for that.  REX can also fail if /var/tmp is configured with the noexec property on the target system."
+log "Note:  The satellite-installer tool (because it uses puppet) can fail when /tmp and/or /var/tmp are mounted read-only, so look for that."
 log
 
 log "// check noexec property on tmp directories"
@@ -1613,6 +1629,9 @@ log "egrep noexec -h \$base_dir/{mount,etc/fstab} | grep \/tmp"
 log "---"
 log_cmd "egrep noexec -h $base_dir/{mount,etc/fstab} | grep \/tmp"
 log "---"
+log
+
+log "Note:  REX can fail if /var/tmp is configured with the noexec property on the target system."
 log
 
 
@@ -1672,7 +1691,7 @@ log
 SERVICE_NAME='ntpd'
 log "// $SERVICE_NAME service status"
 log "---"
-log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 log
 if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 	log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -2048,7 +2067,7 @@ else
 	SERVICE_NAME='fapolicyd'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -2096,7 +2115,7 @@ log
 SERVICE_NAME='crond'
 log "// $SERVICE_NAME service status"
 log "---"
-log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 log
 if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 	log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -2155,7 +2174,7 @@ else
 	log "// $SERVICE_NAME service status"
 	log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|foreman-cockpit' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|foreman-cockpit' | egrep --color=always '^|5:off'"
 	log
 	log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 	log "---"
@@ -2197,7 +2216,7 @@ log "// subscription identity"
 if [ -e $base_dir/sos_commands/subscription_manager/subscription-manager_identity ]; then
 	log "cat \$base_dir/sos_commands/subscription_manager/subscription-manager_identity"
 	log "---"
-	log_cmd "cat $base_dir/sos_commands/subscription_manager/subscription-manager_identity"
+	log_cmd "cat $base_dir/sos_commands/subscription_manager/subscription-manager_identity | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
 	log "---"
 elif [ -e $base_dir/sysmgmt/messages ]; then
 	log "egrep identity \$base_dir/sysmgmt/messages | tail"
@@ -2526,7 +2545,7 @@ if [ "`egrep '^\*' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep
 	log "// $SERVICE_NAME service status"
 	#log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_show_service_--all ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sos_commands/systemd/systemctl_show_service_--all | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -2760,7 +2779,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log "// condensed satellite service status"
 		log "grepping output of chkconfig command"
 		log "---"
-		log_cmd "egrep -h 'httpd|pulp|qdrouterd|qpidd|mosquitto|squid|redis|virt-who|puppet|postgres|tomcat|foreman|gofer|mongo|dynflow|osbuild|elasticsearch|cobblerd|rhn-search|taskomatic|jabberd|oracle' $base_dir/chkconfig"
+		log_cmd "egrep -h 'httpd|pulp|qdrouterd|qpidd|mosquitto|squid|redis|virt-who|puppet|postgres|tomcat|foreman|gofer|mongo|dynflow|osbuild|elasticsearch|cobblerd|rhn-search|taskomatic|jabberd|oracle' $base_dir/chkconfig | egrep --color=always '^|5:off'"
 		log "---"
 		log
 
@@ -2821,7 +2840,7 @@ if [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 		SERVICE_NAME='cobblerd'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -2872,7 +2891,7 @@ if [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 		SERVICE_NAME='rhn-search'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -2916,7 +2935,7 @@ if [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 		SERVICE_NAME='jabberd'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -2953,7 +2972,7 @@ if [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 		SERVICE_NAME='taskomatic'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -3021,7 +3040,7 @@ else
 	SERVICE_NAME='oracle'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -3096,7 +3115,7 @@ else
 	SERVICE_NAME='postgres'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -3426,7 +3445,7 @@ else
 	SERVICE_NAME='httpd'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|mount' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|mount' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep \"^\* $SERVICE_NAME.service\" $base_dir/sysmgmt/services.txt -A 10 | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -3444,6 +3463,15 @@ else
 	log "---"
 	log_cmd "egrep '^Active|^Proto|httpd' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
 	log "---"
+	log
+
+	log "// are apache conf directories polluted?"
+	log "ls \$base_dir/etc/httpd/conf.d/welcome.conf \$base_dir/etc/httpd/conf.modules.d/[01]* | egrep '^|welcome.conf'"
+	log "---"
+	log_cmd "ls $base_dir/etc/httpd/conf.d/welcome.conf $base_dir/etc/httpd/conf.modules.d/[01]* | egrep '^|welcome.conf'"
+	log "---"
+	log
+	log "NOTE:  If http was updated manually through yum or dnf, then the conf.d and conf.modules.d directories may contain files from the default installation of httpd, which can break Red Hat Satellite."
 	log
 
 	log "// number of unique /rhsm/consumers requests in the logs (excluding errors)"
@@ -3836,7 +3864,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		SERVICE_NAME='foreman'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|mount' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|mount' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -4015,7 +4043,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		SERVICE_NAME='dynflow'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED|x2a.service'"
@@ -4186,7 +4214,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log "// $SERVICE_NAME service status"
 		log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|\-sentinel' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|\-sentinel' | egrep --color=always '^|5:off'"
 		log
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 		SERVICE_NAME='rh-redis5-redis'
@@ -4434,7 +4462,7 @@ else
 		log "// DNS caching service status (RHEL 8+)"
 		log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
 		log "---"
-		log_cmd "egrep -h named $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v ^systemd-hostnamed | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h named $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v ^systemd-hostnamed | egrep --color=always '^|5:off'"
 		log
 		log_cmd "egrep -ir '^\* named.service|^\● named.service' $base_dir/sos_commands/systemd/systemctl_status_--all -A 20 -h | sed -n '/named.service/,/\.service/p' | sed '$ d' | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 		log "---"
@@ -4444,7 +4472,7 @@ else
 	SERVICE_NAME='named'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -4508,7 +4536,7 @@ else
 	SERVICE_NAME='dhcpd'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -4550,7 +4578,21 @@ fi
 
 
 if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
-	log_tee "## inventory upload"
+	log_tee "## Insights"
+	log
+
+	log "// insights client facts"
+	log "contents of file \$base_dir/etc/rhsm/facts/insights-client.facts"
+	log "---"
+	log_cmd "python -m json.tool $base_dir/etc/rhsm/facts/insights-client.facts | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
+	log "---"
+	log
+
+	log "// insights client connection test"
+	log "cat \$base_dir/sos_commands/insights/insights-client_--test-connection_--net-debug"
+	log "---"
+	log_cmd "cat $base_dir/sos_commands/insights/insights-client_--test-connection_--net-debug"
+	log "---"
 	log
 
 	if [ ! -f "$base_dir/etc/foreman-installer/scenarios.d/satellite.migrations/*-add-inventory-upload.rb" ] && [ ! "`egrep \"rubygem-foreman_rh_cloud|tfm-rubygem-foreman_inventory_upload\" $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/installed-rpms 2>/dev/null`" ]; then
@@ -4560,7 +4602,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 
 	else
 
-		log "The inventory upload (formerly subscription watch) plugin provides unified reporting of Red Hat Enterprise Linux subscription usage information across the constituent parts of your hybrid infrastructure, including physical, virtual, on-premise, and cloud. This unified reporting model enhances your ability to consume, track, report, and reconcile your Red Hat subscriptions with your purchasing agreements and deployment types."
+		log "Note:  The inventory upload (formerly subscription watch) plugin provides unified reporting of Red Hat Enterprise Linux subscription usage information across the constituent parts of your hybrid infrastructure, including physical, virtual, on-premise, and cloud. This unified reporting model enhances your ability to consume, track, report, and reconcile your Red Hat subscriptions with your purchasing agreements and deployment types."
 		log
 
 		log "The use of Satellite as the data collection tool is useful for customers who have specific needs in their environment that either inhibit or prohibit the use of the Insights agent or the Subscription Manager agent for data collection."
@@ -4597,7 +4639,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	SERVICE_NAME='virt-who'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -4777,7 +4819,7 @@ else
 	SERVICE_NAME='tomcat'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -4909,7 +4951,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 			log "// verify whether simple content access (SCA) is enabled for hosts"
 			log "from candlepin, foreman and insights logs"
 			log "---"
-			log_cmd "egrep -m 5 --color=ALWAYS 'org_environment|simple_content_access|simple content access' $base_dir/var/log/candlepin/audit.log $base_dir/var/log/httpd/foreman-ssl_access_ssl.log $base_dir/var/log/candlepin/candlepin.log $base_dir/var/log/candlepin/error.log $base_dir/sos_commands/insights/insights-client-dump/data/insights_commands/sudo_-iu_postgres_.usr.bin.psql_-d_candlepin_-c_select_displayname_content_access_mode_from_cp_owner_--csv 2>/dev/null | egrep -vi eligible"
+			log_cmd "GREP_COLORS='ms=01;33' egrep -m 5 --color=ALWAYS 'org_environment|simple_content_access|simple content access' $base_dir/var/log/candlepin/audit.log $base_dir/var/log/httpd/foreman-ssl_access_ssl.log $base_dir/var/log/candlepin/candlepin.log $base_dir/var/log/candlepin/error.log $base_dir/sos_commands/insights/insights-client-dump/data/insights_commands/sudo_-iu_postgres_.usr.bin.psql_-d_candlepin_-c_select_displayname_content_access_mode_from_cp_owner_--csv 2>/dev/null | egrep -vi eligible"
 			log "---"
 			log
 		fi
@@ -4981,7 +5023,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		SERVICE_NAME='mongod'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|mongos' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|mongos' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -5112,7 +5154,7 @@ else
 	SERVICE_NAME='pulp'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|mount' | egrep --color=always -i '^|failed|inactive|activating|deactivating|disabled|masked|5:off|error'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|mount' | egrep --color=always -i '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep '^\* pulp' $base_dir/sysmgmt/services.txt -A 20"
@@ -5237,7 +5279,7 @@ else
 	SERVICE_NAME='squid'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -5297,7 +5339,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		SERVICE_NAME='celerybeat'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -5346,7 +5388,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log "qpidd not found"
 		log
 
-		log "Note:  qdrouterd and qpidd were deprecated in Satellite 6.10.  To enable both qpidd and qdrouterd, please run these commands:"
+		log "Note:  qdrouterd and qpidd were deprecated in Satellite 6.10 and removed in Satellite 6.15.  To enable both qpidd and qdrouterd, please run these commands:"
 		log '    # satellite-installer --foreman-proxy-content-enable-katello-agent true'
 		log '    # systemctl enable qdrouterd qpidd --now'
 		log
@@ -5369,7 +5411,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		SERVICE_NAME='qpidd'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -5465,7 +5507,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log
 		log "The qdrouterd service communicates with goferd, which is expected to run on the host servers (including capsule servers)."
 		log
-		log "Note:  qdrouterd and qpidd were deprecated in Satellite 6.10.  To enable both qpidd and qdrouterd, please run these commands:"
+		log "Note:  qdrouterd and qpidd were deprecated in Satellite 6.10 and removed in Satellite 6.15.  To enable both qpidd and qdrouterd, please run these commands:"
 		log '    # satellite-installer --foreman-proxy-content-enable-katello-agent true'
 		log '    # systemctl enable qdrouterd qpidd --now'
 		log
@@ -5474,7 +5516,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		SERVICE_NAME='qdrouterd'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -5512,7 +5554,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log "The mosquitto service uses MQTT as its messaging protocol, and is intended to replace qpidd and qdrouterd as katello-agent and goferd are replaced by yggdrasild on the host side."
 		log
 
-	if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep mosquitto`" ] && [ ! "`egrep -i 'mosquitto' $base_dir/installed-rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -e "$base_dir/etc/mosquitto" ]; then
+	if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep mosquitto`" ] && [ ! "`egrep -i 'mosquitto' $base_dir/installed-rpms $base_dir/ps 2>/dev/null | head -1`" ] && [ ! -e "$base_dir/etc/mosquitto" ] && [ ! "$(egrep mqtt $base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml)" ]; then
 
 		log "mosquitto not found"
 		log
@@ -5522,7 +5564,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		SERVICE_NAME='mosquitto'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -5540,6 +5582,13 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log "---"
 		log
 
+		log "// is mosquitto configured?"
+		log "egrep mqtt \$base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml"
+		log "---"
+		log_cmd "egrep mqtt $base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml"
+		log "---"
+		log
+
 
 		log "// mosquitto limits"
 		log "cat \$base_dir/etc/systemd/system/mosquitto.service.d/limits.conf"
@@ -5554,7 +5603,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 fi
 
 
-if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep 'goferd|yggdrasild'`" ] || [ "`egrep -i 'goferd' $base_dir/chkconfig`" ] || [ "`egrep -i '^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate' $base_dir/installed-rpms`" ]; then
+if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep 'goferd|yggdrasild'`" ] || [ "`egrep -i 'goferd' $base_dir/chkconfig`" ] || [ "`egrep -i '^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate|^yggdrasil' $base_dir/installed-rpms`" ]; then
 
 	export GREP_COLORS='ms=01;32'
 	log_cmd "echo '## goferd and katello-agent' | grep --color=always \#"
@@ -5595,7 +5644,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep 'goferd|yggdrasild'`" 
 	log "// $SERVICE_NAME service status"
 	#log "from files \$base_dir/sos_commands/systemd/systemctl_list-unit-files and \$base_dir/sos_commands/systemd/systemctl_status_--all"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -5609,7 +5658,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep 'goferd|yggdrasild'`" 
 	SERVICE_NAME='yggdrasild'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -5663,7 +5712,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] && [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		SERVICE_NAME='elasticsearch'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -5712,7 +5761,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] && [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		SERVICE_NAME='gutterball'
 		log "// $SERVICE_NAME service status"
 		log "---"
-		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 		log
 		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -5752,8 +5801,8 @@ fi
 if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep puppet`" ] || [ "`egrep puppet $base_dir/chkconfig $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/sos_commands/process/ps_auxwww 2>/dev/null | head -1`" ] || [ "$(find $base_dir/{etc,var,usr} 2>/dev/null | egrep puppet | egrep -v 'selinux|foreman-installer|ansible|ruby|share\/doc|yumdb|redis|katello|plugins')" ]; then
 
 	export GREP_COLORS='ms=01;32'
-	log_cmd "echo '## puppet (puppetserver phase-out began in 6.10, disabled in 6.11)' | grep --color=always \#"
-	echo '## puppet (puppetserver phase-out began in 6.10, disabled in 6.11)' | grep --color=always \#
+	log_cmd "echo '## puppet (puppetserver deprecated in 6.10, disabled in 6.11)' | grep --color=always \#"
+	echo '## puppet (puppetserver deprecated in 6.10, disabled in 6.11)' | grep --color=always \#
 	export GREP_COLORS='ms=01;31'
 	log
 
@@ -5784,7 +5833,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	SERVICE_NAME='puppet'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -5897,6 +5946,16 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	log "---"
 	log
 
+
+	log "// maximum active instances"
+	log "egrep max-active-instances \$base_dir/etc/puppetlabs/puppetserver/conf.d/puppetserver.conf"
+	log "---"
+	log_cmd "egrep max-active-instances $base_dir/etc/puppetlabs/puppetserver/conf.d/puppetserver.conf"
+	log "---"
+	log
+	log "Note: For Satellite Satellite 6.8 and above, this number should be 4.  For older Satellites, this number should equal the number of CPUs on the Staellite server."
+	log
+
 	log "// puppetserver memory allocation"
 	log "grep 'JAVA_ARGS=' \$base_dir/etc/sysconfig/puppetserver \$base_dir/etc/sysconfig/puppet"
 	log "---"
@@ -5917,6 +5976,13 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 		num=`expr $num / 1024`
 		log "$num Mib";
 	fi
+	log "---"
+	log
+
+	log "// puppetserver JAVA_ARGS"
+	log "egrep \$base_dir/etc/sysconfig/puppetserver"
+	log "---"
+	log_cmd "egrep $base_dir/etc/sysconfig/puppetserver"
 	log "---"
 	log
 
@@ -5979,7 +6045,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	SERVICE_NAME='osbuild'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
@@ -6030,7 +6096,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	SERVICE_NAME='cloud-init'
 	log "// cloud-init service status"
 	log "---"
-	log_cmd "egrep -h 'cloud-init' $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|socket' | egrep --color=always '^|failed|inactive|activating|deactivating|disabled|masked|5:off'"
+	log_cmd "egrep -h 'cloud-init' $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -h 'cloud-init' -A 20 $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sysmgmt/services.txt | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
