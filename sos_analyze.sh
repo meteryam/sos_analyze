@@ -1146,19 +1146,19 @@ log
 
 log "---"
 log "from \$base_dir/etc/hostname:"
-log_cmd "cat $base_dir/hostname | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
+log_cmd "cat $base_dir/hostname | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT'"
 log
 log "from \$base_dir/sos_commands/host/hostnamectl_status"
-log_cmd "cat $base_dir/sos_commands/host/hostnamectl_status | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
+log_cmd "cat $base_dir/sos_commands/host/hostnamectl_status | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT'"
 log
 log "from \$base_dir/var/lib/rhsm/facts/facts.json:"
 log_cmd "jq '. | \"hostname: \" + .\"network.hostname\",\"FQDN: \" + .\"network.fqdn\"' $base_dir/var/lib/rhsm/facts/facts.json 2>/dev/null | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
 log
 log "from \$base_dir/etc/rhsm/facts/insights-client.facts"
-log_cmd "python -m json.tool $base_dir/etc/rhsm/facts/insights-client.facts 2>/dev/null | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
+log_cmd "python -m json.tool $base_dir/etc/rhsm/facts/insights-client.facts 2>/dev/null | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT'"
 log
 log "from \$base_dir/etc/sysconfig/network (useful for RHEL 6):"
-log_cmd "cat $base_dir/etc/sysconfig/network | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|HOSTNAME'"
+log_cmd "cat $base_dir/etc/sysconfig/network | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT|HOSTNAME'"
 
 if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ]; then
 	log
@@ -1207,7 +1207,7 @@ if [ "$HOSTS_ENTRY" ]; then
 	log
 	log "from \$base_dir/etc/hosts:"
 	log "---"
-	log_cmd "GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$IPADDRLIST' $base_dir/etc/hosts"
+	log_cmd "GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT|$IPADDRLIST' $base_dir/etc/hosts"
 	log "---"
 	log 
 fi
@@ -1216,7 +1216,7 @@ fi
 log
 log "cat \$base_dir/etc/rhsm/facts/uuid.facts"
 log "---"
-log_cmd "cat $base_dir/etc/rhsm/facts/uuid.facts | GREP_COLORS='ms=01;33' egrep -i --color=always '^|$HOSTNAME'"
+log_cmd "cat $base_dir/etc/rhsm/facts/uuid.facts | GREP_COLORS='ms=01;33' egrep -i --color=always '^|$HOSTNAME|$HOSTNAME_SHORT'"
 log "---"
 log
 
@@ -1253,7 +1253,7 @@ if [ -f "$base_dir/etc/sysconfig/networking/profiles/default/network" ]; then
 	log "// hostname in RHEL5 network profiles file"
 	log "grep -i ^hostname \$base_dir/etc/sysconfig/networking/profiles/default/network"
 	log "---"
-	log_cmd "grep -i ^hostname $base_dir/etc/sysconfig/networking/profiles/default/network | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
+	log_cmd "grep -i ^hostname $base_dir/etc/sysconfig/networking/profiles/default/network | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT'"
 	log "---"
 	log
 fi
@@ -1266,7 +1266,7 @@ log
 log_cmd "ls $base_dir/etc/machine-id $base_dir/etc/rhsm/facts/katello.facts"
 log
 if [ -f "$base_dir/etc/rhsm/facts/katello.facts" ]; then
-	log_cmd "jq '.' $base_dir/etc/rhsm/facts/katello.facts | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
+	log_cmd "jq '.' $base_dir/etc/rhsm/facts/katello.facts | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT'"
 fi
 log "---"
 log
@@ -1554,38 +1554,36 @@ log "// no space left on device"
 #log "'no space left on device' errors in \$base_dir"
 log "---"
 log "messages logs:"
-log_cmd "egrep -hir 'No space left on device$' $base_dir/var/log/messages* | sort -k4h -k3M -k2h -k5 | tail -10"
+log_cmd "egrep -hir 'No space left on device' $base_dir/var/log/messages* | sort -k4h -k3M -k2h -k5 | tail -10"
 log
 
 log "foreman production logs:"
-log_cmd "egrep -hir 'No space left on device$' $base_dir/var/log/foreman/production.log* | sort -k4h -k3M -k2h -k5 | tail -10"
+log_cmd "egrep -hir 'No space left on device' $base_dir/var/log/foreman/production.log* | sort -k4h -k3M -k2h -k5 | tail -10"
 log
 
 
 #log_cmd "egrep -hir 'no space left on device' $base_dir 2>/dev/null | egrep -v '{|}' | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | sed s'/\\n/\n/'g | sed s'/\[Sun //'g | sed s'/\[Mon //'g | sed s'/\[Tue //'g | sed s'/\[Wed //'g | sed s'/\[Thu //'g | sed s'/\[Fri //'g | sed s'/\[Sat //'g | sort -h"
 log "postgres logs:"
-log_cmd "egrep -hir 'No space left on device$' $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log $base_dir/var/lib/pgsql/data/log 2>/dev/null | sort -k1 -k2 | tail -10"
-log
-
-
-log "redis logs:"
-log_cmd "egrep -hir 'No space left on device$' $base_dir/var/log/redis | sort -k4h -k3M -k2h -k5 | tail -10"
-log
-
-log "dmesg logs:"
-log_cmd "egrep -hi 'no space left on device' $base_dir/sos_commands/kernel/dmesg* | sort | tail -10 | tr -d ']['"
+log_cmd "egrep -hir 'No space left on device' $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log $base_dir/var/lib/pgsql/data/log 2>/dev/null | sort -k1 -k2 | tail -10"
 log
 
 log "pulp logs:"
 log_cmd "egrep -i 'no space left on device' $base_dir/sos_commands/pulp/pulp-running_tasks -B 4 -A 5 | egrep 'description|code|start_time' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 'N;N;s/\n/ /g' | sort -k15 | tail -10"
 log
 
-log "foreman logs:"
-log_cmd "egrep -hir 'No space left on device$' $base_dir/var/log/foreman-maintain | sort -k1M -k2h -k3h | tail -10"
+log "redis logs:"
+log_cmd "egrep -hir 'No space left on device' $base_dir/var/log/redis | sort -k4h -k3M -k2h -k5 | tail -10"
 log
+
+log "dmesg logs:"
+log_cmd "egrep -hi 'no space left on device' $base_dir/sos_commands/kernel/dmesg* | sort | tail -10 | tr -d ']['"
+log
+
+
 
 log "insights logs:"
 INSIGHTS_OUTPUT=`"egrep -i 'no space left on device' $base_dir/var/log/insights-client/insights-client.log* | egrep -v "{|}" | egrep -i '^20..\-..\-..' | sort | tail -5 | sed s'/\\n/\n/'g"`
+log "---"
 log "$INSIGHTS_OUTPUT"
 log "---"
 log
