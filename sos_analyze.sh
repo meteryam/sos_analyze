@@ -1137,7 +1137,7 @@ fi
 log
 log "HW platform:"
 log
-log_cmd "{ grep -E '(Vendor|Manufacture|Product Name:|Description:|BIOS Revision:|UEFI Release)' $base_dir/dmidecode | head -n3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; } || { grep virtual $base_dir/facts 2>/dev/null | egrep \"vendor|version|manufacturer|name\" | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u; }"
+log_cmd "{ grep -E '(Vendor|Manufacture|Product Name:|Description:|BIOS Revision:|UEFI Release)' $base_dir/dmidecode | head -n3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u | GREP_COLORS='ms=01;33' egrep -i --color=always '^|VMware'; } || { grep virtual $base_dir/facts 2>/dev/null | egrep \"vendor|version|manufacturer|name\" | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u | GREP_COLORS='ms=01;33' egrep -i --color=always '^|VMware'; }"
 log "---"
 log
 
@@ -1160,7 +1160,7 @@ log
 log "from \$base_dir/etc/sysconfig/network (useful for RHEL 6):"
 log_cmd "cat $base_dir/etc/sysconfig/network | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT|HOSTNAME'"
 
-if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ]; then
+if [ -f "`find $base_dir/etc/foreman-proxy -type f | egrep -v key | egrep -i 'certificate|\.pem|\.crt' | egrep . | head -1`" ]; then
 	log
 	log "foreman certificates:"
 	log "openssl x509 -in \$base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | egrep -i '\$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm'"
@@ -1261,7 +1261,7 @@ fi
 log
 log "// cloned hostname check"
 log "---"
-log "\# ls \$base_dir/etc/machine-id \$base_dir/etc/rhsm/facts/katello.facts"
+log "# ls \$base_dir/etc/machine-id \$base_dir/etc/rhsm/facts/katello.facts"
 log
 log_cmd "ls $base_dir/etc/machine-id $base_dir/etc/rhsm/facts/katello.facts"
 log
@@ -1395,8 +1395,8 @@ log
 log "// top memory consumers by user"
 log "from \$base_dir/ps"
 log "---"
-log "Total Memory Consumed in KiB: $memory_usage"
-log "Total Memory Consumed in GiB: $memory_usage_gb"
+log "Total Memory Consumed in KiB (from ps): $memory_usage"
+log "Total Memory Consumed in GiB (from ps): $memory_usage_gb"
 log
 log_cmd "cat $base_dir/ps 2>&1 | sort -nr | awk '{print \$1, \$6}' | grep -v ^USER | grep -v ^COMMAND | grep -v \"^ $\" | awk  '{a[\$1] += \$2} END{for (i in a) print i, a[i]}' | sort -nrk2"
 log "---"
@@ -1407,7 +1407,8 @@ log "cat \$base_dir/free"
 log "---"
 log_cmd "cat $base_dir/free"
 log " "
-log "Total Memory Consumed in GiB: $memory_usage_gb"
+memory_usage_free_gb=$(echo "scale=2;$(cat $base_dir/free | egrep '^Mem:|^Swap:' | awk '{print $3}' | paste -s -d+ | bc)/1024/1024" | bc)
+log "Total Memory Consumed in GiB (from free): $memory_usage_free_gb"
 log "---"
 log
 
@@ -2025,11 +2026,17 @@ log "---"
 log
 
 log "// fips in the logs"
-log "egrep -hir 'fips mode|fips_enabled' \$base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*,foreman-installer/capsule*} | egrep '^....-..-..' | sort -h"
+log "egrep -hir 'fips mode|fips_enabled|has resolved to: true$' \$base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*,foreman-installer/capsule*} | egrep '^....-..-..' | sort -h"
 log "---"
 log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*,foreman-installer/capsule*} | egrep -vi 'searching|resolving|List of resolvable facts' | egrep '^....-..-..' | sort -h | head -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
 log "..."
 log_cmd "egrep -hir 'fips mode|fips_enabled' $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*,foreman-installer/capsule*} | egrep -vi 'searching|resolving|List of resolvable facts' | egrep '^....-..-..' | sort -h | tail -25 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
+if [ "`egrep -hir fips_enabled $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*,foreman-installer/capsule*} | egrep 'has resolved to: true$'  | egrep -vi 'searching|resolving|List of resolvable facts' | tail -1`" ]; then
+	log "---"
+	log "last true results"
+	log "---"
+	log_cmd "egrep -hir fips_enabled $base_dir/var/log/{secure*,rhsm,foreman-installer/satellite*,foreman-installer/capsule*} | egrep 'has resolved to: true$'  | egrep -vi 'searching|resolving|List of resolvable facts' | egrep '^....-..-..' | sort -h | tail -10 | egrep --color=always '^|true' | GREP_COLORS='ms=01;33' egrep --color=always '$|false'"
+fi
 log "---"
 log
 
@@ -2089,19 +2096,19 @@ else
 	log "---"
 	log
 
-	log "// contents of /etc/systemd/system/fapolicyd.service.d/limits.conf"
+	log "// contents of /etc/fapolicyd/rules.d/"
 	log "---"
-	log_cmd "cat $base_dir/etc/systemd/system/fapolicyd.service.d/limits.conf"
+	log_cmd "ls $base_dir/etc/fapolicyd/rules.d/"
 	log "---"
 	log
-	log "  Note:  The following values are recommended for RHEL 8:"
 	log
-	log "    [Service]"
-	log "    LimitNOFILE=16384"
+
+	log "// checking /etc/fapolicyd/rules.d/ for x-ruby exceptions"
+	log "---"
+	log_cmd "egrep -ir x-ruby $base_dir/etc/fapolicyd/rules.d/"
+	log "---"
 	log
-	log "  Then run these commands:"
-	log "    # systemctl daemon-reload"
-	log "    # foreman-maintain service restart"
+	log "Note:  See this related KCS article if nothing appears here: https://access.redhat.com/solutions/7001184"
 	log
 
 fi
@@ -2179,9 +2186,9 @@ else
 	log
 
 	log "port workaround check"
-	log "cat \$base_dir/etc/systemd/system/cockpit.socket.d/port.conf"
+	log "egrep . \$base_dir/etc/systemd/system/cockpit.socket.d/\*"
 	log "---"
-	log_cmd "cat $base_dir/etc/systemd/system/cockpit.socket.d/port.conf"
+	log_cmd "egrep . $base_dir/etc/systemd/system/cockpit.socket.d/*"
 	log "---"
 
 	log "// log errors for cockpit-ws"
@@ -2340,7 +2347,7 @@ log "---"
 log
 
 
-if [ "$(ls $base_dir/etc/dnf/plugins $base_dir/etc/yum/pluginconf.d | egrep rhui)" ] || [ "$(egrep -i 'rhui-client' $base_dir/installed-rpms 2>/dev/null | head -1)" ]; then
+if [ "$(ls $base_dir/etc/dnf/plugins $base_dir/etc/yum/pluginconf.d | egrep rhui)" ] || [ "$(egrep -i 'rhui-client' $base_dir/installed-rpms 2>/dev/null)" ] || [ "$(egrep -i 'manage_repos' $base_dir/etc/rhsm/rhsm.conf 2>/dev/null | egrep 0$)" ]; then
 
 	log_tee '## rhui plugin for yum'
 	log
@@ -2351,20 +2358,20 @@ if [ "$(ls $base_dir/etc/dnf/plugins $base_dir/etc/yum/pluginconf.d | egrep rhui
 	log "// client package"
 	log "egrep rhui \$base_dir/installed-rpms"
 	log "---"
-	log_cmd "egrep rhui $base_dir/installed-rpms"
+	log_cmd "egrep rhui $base_dir/installed-rpms | egrep --color=always '^|rhui'"
 	log "---"
 	log
 
 	log "// related plugins"
 	log "ls \$base_dir/etc/yum/pluginconf.d/\* | egrep 'rhui|amazon'"
 	log "---"
-	log_cmd "ls $base_dir/etc/yum/pluginconf.d/* | egrep 'rhui|amazon'"
+	log_cmd "ls $base_dir/etc/yum/pluginconf.d/* | egrep --color=always 'rhui|amazon'"
 	log "---"
 	log
 
 	log "// RHUI plugin enabled or disabled?"
 	log "---"
-	log_cmd "ls $base_dir/etc/yum/pluginconf.d/* | egrep 'rhui|amazon'"
+	log_cmd "ls $base_dir/etc/yum/pluginconf.d/* | egrep --color=always 'rhui|amazon'"
 	log_cmd "cat $(ls $base_dir/etc/yum/pluginconf.d/* | egrep 'rhui|amazon') | egrep enabled"
 	log_cmd
 	log "---"
@@ -2399,7 +2406,7 @@ else
 	log
 fi
 
-log "// rhel8 repository overrides (for leapp upgrades)"
+log "// rhel 8 repository overrides (for leapp upgrades)"
 log "jq '.[] | select(.contentLabel |contains("rhel-8")) ' \$base_dir//var/lib/rhsm/cache/content_overrides.json"
 log "---"
 log_cmd "jq '.[] | select(.contentLabel |contains("rhel-8")) ' $base_dir//var/lib/rhsm/cache/content_overrides.json"
@@ -2608,7 +2615,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log "// target-version lines with exit codes"
 	log "lines from \$base_dir/var/log/foreman-maintain/foreman-maintain.log\* and \$base_dir/var/log/foreman-installer/{satellite\*,capsule\*}"
 	log "---"
-	log_cmd "echo -e \"$(egrep -hir '\-\-target-version|Exit with status' $base_dir/var/log/foreman-maintain/foreman-maintain.log*)\n\" \"$(egrep -hir 'Exit with status code' $base_dir/var/log/foreman-installer/{satellite*,capsule*})\n\" | sed s'/I\, \[//'g | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | sort -h | egrep upgrade -A 1 | tail -50"
+	log_cmd "echo -e \"$(egrep -hir '\-\-target-version|Exit with status|upgrade run|update run' $base_dir/var/log/foreman-maintain/foreman-maintain.log*)\n\" \"$(egrep -hir 'Exit with status code' $base_dir/var/log/foreman-installer/{satellite*,capsule*})\n\" | sed s'/I\, \[//'g | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | sort -h | egrep upgrade -A 1 | tail -50"
 	log "---"
 	log
 
@@ -2619,7 +2626,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	export GREP_COLORS='ms=01;33'
 	#cmd_output_timestamps=$(egrep -ir -h "Exit with status code|command with arguments|with args|Upgrade completed|target-version|capsule-certs-generate|Prepare content|additional free space|migration statistics|" $base_dir/sysmgmt/{capsule.log,foreman-maintain.log,production.log,satellite.log} 2>/dev/null | egrep '\-' | sed s'/\[  INFO //'g | sed s'/\[ INFO //'g | sed s'/\[DEBUG //'g | sed s'/^., \[//'g | sort -n | tail -60)
 
-	cmd_output_timestamps=$(egrep -ir -h "Exit with status code|command with arguments|with args|Upgrade completed|target-version|capsule-certs-generate" $base_dir/sysmgmt/{capsule.log,foreman-maintain.log,production.log,satellite.log} 2>/dev/null | egrep "\-" | sed s'/\[  INFO //'g | sed s'/\[ INFO //'g | sed s'/\[DEBUG //'g | sed s'/^., \[//'g | sed s'/T0/ 0/'g | sed s'/T1/ 1/'g | sed s'/T2/ 2/'g | sort -n | egrep -v service | tail -100)
+	cmd_output_timestamps=$(egrep -ir -h "Exit with status code|command with arguments|with args|Upgrade completed|target-version|capsule-certs-generate|upgrade run|update run" $base_dir/sysmgmt/{capsule.log,foreman-maintain.log,production.log,satellite.log} 2>/dev/null | egrep "\-" | sed s'/\[  INFO //'g | sed s'/\[ INFO //'g | sed s'/\[DEBUG //'g | sed s'/^., \[//'g | sed s'/T0/ 0/'g | sed s'/T1/ 1/'g | sed s'/T2/ 2/'g | sort -n | egrep -v service | tail -100)
 
 	cmd_output_migration_stats=$(egrep -hi 'Migration Summary|^Migrated|^Estimated migration time|^You will need|additional free space' $base_dir/sysmgmt/foreman-maintain.log 2>/dev/null | egrep 'Migration Summary' -A 10 | tail -14 | sed -n '/Migration Summary/,/^$/p')
 
@@ -3126,6 +3133,13 @@ else
 	log "---"
 	log
 
+	log "// hammer ping output"
+	log "grep -A2 database \$base_dir/sos_commands/foreman/hammer_ping"
+	log "---"
+	log_cmd "grep -A2 database $base_dir/sos_commands/foreman/hammer_ping | egrep --color=always '^|FAIL|[1..9] Failed'"
+	log "---"
+	log
+
 	log "// is postgres listening?"
 	log "grepping netstat_-W_-neopa file"
 	log "---"
@@ -3219,7 +3233,7 @@ else
 	log "// postgres storage consumption"
 	log "cat \$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql \$base_dir/sos_commands/postgresql/du_-sh_.var.opt.rh.rh-postgresql12.lib.pgsql"
 	log "---"
-	log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var.opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8 or on RHEL8/'g | sed s'/rh-postgresql12\/lib\/pgsql/rh-postgresql12\/lib\/pgsql    # 6.8+ on RHEL7/'g"
+	log_cmd "cat $base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql $base_dir/sos_commands/postgresql/du_-sh_.var.opt.rh.rh-postgresql12.lib.pgsql 2>/dev/null | sed s'/\/var\/lib\/pgsql/\/var\/lib\/pgsql    # pre-6.8 or on RHEL 8+/'g | sed s'/rh-postgresql12\/lib\/pgsql/rh-postgresql12\/lib\/pgsql    # 6.8+ on RHEL7/'g"
 	log "---"
 	log
 
@@ -3261,7 +3275,7 @@ else
 #	if [ ! -f "$base_dir/sos_commands/postgresql/du_-sh_.var..opt.rh.rh-postgresql12.lib.pgsql" ] && [ -d "$base_foreman/var/lib/pgsql/data" ] && [ ! -d "$base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data" ]; then
 	if [ -d "$base_foreman/var/lib/pgsql/data" ] || [ -e "$base_dir/sos_commands/postgresql/du_-sh_.var.lib.pgsql" ]; then
 
-		log "// pre-Satellite 6.8, or 6.11+ on RHEL 8"
+		log "// pre-Satellite 6.8, or 6.11+ on RHEL 8+"
 		log
 
 		log "// postgres configuration"
@@ -3496,20 +3510,6 @@ else
 	log "---"
 	log_cmd "grep queue $base_foreman/var/log/httpd/error_log  | awk '{print \$2, \$3}' | cut -d: -f1,2 | uniq -c"
 	log "---"
-	log
-
-	log "// sysctl configuration (older than 6.9)"
-	log "cat \$base_dir/etc/01-satellite-tune.conf"
-	log "---"
-	log_cmd "cat $base_dir/etc/01-satellite-tune.conf"
-	log "---"
-	log
-	log "  Note:  For PassengerMaxPoolSize > 256, please run these commands:"
-	log
-	log "    echo 'kernel.sem= 250 256000 32 16384' > /etc/sysctl.d/01-satellite-tune.conf"
-	log "    echo 'fs.aio-max-nr = 1000000' >> /etc/sysctl.d/01-satellite-tune.conf"
-	log
-	log "    # sysctl -p /etc/sysctl.d/01-satellite-tune.conf"
 	log
 
 	log "// httpd|apache limits"
@@ -3795,6 +3795,21 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log "---"
 		log
 
+
+		log "// sysctl configuration (older than 6.9)"
+		log "cat \$base_dir/etc/01-satellite-tune.conf"
+		log "---"
+		log_cmd "cat $base_dir/etc/01-satellite-tune.conf"
+		log "---"
+		log
+		log "  Note:  For PassengerMaxPoolSize > 256, please run these commands:"
+		log
+		log "    echo 'kernel.sem= 250 256000 32 16384' > /etc/sysctl.d/01-satellite-tune.conf"
+		log "    echo 'fs.aio-max-nr = 1000000' >> /etc/sysctl.d/01-satellite-tune.conf"
+		log
+		log "    # sysctl -p /etc/sysctl.d/01-satellite-tune.conf"
+		log
+
 		log "// passenger.conf configuration - 6.3 or earlier"
 		log "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' \$base_dir/etc/httpd/conf.d/passenger.conf"
 		log "---"
@@ -3882,11 +3897,11 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log
 
 		log "// maintenance mode check"
-		log "egrep 'maintenance_mode' \$base_dir/var/log/foreman-maintain/foreman-maintain.log | tail"
+		log "egrep 'maintenance.mode' \$base_dir/var/log/foreman-maintain/foreman-maintain.log | tail"
 		#log "zgrep maintenance_mode \$base_dir/var/log/foreman-maintain/foreman-maintain.log* | sort -k2 | tail"
 		log "cat \$base_dir/sos_commands/networking/iptables_-vnxL | sed -n '/FOREMAN_MAINTAIN/,/^$/p'"
 		log "---"
-		log_cmd "egrep 'maintenance_mode' $base_dir/sysmgmt/foreman-maintain.log* | sort -k2 -k3 | tail"
+		log_cmd "egrep 'maintenance.mode' $base_dir/sysmgmt/foreman-maintain.log* | sort -k2 -k3 | tail"
 		#log_cmd "zgrep maintenance_mode $base_dir/var/log/foreman-maintain/foreman-maintain.log* | sort -k2 | tail"
 		log
 		log_cmd "cat $base_dir/sos_commands/networking/iptables_-vnxL | sed -n '/FOREMAN_MAINTAIN/,/^$/p'"
@@ -4809,7 +4824,7 @@ else
 	fi
 
 
-	log "Note:  In RHEL 8, the package pki-servlet-engine provides the tomcat component."
+	log "Note:  In RHEL 8+, the package pki-servlet-engine provides the tomcat component."
 	log
 
 
@@ -6097,7 +6112,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	log_cmd "egrep -h 'cloud-init' $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
-		log_cmd "egrep -h 'cloud-init' -A 20 $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sysmgmt/services.txt | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+		log_cmd "egrep -h 'cloud-init' $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/sysmgmt/services.txt | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 		log
 		log_cmd "egrep -v '\|-' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep \"^\* cloud-init\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 	else
