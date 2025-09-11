@@ -1165,7 +1165,7 @@ if [ -f "`find $base_dir/etc/foreman-proxy -type f | egrep -v key | egrep -i 'ce
 	log "foreman certificates:"
 	log "openssl x509 -in \$base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | egrep -i '\$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm'"
 	log
-	log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | sed 's/$/\$/' | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
+	log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | sed 's/$/\$/' | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|sha1W'"
 	log
 
 	log "check certificates in \$base_dir/etc/foreman-proxy/ for beginning and ending dates"
@@ -1177,6 +1177,7 @@ if [ -f "`find $base_dir/etc/foreman-proxy -type f | egrep -v key | egrep -i 'ce
 	echo $i; 
 	START_DATE=`openssl x509 -in $i -noout -text | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
 	END_DATE=`openssl x509 -in $i -noout -text | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
+	SIGALGO=`openssl x509 -in $i -noout -text | egrep -i "Signature Algorithm:" | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u`;
 	KEY_LENGTH=$(openssl x509 -in $i -noout -text | egrep -i "bit\)" | sed s'/Public-Key://'g | sed 's/^[ \t]*//;s/[ \t]*$//');
 	if [ "`date -d \"$START_DATE\" +\"%Y%m%d%H%M\"`" -ge "$MYDATE_EPOCH" ]; then 
 		echo -n 'Not Before: ';
@@ -1195,6 +1196,8 @@ if [ -f "`find $base_dir/etc/foreman-proxy -type f | egrep -v key | egrep -i 'ce
 	fi;
 	echo -n 'Key Length: ';
 	echo "$KEY_LENGTH";
+	# print signature algorithm
+	echo "$SIGALGO" | egrep --color=always '^|sha1W';
 	echo; 
 	done;)
 
@@ -2414,13 +2417,16 @@ log "---"
 log
 
 log "// release version (for version locking)"
-log "jq '.' \$base_dir/var/lib/rhsm/cache/releasever.json"
 log "cat \$base_dir/etc/yum/vars/releasever 2>/dev/null"
+log "cat \$base_dir/etc/dnf/vars/releasever 2>/dev/null"
+log "jq '.' \$base_dir/var/lib/rhsm/cache/releasever.json"
 log "cat \$base_dir/sos_commands/sos_commands/subscription_manager/subscription-manager_release_--show 2>/dev/null"
 log "---"
-log_cmd "jq '.' $base_dir/var/lib/rhsm/cache/releasever.json 2>/dev/null"
-log "---"
 log_cmd "cat $base_dir/etc/yum/vars/releasever 2>/dev/null;echo"
+log "---"
+log_cmd "cat $base_dir/etc/dnf/vars/releasever 2>/dev/null;echo"
+log "---"
+log_cmd "jq '.' $base_dir/var/lib/rhsm/cache/releasever.json 2>/dev/null"
 log "---"
 log_cmd "cat $base_dir/sos_commands/sos_commands/subscription_manager/subscription-manager_release_--show 2>/dev/null"
 log "---"
@@ -2612,10 +2618,10 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	fi
 
 
-	log "// target-version lines with exit codes"
+	log "// upgrade lines with exit codes"
 	log "lines from \$base_dir/var/log/foreman-maintain/foreman-maintain.log\* and \$base_dir/var/log/foreman-installer/{satellite\*,capsule\*}"
 	log "---"
-	log_cmd "echo -e \"$(egrep -hir '\-\-target-version|Exit with status|upgrade run|update run' $base_dir/var/log/foreman-maintain/foreman-maintain.log*)\n\" \"$(egrep -hir 'Exit with status code' $base_dir/var/log/foreman-installer/{satellite*,capsule*})\n\" | sed s'/I\, \[//'g | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | sort -h | egrep upgrade -A 1 | tail -50"
+	log_cmd "echo -e \"$(egrep -hir '\-\-target-version|Exit with status|upgrade|update|' $base_dir/var/log/foreman-maintain/foreman-maintain.log*)\n\" \"$(egrep -hir 'Exit with status code' $base_dir/var/log/foreman-installer/{satellite*,capsule*})\n\" | sed s'/I\, \[//'g | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | sort -h | egrep upgrade -A 1 | tail -50"
 	log "---"
 	log
 
