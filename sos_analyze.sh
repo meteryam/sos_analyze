@@ -179,10 +179,17 @@ main()
 	log_cmd()
 	{
 		if [ "$ANSI_COLOR_CODES" == "false" ] && [ "$(which ansifilter)" ] ; then
-			# echo "$@" | bash 2>&1 >> $FOREMAN_REPORT
-			echo "$@" | bash 2>/dev/null | ansifilter | sed s'/\/\//\//'g | sed -r s"/$sos_path/"g >> $FOREMAN_REPORT
+			if [ "$(echo $@ | https://)" == "" ] && [ "$(echo $@ | http://)" == "" ]; then
+				echo "$@" | bash 2>/dev/null | ansifilter | sed -E '/http:\/\/|https:\/\//!s/\/\//\//g' | sed -r s"/$sos_path/"g >> $FOREMAN_REPORT
+			else
+				echo "$@" | bash 2>/dev/null | ansifilter | sed -r s"/$sos_path/"g >> $FOREMAN_REPORT
+			fi
 		else
-			echo "$@" | bash 2>/dev/null | sed s'/\/\//\//'g | sed -r s"/$sos_path/"g >> $FOREMAN_REPORT
+			if [ "$(echo $@ | https://)" == "" ] && [ "$(echo $@ | http://)" == "" ]; then
+				echo "$@" | bash 2>/dev/null | sed -E '/http:\/\/|https:\/\//!s/\/\//\//g' | sed -r s"/$sos_path/"g >> $FOREMAN_REPORT
+			else
+				echo "$@" | bash 2>/dev/null | sed -r s"/$sos_path/"g >> $FOREMAN_REPORT
+			fi
 		fi
 	}
 
@@ -1150,6 +1157,28 @@ log_cmd "cat $base_dir/hostname | GREP_COLORS='ms=01;33' egrep --color=always '^
 log
 log "from \$base_dir/sos_commands/host/hostnamectl_status"
 log_cmd "cat $base_dir/sos_commands/host/hostnamectl_status | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT'"
+
+log
+log "// cloned hostname check"
+log "---"
+if [ -e "$base_dir/sos_commands/host/hostnamectl_status" ]; then
+if [ -e "$base_dir/etc/machine-id" ] || [ -e "$base_dir/etc/rhsm/facts/katello.facts" ]; then
+	log "# ls \$base_dir/etc/machine-id \$base_dir/etc/rhsm/facts/katello.facts"
+	log
+	log_cmd "ls $base_dir/etc/machine-id $base_dir/etc/rhsm/facts/katello.facts"
+	log
+	log_cmd "egrep -i $(egrep 'Machine ID:' $base_dir/sos_commands/host/hostnamectl_status) $base_dir/etc/machine-id $base_dir/etc/rhsm/facts/katello.facts 2>/dev/null"
+else
+	log "neither /etc/machine-id nor /etc/rhsm/facts/katello.facts found"
+fi
+fi
+log
+if [ -f "$base_dir/etc/rhsm/facts/katello.facts" ]; then
+	log_cmd "jq '.' $base_dir/etc/rhsm/facts/katello.facts | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT'"
+fi
+log "---"
+log
+
 log
 log "from \$base_dir/var/lib/rhsm/facts/facts.json:"
 log_cmd "jq '. | \"hostname: \" + .\"network.hostname\",\"FQDN: \" + .\"network.fqdn\"' $base_dir/var/lib/rhsm/facts/facts.json 2>/dev/null | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
@@ -1261,18 +1290,6 @@ if [ -f "$base_dir/etc/sysconfig/networking/profiles/default/network" ]; then
 	log
 fi
 
-log
-log "// cloned hostname check"
-log "---"
-log "# ls \$base_dir/etc/machine-id \$base_dir/etc/rhsm/facts/katello.facts"
-log
-log_cmd "ls $base_dir/etc/machine-id $base_dir/etc/rhsm/facts/katello.facts"
-log
-if [ -f "$base_dir/etc/rhsm/facts/katello.facts" ]; then
-	log_cmd "jq '.' $base_dir/etc/rhsm/facts/katello.facts | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT'"
-fi
-log "---"
-log
 
 
 if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ] && [ -f "$base_dir/etc/foreman/proxy_ca.pem" ]; then
@@ -1370,7 +1387,7 @@ log
 log "// baremetal or vm?"
 log "grep dmidecode and facts files for vendor and manufacturer"
 log "---"
-log_cmd "grep -E '(Vendor|Manufacture|Product Name:|Description:)' $base_dir/dmidecode 2>/dev/null | head -n3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u"
+log_cmd "grep -E '(Vendor|Manufacture|Product Name:|Description:|UUID)' $base_dir/dmidecode 2>/dev/null | head -n3 | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u"
 log_cmd "grep virtual $base_dir/facts 2>/dev/null | egrep \"vendor|version|manufacturer|name\" | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u"
 log
 log_cmd "egrep 'Chassis:|Virtualization:|Hardware' $base_dir/sos_commands/host/hostnamectl_status"
@@ -1384,7 +1401,7 @@ log "// out of memory errors"
 log "grep messages files for out of memory errors"
 log "---"
 #log_cmd "egrep -hir 'out of memory' $base_dir/var/log/messages $base_dir/sos_commands/logs/journalctl_--no-pager $base_dir/OOO 2>/dev/null | egrep -v '{|}|HeapDumpOnOutOfMemoryError' | sort -h | tail -100"
-log_cmd "egrep -hir 'out of memory' $base_dir/var/log/messages* $base_dir/sos_commands/logs/journalctl_--no-pager $base_dir/sos_commands/kernel/dmesg $base_dir/OOO 2>/dev/null | egrep -vi '{|}|HeapDumpOnOutOfMemoryError|powershell' | sort -h | tail -100"
+log_cmd "egrep -hir 'out of memory' $base_dir/var/log/messages* $base_dir/sos_commands/logs/journalctl_--no-pager $base_dir/sos_commands/kernel/dmesg $base_dir/OOO 2>/dev/null | egrep -vi '{|}|HeapDumpOnOutOfMemoryError|powershell' | sort -k1,1M -k2,2h | uniq -f2 | tail -100"
 log "---"
 log
 
@@ -1439,12 +1456,6 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 fi
 
 if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
-	#log "// tuning profile"
-	#log "egrep -hir 'tuning' \$base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
-	#log "---"
-	#log_cmd "egrep -hir 'tuning' $base_foreman/var/log/foreman-installer | egrep -i '\=\>' | uniq -f 4 | sort -h"
-	#log "---"
-	#log
 
 	log "// is a tuning profile enabled?"
 	NO_SCENARIO='FALSE'
@@ -1515,24 +1526,6 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log
 fi
 
-#if [ "`egrep . $base_dir/sos_commands/foreman/sos_commands/foreman/passenger-status_--show_requests $base_dir/etc/httpd/conf.modules.d/passenger_extra.conf $base_dir/etc/httpd/conf.d/passenger.conf 2>/dev/null | head -1`" ] || [ "`egrep -i general $base_dir/sos_commands/foreman/passenger-status_--show_pool 2>/dev/null | head -1`" ]; then
-
-#	log "// passenger.conf configuration - 6.3 or earlier"
-#	log "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' \$base_dir/etc/httpd/conf.d/passenger.conf"
-#	log "---"
-#	log_cmd "grep 'MaxPoolSize\|PassengerMaxRequestQueueSize' $base_dir/etc/httpd/conf.d/passenger.conf | grep -v \#"
-#	log "---"
-#	log
-
-#	log "// passenger pool status"
-#	log "egrep -A 3 'General information' \$base_dir/sos_commands/foreman/passenger-status_--show_pool"
-#	log "---"
-#	log_cmd "egrep -A 3 'General information' $base_dir/sos_commands/foreman/passenger-status_--show_pool"
-#	log "---"
-#	log
-
-#fi
-
 if [ -f "$base_dir/etc/sysconfig/dynflowd" ]; then
 
 	log "// dynflow optimizations (only used before 6.8)"
@@ -1568,7 +1561,7 @@ log
 
 #log_cmd "egrep -hir 'no space left on device' $base_dir 2>/dev/null | egrep -v '{|}' | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | sed s'/\\n/\n/'g | sed s'/\[Sun //'g | sed s'/\[Mon //'g | sed s'/\[Tue //'g | sed s'/\[Wed //'g | sed s'/\[Thu //'g | sed s'/\[Fri //'g | sed s'/\[Sat //'g | sort -h"
 log "postgres logs:"
-log_cmd "egrep -hir 'No space left on device' $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log $base_dir/var/lib/pgsql/data/log 2>/dev/null | sort -k1 -k2 | tail -10"
+log_cmd "egrep -hir 'No space left on device' $base_dir/var/opt/rh/rh-postgresql12/lib/pgsql/data/log $base_dir/var/lib/pgsql/data/log 2>/dev/null | egrep -v 'null, null, null, null' | sort -k1 -k2 | tail -10"
 log
 
 log "pulp logs:"
@@ -1690,7 +1683,7 @@ fi
 log_tee "## ntp info"
 log
 
-SERVICE_NAME='ntpd'
+SERVICE_NAME='ntpd/chronyd'
 log "// $SERVICE_NAME service status"
 log "---"
 log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
@@ -1720,11 +1713,11 @@ fi
 
 log "// ntp errors"
 #log "egrep 'ntpd|chrony|sntp|timesync' \$base_dir/var/log/messages* | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.'"
-log "egrep 'ntpd|chrony|sntp|timesync' \$base_dir/sysmgmt/messages | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.|setroubleshoot'"
+log "egrep 'ntpd|chrony|sntp|timesync' \$base_dir/sysmgmt/messages | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.|setroubleshoot|Started /usr/bin/rpm'"
 log "egrep -i 'skew|RES equals failed' \$base_dir/var/log/* | egrep -v anaconda"
 log "---"
 #log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/var/log/messages* | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.' | egrep '^|offline|mongod'"
-log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/sysmgmt/messages | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.|setroubleshoot'"
+log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/sysmgmt/messages | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.|setroubleshoot|Started /usr/bin/rpm'"
 log
 log_cmd "egrep -i 'skew|RES equals failed' $base_dir/var/log/* | egrep -v 'BEGIN CERTIFICATE|^Binary|anaconda' | egrep -v 'HTTP\/1.1|mongod'"
 log "---"
@@ -1755,12 +1748,6 @@ log_cmd "grep proxy $base_dir/etc/rhsm/rhsm.conf | grep -v ^#"
 log "---"
 log
 
-log "// yggdrasil Proxy"
-log "grep PROXY \$base_dir/etc/systemd/system/rhcd.service.d/proxy.conf | grep -v ^#"
-log "---"
-log_cmd "grep PROXY \$base_dir/etc/systemd/system/rhcd.service.d/proxy.conf | grep -v ^#"
-log "---"
-log
 
 log "// yum/dnf proxy"
 log "grep proxy \$base_dir/etc/yum.conf \$base_dir/etc/dnf/dnf.conf | grep -v ^#"
@@ -1795,6 +1782,13 @@ if [ -f $base_dir/bash_proxy ]; then
 	log "---"
 	log
 fi
+
+log "// yggdrasil Proxy"
+log "grep PROXY \$base_dir/etc/systemd/system/rhcd.service.d/proxy.conf | grep -v ^#"
+log "---"
+log_cmd "grep PROXY \$base_dir/etc/systemd/system/rhcd.service.d/proxy.conf | grep -v ^#"
+log "---"
+log
 
 log "// check rhsm.conf file for package_profile settings"
 log "from file \$base_dir/etc/rhsm/rhsm.conf"
@@ -1997,7 +1991,7 @@ log_cmd "echo -E \"$SE_DENIALS\" | egrep \"`date +'%Y' --date='-2 months'`|`date
 log "---"
 log
 log "from /var/log/messages:"
-log_cmd "egrep -I 'avc:  denied|SELinux is preventing|setroubleshoot' $base_dir/sysmgmt/messages $base_dir/sysmgmt/journal.log | egrep -v 'units_rpm|HTTP\/1.1|aide:' | sort -u | tail -30 | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto' | sed s'/#012/\n/'g | GREP_COLORS='ms=01;33' egrep --color=always '^|permissive=1'"
+log_cmd "egrep -hi 'avc:  denied|SELinux is preventing|setroubleshoot|if you believe' $base_dir/var/log/messages* $base_dir/sysmgmt/journal.log | egrep -v 'units_rpm|HTTP\/1.1|aide:|Started /usr/bin/rpm|SETroubleshoot daemon|setroubleshootd.service|SetroubleshootPrivileged' | sort -t ' ' -k1,1 -k2,2 | sort -u | tail -30 | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto' | sed s'/#012/\n/'g | GREP_COLORS='ms=01;33' egrep --color=always '^|permissive=1'"
 log "---"
 log
 
@@ -2079,6 +2073,10 @@ else
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+	fi
+
+	if [ -e $base_dir/sos_commands/systemd/systemctl_status_--all ]; then
+		log_cmd "egrep -ir '^\● fapolicyd.service' $base_dir/sos_commands/systemd/systemctl_status_--all -A 20 -h | sed -n '/fapolicyd.service/,/\.service/p' | sed '$ d' | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 	else
 		log
 		log_cmd "egrep $SERVICE_NAME $base_dir/ps"
@@ -2158,9 +2156,9 @@ log "---"
 log
 
 log "// last 20 entries from foreman/cron.log"
-log "tail -20 \$base_foreman/var/log/foreman/cron.log"
+log "egrep -v 'Scoped order is ignored' \$base_foreman/var/log/foreman/cron.log | tail -20"
 log "---"
-log_cmd "tail -20 $base_foreman/var/log/foreman/cron.log 2>&1"
+log_cmd "egrep -v 'Scoped order is ignored' $base_foreman/var/log/foreman/cron.log | tail -20"
 log "---"
 log
 
@@ -2439,10 +2437,17 @@ log_cmd "cat $base_dir/sos_commands/subscription_manager/subscription-manager_re
 log "---"
 log
 
-log "// available repositories listed in rhsm.log"
-log "egrep '\[id:' \$base_dir/var/log/rhsm/rhsm.log | sort -u"
+#log "// available repositories listed in rhsm.log"
+#log "egrep '\[id:' \$base_dir/var/log/rhsm/rhsm.log | sort -u"
+#log "---"
+#log_cmd "egrep '\[id:' $base_dir/var/log/rhsm/rhsm.log | sort -u"
+#log "---"
+#log
+
+log "// available repositories listed in redhat.repo"
+log "egrep '^\[' \$base_dir/etc/yum.repos.d/redhat.repo | egrep -v 'debug|source'"
 log "---"
-log_cmd "egrep '\[id:' $base_dir/var/log/rhsm/rhsm.log | sort -u"
+log_cmd "egrep '^\[' $base_dir/etc/yum.repos.d/redhat.repo | egrep -v 'debug|source' | sort -h"
 log "---"
 log
 
@@ -2480,8 +2485,8 @@ log "// packages provided by 3rd party vendors"
 
 log "show third-party packages from package-data and/or 3rd_party files"
 log "---"
-log_cmd "egrep -hv 'Red Hat|^$HOSTNAME|^gpg\-pubkey\-' $base_dir/sos_commands/rpm/package-data | cut -f1,4 | sort -k2 | egrep -v '^localhost-tomcat' | egrep -i --color=always '^|$SATPACKAGES|curl|Fedora|Kojii|CentOS|syslog-ng|katello-ca-consumer'"
-log_cmd "cat $base_dir/3rd_party 2>/dev/null | sort -k2 | egrep -v '^localhost-tomcat' | egrep -i --color=always '^|$SATPACKAGES|curl|Fedora|Kojii|CentOS|syslog-ng|katello-ca-consumer'"
+log_cmd "egrep -hv 'Red Hat|^$HOSTNAME|^gpg\-pubkey\-' $base_dir/sos_commands/rpm/package-data | cut -f1,4 | sort -k2 | egrep -v '^localhost-tomcat' | egrep -i --color=always '^|$SATPACKAGES|curl|Fedora|Kojii|CentOS|syslog-ng|katello-ca-consumer-$HOSTNAME'"
+log_cmd "cat $base_dir/3rd_party 2>/dev/null | sort -k2 | egrep -v '^localhost-tomcat' | egrep -i --color=always '^|$SATPACKAGES|curl|Fedora|Kojii|CentOS|syslog-ng|katello-ca-consumer-$HOSTNAME'"
 log "---"
 log
 
@@ -2541,7 +2546,7 @@ if [ "`egrep '^\*' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep
 	log "---"
 	log_cmd "egrep '^dnf-automatic' $base_dir/installed-rpms 2>&1"
 	log
-	log_cmd "egrep '^dnf-automatic' $base_dir/sos_commands/yum/yum_list_installed 2>&1"
+	log_cmd "egrep '^dnf-automatic' $base_dir/sos_commands/yum/yum_list_installed 2>&1 | egrep -i --color=always '^|epel|fedora'"
 	log "---"
 	log
 
@@ -2803,7 +2808,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log "// satellite service status"
 		log "from file $base_dir/sos_commands/foreman/foreman-maintain_service_status"
 		log "---"
-		log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep -v 'pulp_database.units_rpm' | sed '/BEGIN CERTIFICATE/,/\"/d' | sed '/BEGIN PRIVATE KEY/,/\"/d' | tr '\r' '\n' | sed s'/\*/\n\*/'g | egrep -v '{|}|displaying|^\||^\/|^\\|^\-' | uniq | egrep -i --color=always '^|failed|inactive|activating|deactivating|masked|error|alert|crit|warning|signal=KILL' | GREP_COLORS='ms=01;33' egrep --color=always '^|\[OK\]|Active:|All services are running'"
+		log_cmd "cat $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep -v 'pulp_database.units_rpm' | sed '/BEGIN CERTIFICATE/,/\"/d' | sed '/BEGIN PRIVATE KEY/,/\"/d' | tr '\r' '\n' | sed s'/\*/\n\*/'g | egrep -v '{|}|displaying|^\||^\/|^\\|^\-' | uniq | egrep -i --color=always '^|failed|inactive|activating|deactivating|masked|error|alert|crit|signal=KILL' | GREP_COLORS='ms=01;33' egrep -i --color=always '^|\[OK\]|Active:|All services are running|warning'"
 		log "---"
 		log
 
@@ -3117,7 +3122,16 @@ else
 		log "// installed postgres packages"
 		log "egrep '^postgresql|rh-postgresql' \$base_dir/installed-rpms"
 		log "---"
-		log_cmd "egrep '^postgresql|rh-postgresql' $base_dir/installed-rpms"
+		log_cmd "egrep '^postgresql|rh-postgresql' $base_dir/installed-rpms | egrep -i --color=always '^|epel|fedora'"
+		log "---"
+		log
+	fi
+
+	if [ -f "$base_dir/installed-rpms/sos_commands/dnf/dnf_module_list" ]; then
+		log "// check postgres modules"
+		log "egrep '^postgres' \$base_dir/installed-rpms/sos_commands/dnf/dnf_module_list"
+		log "---"
+		log_cmd "egrep '^postgres' $base_dir/installed-rpms/sos_commands/dnf/dnf_module_list | sed 's/^[ \t]*//;s/[ \t]*$//'"
 		log "---"
 		log
 	fi
@@ -3126,15 +3140,17 @@ else
 	SERVICE_NAME='postgres'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
+	log_cmd "egrep -h '$SERVICE_NAME|postmaster' $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* postmaster\" -A 20 | sed -n \"/^\* postmaster/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 		SERVICE_NAME='rh-postgresql12-postgresql'
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* postmaster\" -A 20 | sed -n \"/^\* postmaster/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 	else
 		log
-		log_cmd "egrep $SERVICE_NAME $base_dir/ps"
+		log_cmd "egrep '$SERVICE_NAME|postmaster' $base_dir/ps"
 	fi
 	log "---"
 	log
@@ -3149,7 +3165,7 @@ else
 	log "// is postgres listening?"
 	log "grepping netstat_-W_-neopa file"
 	log "---"
-	log_cmd "egrep '^Active|^Proto|postgres' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+	log_cmd "egrep '^Active|^Proto|postgres|postmaster' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
 	log "---"
 	log
 
@@ -3685,7 +3701,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 		log "// installed puma packages"
 		log "grep puma \$base_dir/installed-rpms"
 		log "---"
-		log_cmd "grep puma $base_dir/installed-rpms 2>&1"
+		log_cmd "grep puma $base_dir/installed-rpms 2>&1 | egrep -i --color=always '^|epel|fedora'"
 		log "---"
 		log
 
@@ -3700,7 +3716,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 		log "// installed puma packages"
 		log "grep puma \$base_dir/installed-rpms"
 		log "---"
-		log_cmd "grep puma $base_dir/installed-rpms 2>&1"
+		log_cmd "grep puma $base_dir/installed-rpms 2>&1 | egrep -i --color=always '^|epel|fedora'"
 		log "---"
 		log
 
@@ -3766,7 +3782,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 			log "// 3rd party passenger packages"
 			log "from file $base_dir/sos_commands/rpm/package-data"
 			log "---"
-			log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | grep passenger | cut -f1,4 | sort -k2"
+			log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | grep passenger | cut -f1,4 | sort -k2 | egrep -i --color=always '^|epel|fedora'"
 			log "---"
 			log
 		fi
@@ -4235,7 +4251,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log "---"
 		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|\-sentinel' | egrep --color=always '^|5:off'"
 		log
-		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED' | sed -n '/\.service -/,/\.service -/p' | head -n -1"
 		SERVICE_NAME='rh-redis5-redis'
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 		log "---"
@@ -4596,7 +4612,7 @@ else
 fi
 
 
-if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
+#if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 	log_tee "## Insights"
 	log
 
@@ -4607,17 +4623,13 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 	log "---"
 	log
 
-	log "// insights client connection test"
-	log "cat \$base_dir/sos_commands/insights/insights-client_--test-connection_--net-debug"
-	log "---"
-	log_cmd "cat $base_dir/sos_commands/insights/insights-client_--test-connection_--net-debug"
-	log "---"
-	log
-
 	if [ ! -f "$base_dir/etc/foreman-installer/scenarios.d/satellite.migrations/*-add-inventory-upload.rb" ] && [ ! "`egrep \"rubygem-foreman_rh_cloud|tfm-rubygem-foreman_inventory_upload\" $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/installed-rpms 2>/dev/null`" ]; then
 
-		log "inventory upload plugin not found"
-		log
+
+		if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
+			log "inventory upload plugin not found"
+			log
+		fi;
 
 	else
 
@@ -4630,12 +4642,33 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 		log "// is the inventory upload foreman plugin installed?"
 		log "---"
 		log_cmd "egrep \"rubygem-foreman_rh_cloud|tfm-rubygem-foreman_inventory_upload\" $base_dir/installed-rpms 2>&1"
+		log ""
 		log_cmd "cat $base_dir/etc/foreman-installer/scenarios.d/satellite.migrations/*-add-inventory-upload.rb"
+		log_cmd "egrep -ir foreman-plugin-rh-cloud-enable-iop-advisor-engine $base_dir/var/log/foreman-installer 2>/dev/null"
 		log "---"
 		log
 
 	fi
-fi
+
+	if [ -e "$base_dir/sos_commands/foreman/foreman_tasks_tasks" ]; then
+
+		log "// last 20 inventory upload tasks"
+		log "---"
+		#log_cmd "egrep -i 'inventory|upload' $base_dir/sos_commands/foreman/foreman_tasks_tasks | tr ',' '|' | sort -t \"|\" -k 4 | awk -F\"|\" '{print $1 \"|\" $4 \"|\" $6 \"|\" $7 \"|\" $12 }' | sed 's/^[ \t]*//;s/[ \t]*$//' | tail -20 | egrep --color=always '^|error|warning'"
+		inventory_tasks=$(egrep -i 'inventory|upload' $base_dir/sos_commands/foreman/foreman_tasks_tasks | tr ',' '|' | sort -t '|' -k 10 | awk -F'|' '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused' | tail -20 | egrep --color=always '^|error|warning')
+		log "$inventory_tasks"
+		log "---"
+		log
+
+	fi
+
+	log "// insights client connection test"
+	log "cat \$base_dir/sos_commands/insights/insights-client_--test-connection_--net-debug"
+	log "---"
+	log_cmd "cat $base_dir/sos_commands/insights/insights-client_--test-connection_--net-debug"
+	log "---"
+	log
+#fi
 
 
 log_tee "## virt-who"
@@ -4807,7 +4840,7 @@ else
 
 
 	if [ "`grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data 2>/dev/null | egrep 'tomcat|pki-servlet-engine' | egrep -v 'Red Hat|none'`" ]; then
-		log "// 3rd party qpidd packages"
+		log "// 3rd party tomcat packages"
 		log "from file $base_dir/sos_commands/rpm/package-data"
 		log "---"
 		log_cmd "grep -v 'Red Hat' $base_dir/sos_commands/rpm/package-data | egrep 'tomcat|pki-servlet-engine|idm-jss|idm-tomcat' | grep -v ^$HOSTNAME | cut -f1,4 | sort -k2"
@@ -5604,7 +5637,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log "// is mosquitto configured?"
 		log "egrep mqtt \$base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml"
 		log "---"
-		log_cmd "egrep mqtt $base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml"
+		log_cmd "egrep mqtt $base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml | egrep '^|$HOSTNAME'"
 		log "---"
 		log
 
@@ -5646,9 +5679,9 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep 'goferd|yggdrasild'`" 
 	log "// installed katello-agent and/or gofer packages"
 	log "from files \$base_dir/installed-rpms and \$base_dir/sos_commands/yum/yum_list_installed"
 	log "---"
-	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate|^katello-package-upload|^katello-host-update|proton)' $base_dir/installed-rpms 2>&1 | egrep -v '$HOSTNAME'"
+	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate|^katello-package-upload|^katello-host-update|proton)' $base_dir/installed-rpms 2>&1 | egrep -v '$HOSTNAME' | egrep -i --color=always '^|epel|fedora'"
 	log
-	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate|^katello-package-upload|^katello-host-update|proton)' $base_dir/sos_commands/yum/yum_list_installed 2>&1 | egrep -v '$HOSTNAME'"
+	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate|^katello-package-upload|^katello-host-update|proton)' $base_dir/sos_commands/yum/yum_list_installed 2>&1 | egrep -v '$HOSTNAME' | egrep -i --color=always '^|epel|fedora'"
 	log "---"
 	log
 
@@ -5835,15 +5868,11 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	if [ "$(egrep '^puppet' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME')" ]; then
 		log "// puppet packages"
 		log "egrep '^puppet' \$base_dir/sos_commands/yum/yum_list_installed"
+		log "egrep '^puppet' \$base_dir/sos_commands/rpm/package-data"
 		log "---"
 		log_cmd "egrep '^puppet' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME'"
-		log "---"
 		log
-	else
-		log "// puppet packages"
-		log "egrep '^puppet' \$base_dir/installed-rpms"
-		log "---"
-		log_cmd "egrep '^puppet' $base_dir/installed-rpms | egrep -v '$HOSTNAME'"
+		log_cmd "egrep '^puppet' $base_dir/sos_commands/rpm/package-data | awk '{print $1, $8, $9}'"
 		log "---"
 		log
 	fi
