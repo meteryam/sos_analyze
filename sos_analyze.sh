@@ -971,7 +971,7 @@ main()
 	fi
 
 	touch "$base_dir/sysmgmt/services.txt"
-	cat $base_dir/sos_commands/systemd/systemctl_status_--all | sed -n '/service -/,/timer -/p' | sed -n '/service -/,/target -/p' | sed -n '/service -/,/swap -/p' | sed -n '/service -/,/socket -/p' | sed -n '/service -/,/slice -/p' | sed s'/\●/\*/'g | egrep '^\* ntpd|^\* chronyd|^\* systemd-timedatectl|^\* cockpit|^\* goferd|^\* elasticsearch|^\* named|^\* dhcpd|^\* osbuild|^\* postgres|^\* httpd|^\* light|^\* puppet|^\* redis|^\* squid|^\* foreman|^\* tomcat|^\* virt-who|^\* qpidd|^\* qdrouterd|^\* mongod|^\* rh-mongodb34-mongod|^\* celery|^\* pulp|^\* dynflow|^\* smart_proxy_dynflow_core|^\* mosquitto' -A 20 | egrep -v 'displaying |\|-' &> $base_dir/sysmgmt/services.txt
+	cat $base_dir/sos_commands/systemd/systemctl_status_--all | sed -n '/service -/,/timer -/p' | sed -n '/service -/,/target -/p' | sed -n '/service -/,/swap -/p' | sed -n '/service -/,/socket -/p' | sed -n '/service -/,/slice -/p' | sed s'/\●/\*/'g | egrep '^\* ntpd|^\* chronyd|^\* systemd-timedatectl|^\* cockpit|^\* goferd|^\* elasticsearch|^\* named|^\* dhcpd|^\* osbuild|^\* postgres|^\* httpd|^\* light|^\* puppet|^\* redis|^\* squid|^\* foreman|^\* tomcat|^\* virt-who|^\* qpidd|^\* qdrouterd|^\* mongod|^\* rh-mongodb34-mongod|^\* celery|^\* pulp|^\* dynflow|^\* smart_proxy_dynflow_core|^\* mosquitto|^\* tftp' -A 20 | egrep -v 'displaying |\|-' &> $base_dir/sysmgmt/services.txt
 
 
 
@@ -1041,11 +1041,12 @@ if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scena
 		CAPSULE_SERVER='TRUE'
 	fi
 fi
-if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | egrep -i satellite-answers.yaml)" ] || [ "$(egrep '^passenger|^puma|^candlepin|^satellite-6|^host0-6' $base_dir/installed-rpms 2>/dev/null)" ] || [ `egrep "$HOSTNAME$" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml 2>/dev/null | egrep servername | head -1` ] || [ -e $base_dir/sos_commands/foreman/smart_proxies ]; then
+if [ "$(egrep answer_file $base_dir/etc/foreman-installer/scenarios.d/last_scenario.yaml 2>/dev/null | egrep -i satellite-answers.yaml)" ] || [ "$(egrep '^passenger|^puma|^candlepin|^satellite-6|^host0-6' $base_dir/installed-rpms 2>/dev/null)" ] || [ `egrep "$HOSTNAME$" $base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml 2>/dev/null | egrep servername | head -1` ] || [ -e $base_dir/sos_commands/foreman/smart_proxies ] ]; then
 	SATELLITE_INSTALLED='TRUE'
 fi
 if [ "$(egrep '^foreman-1.6|^foreman-1.7|^foreman-proxy-1.6|^foreman-proxy-1.7' $base_dir/installed-rpms)" ]; then EARLY_SATELLITE='TRUE'; fi
 if [ "$(egrep '^spacewalk-backend-server|^cobblerd|^rhn-search|^jabberd|^taskomatic|^satellite-branding' $base_dir/installed-rpms)" ]; then SPACEWALK_INSTALLED='TRUE'; fi
+
 
 
 log_tee "### Welcome to Report ###"
@@ -1108,6 +1109,8 @@ elif [ "$CAPSULE_SERVER" == "TRUE" ] && [ "$SATELLITE_INSTALLED" == "TRUE" ]; th
 	log "Note:  Based on what's in this sosreport, this server may have a mixture of Satellite and capsule files."
 elif [ "$SPACEWALK_INSTALLED" == "FALSE" ] && [ "$SATELLITE_INSTALLED" == "FALSE" ] && [ "$CAPSULE_SERVER" == "FALSE" ]; then
 	log "Note:  Based on what's in this sosreport, this server may not be a Satellite server or capsule server."
+else
+	log "Not enough information found to answer this question."
 fi
 
 
@@ -1985,13 +1988,17 @@ log
 log "// SELinux denials"
 log "grep for selinux denials"
 log "---"
-log "from /var/log/audit/audit.log:"
-SE_DENIALS=`cat $base_dir/var/log/audit/* | sort -u | egrep '^type=(AVC|SELINUX)' | while read line; do time=\`echo $line | sed 's/.*audit(\([0-9]*\).*/\1/'\`; echo \`date -d @$time +'%Y-%m-%d.%H:%M'\` $line; done | awk '{$2=""; $3=""; $4=""; print $0}' | tail -1000`
-log_cmd "echo -E \"$SE_DENIALS\" | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | tail -30 | egrep denied | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto' | GREP_COLORS='ms=01;33' egrep --color=always '^|permissive=1'"
+log "raw denial messages from /var/log/audit/audit.log, /var/log/messages and from the journal:"
+log "=========================================================================================="
+#SE_DENIALS=`cat $base_dir/var/log/audit/* | sort -u | egrep '^type=(AVC|SELINUX)' | while read line; do time=\`echo $line | sed 's/.*audit(\([0-9]*\).*/\1/'\`; echo \`date -d @$time +'%Y-%m-%d.%H:%M'\` $line; done | awk '{$2=""; $3=""; $4=""; print $0}' | tail -1000`
+#log_cmd "echo -E \"$SE_DENIALS\" | egrep \"`date +'%Y' --date='-2 months'`|`date +'%Y'`\" | tail -30 | egrep denied | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto' | GREP_COLORS='ms=01;33' egrep --color=always '^|permissive=1'"
+#log
+log_cmd "egrep -hi '^type=(AVC|SELINUX)|avc:  denied' $base_dir/var/log/audit/* $base_dir/var/log/messages* $base_dir/sysmgmt/journal.log | sed s'/#012/\n/'g | egrep -i denied | sort -h | sort -u | tail -30 | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto' | GREP_COLORS='ms=01;33' egrep --color=always '^|permissive=1'"
 log "---"
 log
-log "from /var/log/messages:"
-log_cmd "egrep -hi 'avc:  denied|SELinux is preventing|setroubleshoot|if you believe' $base_dir/var/log/messages* $base_dir/sysmgmt/journal.log | egrep -v 'units_rpm|HTTP\/1.1|aide:|Started /usr/bin/rpm|SETroubleshoot daemon|setroubleshootd.service|SetroubleshootPrivileged' | sort -t ' ' -k1,1 -k2,2 | sort -u | tail -30 | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto' | sed s'/#012/\n/'g | GREP_COLORS='ms=01;33' egrep --color=always '^|permissive=1'"
+log "from /var/log/messages and the journal:"
+log "======================================="
+log_cmd "egrep -hi 'SELinux is preventing|Plugin restorecon' $base_dir/var/log/messages* $base_dir/sysmgmt/journal.log | egrep -v 'units_rpm|HTTP\/1.1|aide:|Started /usr/bin/rpm|SETroubleshoot daemon|setroubleshootd.service|SetroubleshootPrivileged|node=' | sort -t ' ' -k1,1 -k2,2 | sort -u | tail -30 | egrep --color=always '^|permissive=0|sidekiq|unix_stream_socket|connectto' | sed s'/#012/\n/'g | GREP_COLORS='ms=01;33' egrep --color=always '^|permissive=1'"
 log "---"
 log
 
@@ -4468,7 +4475,76 @@ else
 
 fi
 
+if [ -e "$base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml" ] || [ -e "$base_dir/etc/foreman-installer/scenarios.d/capsule-answers.yaml" ]; then
 
+	export GREP_COLORS='ms=01;32'
+	log_cmd "echo '## tftpd' | grep --color=always \#"
+	echo '## tftpd' | grep --color=always \#
+	export GREP_COLORS='ms=01;31'
+
+	log
+	log "The TFTP service allows the Satellite server to provide PXE Boot services for provisioning purposes."
+	log
+
+	SERVICE_NAME='tftp'
+	log "// $SERVICE_NAME service status"
+	log "---"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket|mount' | egrep --color=always '^|5:off'"
+	log
+	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
+		log_cmd "egrep \"^\* $SERVICE_NAME.service\" $base_dir/sysmgmt/services.txt -A 10 | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+		SERVICE_NAME='light-httpd'
+		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+	else
+		log
+		log_cmd "egrep $SERVICE_NAME $base_dir/ps"
+	fi
+	log "---"
+	log
+
+
+	log "// boot logs for the tftp service"
+	log "egrep -i tftp \$base_dir/var/log/boot.log"
+	log "---"
+	log_cmd "egrep -i tftp $base_dir/var/log/boot.log | tail"
+	log "---"
+	log
+
+	log "// tftp settings"
+	log "egrep tftp \$base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
+	log "cat \$base_dir/etc/foreman-proxy/settings.d/tftp.yml"
+	log "---"
+	log_cmd "egrep tftp $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
+	log
+	log "cat $base_dir/etc/foreman-proxy/settings.d/tftp.yml"
+	log "---"
+	log
+
+
+	log "// stuff in tftpboot directory"
+	log "sed -n '/tftpboot:/,/^$/p' \$base_dir/sos_commands/tftpserver/ls_-alZR_.var.lib.tftpboot"
+	log "---"
+	log_cmd "sed -n '/tftpboot:/,/^$/p' $base_dir/sos_commands/tftpserver/ls_-alZR_.var.lib.tftpboot"
+	log "---"
+	log
+
+
+	log "// client logs"
+	log "egrep -vi 'started|deactivated' \$base_dir/sos_commands/tftpserver/journalctl_--no-pager_--unit_tftp | tail -20"
+	log "---"
+	log_cmd "egrep -vi 'started|deactivated' $base_dir/sos_commands/tftpserver/journalctl_--no-pager_--unit_tftp | tail -20"
+	log "---"
+	log
+
+
+	log "// tftp errors in foreman-proxy logs"
+	log "---"
+	log_cmd "egrep -hi tftp $base_dir/var/log/foreman-proxy/proxy.log | egrep -i ' fail| error| fault'"
+	log "---"
+	log
+
+
+fi
 
 
 if [ ! "`egrep '^\* named' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status`" ] && [ ! -f "$base_dir/etc/zones.conf" ] && [ ! -f "$base_dir/etc/named.conf" ] && [ "`egrep ^named $base_dir/chkconfig`" == '' ]; then
