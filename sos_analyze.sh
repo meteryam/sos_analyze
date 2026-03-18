@@ -2777,7 +2777,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 	log_tee "## Satellite Services"
 	log
 
-	if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
+	if [ "$SATELLITE_INSTALLED" == "TRUE" ] && [ "$CAPSULE_SERVER" == "FALSE" ]; then
 	if [ "`egrep -i 'satellite-6|satellite-cli' $base_dir/installed-rpms 2>/dev/null | head -1`" ]; then
 
 		log "// hammer ping output"
