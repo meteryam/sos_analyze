@@ -886,14 +886,23 @@ main()
 	# this section extracts the latest two versions of several frequently-queried log files
 	#echo 'decompressing and caching frequently used logs...'
 
-	echo "extracting logs..."
+	echo "decompressing logs..."
+
+	#for i in `ls -rt $base_dir/var/log/messages* | tail -4 | egrep gz$`; do gunzip -f $i; done
+	for i in $(find $base_dir/var/log $base_foreman/var/log -type f | sort -u | egrep gz$); do gunzip -f $i; done
+	for i in $(find $base_dir/var/log $base_foreman/var/log -type f | sort -u | egrep xz$); do xz -fd $i; done
+
+
+	echo "extracting last thousand lines of logs..."
 
 	if [ "`ls -rt $base_dir/var/log/messages*`" ]; then
 		#for i in `ls -rt $base_dir/var/log/messages* | tail -4 | egrep gz$`; do gunzip -f $i; done
 		#for i in `ls -rt $base_dir/var/log/messages* | tail -4 | egrep xz$`; do xz -fd $i; done
-		#cat `ls -rt $base_dir/var/log/messages* | tail -4` | egrep -v "\{|\}" | tail -10000 > $base_dir/sysmgmt/messages
-		#cat `ls -rt $base_dir/var/log/messages* | tail -4` | egrep "\{|\}" | egrep -v 'pulp_database.units_rpm|pulp_database.consumer_unit_profiles|pulp_database.units_package_group|pulp_database.units_erratum' | tail -1000 > $base_dir/sysmgmt/messages.mongo
-		ln -s -r $base_dir/var/log/messages $base_dir/sysmgmt/messages
+		cat `ls -rt $base_dir/var/log/messages* | tail -4` | egrep -v "\{|\}" | tail -10000 > $base_dir/sysmgmt/messages
+		if [ "$(egrep mongo $base_dir/installed-rpms)" != ""  ]; then
+			cat `ls -rt $base_dir/var/log/messages* | tail -4` | egrep "\{|\}" | egrep -v 'pulp_database.units_rpm|pulp_database.consumer_unit_profiles|pulp_database.units_package_group|pulp_database.units_erratum' | tail -1000 > $base_dir/sysmgmt/messages.mongo
+		fi
+		#ln -s -r $base_dir/var/log/messages $base_dir/sysmgmt/messages
 	fi
 
 
@@ -901,48 +910,48 @@ main()
 	if [ "`ls -rt $base_foreman/var/log/foreman/production*`" ]; then 
 		#for i in `ls -rt $base_foreman/var/log/foreman/production* | tail -4 | egrep gz$`; do gunzip -f $i 2>/dev/null; done
 		#for i in `ls -rt $base_foreman/var/log/foreman/production* | tail -4 | egrep xz$`; do xz -fd $i 2>/dev/null; done
-		#cat `ls -rt $base_foreman/var/log/foreman/production* | tail -4` | tail -10000 > $base_dir/sysmgmt/production.log; else touch $base_dir/sysmgmt/production.log; 
-		ln -s -r $base_foreman/var/log/foreman/production.log $base_dir/sysmgmt/production.log
+		cat `ls -rt $base_foreman/var/log/foreman/production* | tail -4` | tail -10000 > $base_dir/sysmgmt/production.log; else touch $base_dir/sysmgmt/production.log; 
+		#ln -s -r $base_foreman/var/log/foreman/production.log $base_dir/sysmgmt/production.log
 	fi
 
 	if [ "`ls -rt $base_foreman/var/log/foreman-installer/satellite*`" ]; then 
 		#for i in `ls -rt $base_foreman/var/log/foreman-installer/satellite* | tail -4 | egrep gz$`; do gunzip -f $i 2>/dev/null; done
 		#for i in `ls -rt $base_foreman/var/log/foreman-installer/satellite* | tail -4 | egrep xz$`; do xz -fd $i 2>/dev/null; done
-		#cat `ls -rt $base_foreman/var/log/foreman-installer/satellite* | tail -4` | tail -10000 > $base_dir/sysmgmt/satellite.log; else touch $base_dir/sysmgmt/satellite.log; 
-		ln -s -r $base_foreman/var/log/foreman-installer/satellite.log $base_dir/sysmgmt/satellite.log
+		cat `ls -rt $base_foreman/var/log/foreman-installer/satellite* | tail -4` | tail -10000 > $base_dir/sysmgmt/satellite.log; else touch $base_dir/sysmgmt/satellite.log; 
+		#ln -s -r $base_foreman/var/log/foreman-installer/satellite.log $base_dir/sysmgmt/satellite.log
 	fi
 
 	if [ "`ls -rt $base_foreman/var/log/foreman-installer/capsule*`" ]; then 
 		#for i in `ls -rt $base_foreman/var/log/foreman-installer/capsule* | tail -4 | egrep gz$`; do gunzip -f $i 2>/dev/null; done
 		#for i in `ls -rt $base_foreman/var/log/foreman-installer/capsule* | tail -4 | egrep xz$`; do xz -fd $i 2>/dev/null; done
-		#cat `ls -rt $base_foreman/var/log/foreman-installer/capsule* | tail -4` | tail -10000 > $base_dir/sysmgmt/capsule.log; else touch $base_dir/sysmgmt/capsule.log; 
-		ln -s -r $base_foreman/var/log/foreman-installer/capsule.log $base_dir/sysmgmt/capsule.log
+		cat `ls -rt $base_foreman/var/log/foreman-installer/capsule* | tail -4` | tail -10000 > $base_dir/sysmgmt/capsule.log; else touch $base_dir/sysmgmt/capsule.log; 
+		#ln -s -r $base_foreman/var/log/foreman-installer/capsule.log $base_dir/sysmgmt/capsule.log
 	fi
 
 	if [ "`ls -rt $base_foreman/var/log/katello-installer/katello-installer*`" ]; then 
 		#for i in `ls -rt $base_foreman/var/log/katello-installer/katello-installer* | tail -4 | egrep gz$`; do gunzip -f $i 2>/dev/null; done
 		#for i in `ls -rt $base_foreman/var/log/katello-installer/katello-installer* | tail -4 | egrep xz$`; do xz -fd $i 2>/dev/null; done
-		#cat `ls -rt $base_foreman/var/log/katello-installer/katello-installer* | tail -4` | tail -10000 > $base_dir/sysmgmt/katello-installer.log; else touch $base_dir/sysmgmt/katello-installer.log; 
-		ln -s -r $base_foreman/var/log/katello-installer/katello-installer.log $base_dir/sysmgmt/katello-installer.log
+		cat `ls -rt $base_foreman/var/log/katello-installer/katello-installer* | tail -4` | tail -10000 > $base_dir/sysmgmt/katello-installer.log; else touch $base_dir/sysmgmt/katello-installer.log; 
+		#ln -s -r $base_foreman/var/log/katello-installer/katello-installer.log $base_dir/sysmgmt/katello-installer.log
 	fi
 
 	if [ "`ls -rt $base_foreman/var/log/foreman-maintain/foreman-maintain*`" ]; then 
 		#for i in `ls -rt $base_foreman/var/log/foreman-maintain/foreman-maintain* | tail -4 | egrep gz$`; do gunzip -f $i 2>/dev/null; done
 		#for i in `ls -rt $base_foreman/var/log/foreman-maintain/foreman-maintain* | tail -4 | egrep xz$`; do xz -fd $i 2>/dev/null; done
-		#cat `ls -rt $base_foreman/var/log/foreman-maintain/foreman-maintain* | tail -4` | tail -10000 > $base_dir/sysmgmt/foreman-maintain.log; else touch $base_dir/sysmgmt/foreman-maintain.log; 
-		ln -s -r $base_foreman/var/log/foreman-maintain/foreman-maintain.log $base_dir/sysmgmt/foreman-maintain.log
+		cat `ls -rt $base_foreman/var/log/foreman-maintain/foreman-maintain* | tail -4` | tail -10000 > $base_dir/sysmgmt/foreman-maintain.log; else touch $base_dir/sysmgmt/foreman-maintain.log; 
+		#ln -s -r $base_foreman/var/log/foreman-maintain/foreman-maintain.log $base_dir/sysmgmt/foreman-maintain.log
 	fi
 
 	if [ -f "$base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot" ] || [ -d "$base_dir/var/log/journal" ]; then
-		#cat `journalctl -D $base_dir/var/log/journal 2>/dev/null | tail -10000` $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | egrep "^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]" | sort -h | uniq | tail -10000 > $base_dir/sysmgmt/journal.log
-		touch $base_dir/sysmgmt/journal.log
+		cat `journalctl -D $base_dir/var/log/journal 2>/dev/null | tail -10000` $base_dir/sos_commands/logs/journalctl_--no-pager_--catalog_--boot | egrep "^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]" | sort -h | uniq | tail -10000 > $base_dir/sysmgmt/journal.log
+		#touch $base_dir/sysmgmt/journal.log
 	else
 		touch $base_dir/sysmgmt/journal.log
 	fi
 
 	touch "$base_dir/sysmgmt/services.txt"
 	if [ -f "$base_dir/sos_commands/systemd/systemctl_status_--all" ]; then
-		cat $base_dir/sos_commands/systemd/systemctl_status_--all | sed -n '/service -/,/timer -/p' | sed -n '/service -/,/target -/p' | sed -n '/service -/,/swap -/p' | sed -n '/service -/,/socket -/p' | sed -n '/service -/,/slice -/p' | sed s'/\●/\*/'g | egrep '^\* ntpd|^\* chronyd|^\* systemd-timedatectl|^\* cockpit|^\* goferd|^\* elasticsearch|^\* named|^\* dhcpd|^\* osbuild|^\* postgres|^\* httpd|^\* light|^\* puppet|^\* redis|^\* squid|^\* foreman|^\* tomcat|^\* virt-who|^\* qpidd|^\* qdrouterd|^\* mongod|^\* rh-mongodb34-mongod|^\* celery|^\* pulp|^\* dynflow|^\* smart_proxy_dynflow_core|^\* mosquitto|tftp.service -' -A 20 | egrep -v 'displaying |\|-' &> $base_dir/sysmgmt/services.txt
+		cat $base_dir/sos_commands/systemd/systemctl_status_--all | sed -n '/service -/,/timer -/p' | sed -n '/service -/,/target -/p' | sed -n '/service -/,/swap -/p' | sed -n '/service -/,/socket -/p' | sed -n '/service -/,/slice -/p' | sed s'/\●/\*/'g | egrep '^\* ntpd|^\* chronyd|^\* systemd-timedatectl|^\* cockpit|^\* goferd|^\* elasticsearch|^\* named|^\* dhcpd|^\* osbuild|^\* postgres|^\* httpd|^\* light|^\* puppet|^\* redis|^\* squid|^\* foreman|^\* tomcat|^\* virt-who|^\* qpidd|^\* qdrouterd|^\* mongod|^\* rh-mongodb34-mongod|^\* celery|^\* pulp|^\* dynflow|^\* smart_proxy_dynflow_core|^\* mosquitto|^\* yggdrasild|tftp.service -' -A 20 | egrep -v 'displaying |\|-' &> $base_dir/sysmgmt/services.txt
 	fi
 
 
@@ -1226,17 +1235,17 @@ if [ -f "`find $base_dir/etc/foreman-proxy -type f | egrep -v key | egrep -i '\.
 	MYDATE_EPOCH=`date -d now +"%Y%m%d%H%M"`;
 	OUTPUT=$(for i in `find $base_dir/etc/foreman-proxy -type f -exec file {} \; | egrep -v key | egrep '\.pem.text:|\.crt.text:' | awk -F":" '{print $1}' | sort`; do 
 		echo $i; 
-		START_DATE=`cat $i | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
+		START_DATE=`cat $i | egrep -i "not before" | sed s'/Not Before://'g | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -k1h -k4 -k3 | tail -1`; 
 		if [ "$START_DATE" != "" ]; then 
 			echo -n 'Not Before: ';
 			echo "$START_DATE" | egrep . --color='ALWAYS'; 
 		fi; 
-		END_DATE=`cat $i | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//'`; 
+		END_DATE=`cat $i | egrep -i "not after" | sed s'/Not After ://'g | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -k7 -k4h -k6 | tail -1`; 
 		if [ "$END_DATE" != "" ]; then 
 			echo -n 'Not After: ';
 			echo "$END_DATE" | egrep . --color='ALWAYS'; 
 		fi;
-		KEY_LENGTH=$(cat $i | egrep -i "bit\)" | sed s'/Public-Key://'g | sed 's/^[ \t]*//;s/[ \t]*$//');
+		KEY_LENGTH=$(cat $i | egrep -i "bit\)" | sed s'/Public-Key://'g | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u);
 		if [ "$KEY_LENGTH" != "" ]; then 
 			echo -n 'Key Length: ';
 			echo "$KEY_LENGTH";
@@ -1322,7 +1331,7 @@ if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ] && [ -f "$base_dir/etc/fore
 	PROXY_CA=`openssl x509 -in $base_dir/etc/foreman/proxy_ca.pem -text -noout |& grep -A 1 'Subject Key Identifier' | tail -1 | awk '{print $1}'`
 	log "$SSL_CERT"
 	log "$PROXY_CA"
-	diff <(echo $SSL_CERT) <(echo $PROXY_CA) &>/dev/null;if [ "$?" -eq 0 ]; then log "certificates match"; else log "certificates differ"; fi
+	diff <(echo $SSL_CERT) <(echo $PROXY_CA) &>/dev/null;if [ "$?" -eq 0 ]; then log "certificates match"; else log "certificates differ | egrep --color=always '.'"; fi
 	log "---"
 	log
 fi
@@ -1574,6 +1583,34 @@ if [ -f "$base_dir/etc/sysconfig/dynflowd" ]; then
 fi
 
 
+log_tee "## open file descriptors"
+log
+
+log "// Too many open files errors"
+log "egrep -ir 'Too many open files' in /var/log/messages"
+log "---"
+log_cmd "egrep -ir --color=always 'Too many open files' $base_dir/var/log/messages | tail -30"
+log "---"
+log
+
+log "// global maximum open files"
+log "cat /proc/sys/fs/file-max"
+log "---"
+log_cmd "cat $base_dir/proc/sys/fs/file-max"
+log "---"
+log "  Note:  To change this, edit the parameter fs.file-max in '/etc/sysctl.conf' and then run 'sysctl -p' to commit.  To check this live, run 'ulimit -n' as root.  The default is usually 1024."
+log "---"
+log
+
+log "// maximum open files by service"
+log "egrep -ir LimitNOFILE /etc/systemd/system/ | egrep -v \#"
+log "---"
+log_cmd "egrep -ir --color=always LimitNOFILE $base_dir/etc/systemd/system/ | egrep -v \#"
+log "---"
+log "  Note:  To change this, edit the service or a file within the service's directory, run 'systemctl daemon-reload' and then restart the service(s)."
+log "  Alternatively, KCS https://access.redhat.com/solutions/7143419 describes how to make these changes permanent for some services through the custom hiera file."
+log "---"
+log
 
 
 
@@ -1841,6 +1878,17 @@ log_cmd "sort $base_dir/ip_addr | egrep --color=always '^|$IPADDRLIST'"
 export GREP_COLORS='ms=01;31'
 log "---"
 log
+
+if [ ! "$(egrep 'DEVICE|BOOTPROTO|ONBOOT' $base_dir/etc/sysconfig/network-scripts/ifcfg* 2>/dev/null)" == "" ]; then
+	log "// ifcfg profiles NetworkManager controlled?"
+	log "egrep -v '  \-\-' /sos_commands/networkmanager/nmcli_con"
+	log "---"
+	log_cmd "egrep -i 'NM_CONTROLLED=no' $base_dir/etc/sysconfig/network-scripts/ifcfg* | egrep --color=always -i '^|no$'"
+	log "---"
+	log "Note:  If an ifcfg network connection isn't controlled by NetworkManager, the migration scripts for it (including those built into the leapp tools) will fail."
+	log "---"
+	log
+fi
 
 log "// nmcli connections"
 log "egrep -v '  \-\-' /sos_commands/networkmanager/nmcli_con"
@@ -2317,10 +2365,14 @@ SETDASH='FALSE'
 log "Note:  For clients registered to Satellite on RHEL 9, the prefix should be /subscription rather than /rhsm"
 log
 
-log "// installed certificate"
+log "// installed certificates"
 log "cat /etc/pki/consumer/cert.pem | openssl x509 -noout -text | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm'"
 log "---"
 log_cmd "cat $base_dir/etc/pki/consumer/cert.pem | openssl x509 -noout -text | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|sha1W'"
+log "---"
+log "cat /etc/rhsm/ca/katello-server-ca.pem | openssl x509 -noout -text | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm'"
+log "---"
+log_cmd "cat $base_dir/etc/rhsm/ca/katello-server-ca.pem | openssl x509 -noout -text | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|sha1W'"
 log "---"
 log
 
@@ -2461,12 +2513,14 @@ else
 	log
 fi
 
-log "// rhel 8 repository overrides (for leapp upgrades)"
-log "jq '.[] | select(.contentLabel |contains("rhel-8")) ' //var/lib/rhsm/cache/content_overrides.json"
-log "---"
-log_cmd "jq '.[] | select(.contentLabel |contains("rhel-8")) ' $base_dir//var/lib/rhsm/cache/content_overrides.json"
-log "---"
-log
+if [ "$(egrep ^leapp-upgrade $base_dir/installed-rpms)" != "" ]; then
+	log "// rhel 8 repository overrides (for leapp upgrades)"
+	log "jq '.[] | select(.contentLabel |contains("rhel-8")) ' //var/lib/rhsm/cache/content_overrides.json"
+	log "---"
+	log_cmd "jq '.[] | select(.contentLabel |contains("rhel-8")) ' $base_dir//var/lib/rhsm/cache/content_overrides.json"
+	log "---"
+	log
+fi
 
 log "// release version (for version locking)"
 log "cat /etc/yum/vars/releasever 2>/dev/null"
@@ -2666,6 +2720,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log_cmd "egrep 'satellite' $base_dir/sos_commands/dnf/dnf_--assumeno_module_list | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | uniq"
 		log "---"
 		log_cmd "egrep '\[x|x\]' $base_dir/sos_commands/dnf/dnf_--assumeno_module_list | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | uniq | egrep Hint"
+		log "---"
 		log
 
 	fi
@@ -3213,7 +3268,7 @@ else
 	log "// is postgres listening?"
 	log "grepping netstat_-W_-neopa file"
 	log "---"
-	log_cmd "egrep '^Active|^Proto|postgres|postmaster' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+	log_cmd "egrep '^Active|^Proto|postgres|postmaster' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN|tcp|udp'"
 	log "---"
 	log
 
@@ -3546,7 +3601,7 @@ else
 	log "// is apache listening?"
 	log "grepping netstat_-W_-neopa file for ports 443 and 80"
 	log "---"
-	log_cmd "egrep '^Active|^Proto|httpd' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+	log_cmd "egrep '^Active|^Proto|httpd' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN|tcp|udp'"
 	log "---"
 	log
 
@@ -3731,6 +3786,34 @@ else
 
 	fi
 
+	log "// suspicious HTTP requests in /var/log/httpd"
+	log "number of failed root requests:"
+	log "---"
+	log_cmd "egrep -r 'GET' $base_dir/var/log/httpd | egrep -v 'HTTP\/1.1\" 200' | egrep 'root' | wc -l"
+	log "---"
+	log
+	log "number of failed password requests:"
+	log "---"
+	log_cmd "egrep -r 'GET' $base_dir/var/log/httpd | egrep -v 'HTTP\/1.1\" 200' | egrep 'password' | wc -l"
+	log "---"
+	log
+	log "number of failed boot.ini requests:"
+	log "---"
+	log_cmd "egrep -r 'GET' $base_dir/var/log/httpd | egrep -v 'HTTP\/1.1\" 200' | egrep 'boot.ini' | wc -l"
+	log "---"
+	log
+	log "IP sources (for root, password and boot.ini, specifically):"
+	log "---"
+	log_cmd "egrep -r 'GET' $base_dir/var/log/httpd | egrep -v 'HTTP\/1.1\" 200' | egrep 'root|password|boot.ini' | awk -F':' '{print $2}' | awk '{print $1}' | sort -u"
+	log "---"
+	log
+	log "Last several requests mentioning Nessus (a common third-party vulnerability scanner):"
+	log "---"
+	NESSUS_LOGS=$(egrep -ir nessus $base_dir/var/log/httpd | egrep -v 'HTTP/1.1\" 200' | tail -30)
+	log "$NESSUS_LOGS"
+	log "---"
+	log
+
 
 fi
 
@@ -3825,7 +3908,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log "// is passenger listening?"
 		log "grepping netstat_-W_-neopa file"
 		log "---"
-		log_cmd "egrep -i '^Active|^Proto|passenger' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+		log_cmd "egrep -i '^Active|^Proto|passenger' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN|tcp|udp'"
 		log "---"
 		log
 
@@ -4325,6 +4408,24 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log "---"
 		log
 
+		if [ "`egrep ^redis $base_dir/installed-rpms`" ]; then
+			log "// installed redis packages"
+			log "egrep '^redis' /installed-rpms"
+			log "---"
+			log_cmd "egrep '^redis' $base_dir/installed-rpms | egrep -i --color=always '^|epel|fedora'"
+			log "---"
+			log
+		fi
+
+		if [ -f "$base_dir/installed-rpms/sos_commands/dnf/dnf_module_list" ]; then
+			log "// check redis modules"
+			log "egrep '^redis' /installed-rpms/sos_commands/dnf/dnf_module_list"
+			log "---"
+			log_cmd "egrep '^redis' $base_dir/installed-rpms/sos_commands/dnf/dnf_module_list | sed 's/^[ \t]*//;s/[ \t]*$//'"
+			log "---"
+			log
+		fi
+
 
 		log "// redis_url setting:"
 		log "egrep databases /etc/redis/redis.conf"
@@ -4343,7 +4444,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log "// is redis listening?"
 		log "grepping netstat_-W_-neopa file"
 		log "---"
-		log_cmd "egrep '^Active|^Proto|redis' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+		log_cmd "egrep '^Active|^Proto|redis' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN|tcp|udp'"
 		log "---"
 		log
 
@@ -4457,7 +4558,7 @@ else
 		log "// is satellite listening on port 9090?"
 		log "grepping netstat_-W_-neopa file for ports 9090"
 		log "---"
-		log_cmd "egrep '^Active|^Proto|9090' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+		log_cmd "egrep '^Active|^Proto|9090' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN|tcp|udp'"
 		log "---"
 		log
 
@@ -4580,10 +4681,10 @@ if [ -e "$base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml" ] |
 	log "cat /etc/foreman-proxy/settings.d/tftp.yml"
 	log "---"
 	log_cmd "egrep tftp $base_dir/etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml} | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT|$IPADDRLIST'"
+	log "---"
 	log
 	log "cat /etc/foreman-proxy/settings.d/tftp.yml"
 	log "---"
-	log
 	log_cmd "cat $base_dir/etc/foreman-proxy/settings.d/tftp.yml | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|$HOSTNAME_SHORT|$IPADDRLIST'"
 	log "---"
 	log
@@ -5107,7 +5208,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log "// is candlepin listening?"
 		log "egrep file netstat_-W_-neopa for subscription-manager port 8443"
 		log "---"
-		log_cmd "egrep '^Active|^Proto|\:8443' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep -v 'Bluetooth' | egrep '^Active|^Proto|LISTEN' | uniq"
+		log_cmd "egrep '^Active|^Proto|\:8443|\:23443' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep -v 'Bluetooth' | egrep '^Active|^Proto|LISTEN|tcp|udp' | uniq"
 		log "---"
 		log
 
@@ -5235,7 +5336,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log "// is mongodb listening?"
 		log "grepping netstat_-W_-neopa file"
 		log "---"
-		log_cmd "egrep '^Active|^Proto|mongod' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+		log_cmd "egrep '^Active|^Proto|mongod' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN|tcp|udp'"
 		log "---"
 		log
 
@@ -5389,7 +5490,6 @@ else
 	log "---"
 	log
 
-
 	log "// pulp_workers configuration"
 	log "egrep '^PULP_MAX_TASKS_PER_CHILD\|^PULP_CONCURRENCY|pulpcore_worker_count' /etc/default/pulp_workers /etc/foreman-installer/scenarios.d/{satellite-answers.yaml,capsule-answers.yaml}"
 	log "---"
@@ -5404,13 +5504,28 @@ else
 	log "---"
 	log
 
-
 	log "// max-requests setting for pulpcore-api service"
 	log "egrep 'max-requests' /etc/systemd/system/pulpcore-api.service"
 	log "---"
 	log_cmd "egrep 'max-requests' $base_dir/etc/systemd/system/pulpcore-api.service"
 	log "---"
 	log
+
+	if [ -e "$base_dir/etc/systemd/system/pulpcore-content.service" ]; then
+		log "// pulpcore-content limits"
+		log "egrep -i '^|LimitNOFILE' /etc/systemd/system/pulpcore-content.service"
+		log "---"
+		log_cmd "GREP_COLORS='ms=01;33' egrep -i --color=always '^|LimitNOFILE' $base_dir/etc/systemd/system/pulpcore-content.service"
+		log
+		log "---"
+		log
+		log "  Note:  A LimitNOFILE value of 10000 is recommended for Satellite or capsule version 6.18.0 or 6.18.1."
+		log
+		log "  Then run these commands:"
+		log "    # systemctl daemon-reload"
+		log "    # systemctl restart pulpcore-content"
+		log
+	fi
 
 	log "// pulp squid port"
 	log "egrep pulp -A 1 /etc/squid/squid.conf"
@@ -5489,7 +5604,7 @@ else
 	log "// is squid listening?"
 	log "grepping netstat_-W_-neopa file"
 	log "---"
-	log_cmd "egrep '^Active|^Proto|squid' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+	log_cmd "egrep '^Active|^Proto|squid' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN|tcp|udp'"
 	log "---"
 	log
 
@@ -5630,7 +5745,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log "// is qpidd listening?"
 		log "grepping netstat_-W_-neopa file"
 		log "---"
-		log_cmd "egrep '^Active|^Proto|qpidd' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep -v 'Bluetooth' | egrep '^Active|^Proto|LISTEN' | uniq"
+		log_cmd "egrep '^Active|^Proto|qpidd' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep -v 'Bluetooth' | egrep '^Active|^Proto|LISTEN|tcp|udp' | uniq"
 		log "---"
 		log
 
@@ -5726,7 +5841,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 		log "// is qdrouterd listening?"
 		log "grepping netstat_-W_-neopa file"
 		log "---"
-		log_cmd "egrep '^Active|^Proto|qdrouterd' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+		log_cmd "egrep '^Active|^Proto|qdrouterd' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN|tcp|udp'"
 		log "---"
 		log
 
@@ -5774,14 +5889,14 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log "// is mosquitto listening?"
 		log "grepping netstat_-W_-neopa file"
 		log "---"
-		log_cmd "egrep '^Active|^Proto|mosquitto' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+		log_cmd "egrep '^Active|^Proto|mosquitto' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN|tcp|udp'"
 		log "---"
 		log
 
 		log "// is mosquitto configured?"
-		log "egrep mqtt /etc/foreman-proxy/settings.d/remote_execution_ssh.yml"
+		log "egrep 'mqtt|mode' /etc/foreman-proxy/settings.d/remote_execution_ssh.yml"
 		log "---"
-		log_cmd "egrep mqtt $base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml | egrep '^|$HOSTNAME'"
+		log_cmd "egrep 'mqtt|mode' $base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml | egrep --color=always '^|$HOSTNAME' | GREP_COLORS='ms=01;33' egrep --color=always 'pull-mqtt'"
 		log "---"
 		log
 
@@ -5815,15 +5930,15 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep 'goferd|yggdrasild'`" 
 	log
 	log "The katello-host-tools-tracer package (introduced in Satellite 6.3) installs the katello-tracer-upload command, which tells the Satellite server whether any processes require restarting after being updated."
 	log
-	log "The katello-pull-transport-migrate package (introduced in Satellite 6.12) installs the yggdrasild service, which allows clients to use a REX in pull mode over port 1883."
+	log "The katello-pull-transport-migrate package (introduced in Satellite 6.12) installs the yggdrasild service (an mqtt client), which allows clients to use a REX in pull mode over port 1883."
 	log
 	log "These packages should be installed on capsule servers and other Satellite-registered hosts, and never on the Satellite server itself, because they cannot communicate properly with the Customer Portal and will generate errors."
 	log
 
-	log "// installed katello-agent and/or gofer packages"
+	log "// installed katello-agent, gofer and/or yggdrasil packages"
 	log "from files /installed-rpms and /sos_commands/yum/yum_list_installed"
 	log "---"
-	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate|^katello-package-upload|^katello-host-update|proton)' $base_dir/installed-rpms 2>&1 | egrep -v '$HOSTNAME' | egrep -i --color=always '^|epel|fedora'"
+	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate|^katello-package-upload|^katello-host-update|proton|katello-pull-transport-migrate|yggdrasil)' $base_dir/installed-rpms 2>&1 | egrep -v '$HOSTNAME' | egrep -i --color=always '^|epel|fedora'"
 	log
 	log_cmd "grep -E '(^katello-agent|^gofer|^katello-host|^katello-pull-transport-migrate|^katello-package-upload|^katello-host-update|proton)' $base_dir/sos_commands/yum/yum_list_installed 2>&1 | egrep -v '$HOSTNAME' | egrep -i --color=always '^|epel|fedora'"
 	log "---"
@@ -5865,10 +5980,10 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt | egrep 'goferd|yggdrasild'`" 
 	log "---"
 	log
 
-	log "// are katello/gofer listening?"
-	log "grepping netstat_-W_-neopa file for katello-agent port 5646 and goferd port 5647"
+	log "// are katello/gofer/yggdrasil listening?"
+	log "grepping netstat_-W_-neopa file for katello-agent port 5646, goferd port 5647 and yggdrasil port 1883"
 	log "---"
-	log_cmd "egrep '^Active|^Proto|\:5646|\:5647|\:1883' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+	log_cmd "egrep '^Active|^Proto|\:5646|\:5647|\:1883' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN|tcp|udp'"
 	log "---"
 	log
 
@@ -6031,7 +6146,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 
 		SERVICE_NAME='puppetserver'
-		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 30 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 	else
 		log
 		log_cmd "egrep $SERVICE_NAME $base_dir/ps"
@@ -6044,7 +6159,7 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	log "// is puppetserver listening?"
 	log "grepping netstat_-W_-neopa file for port 8140"
 	log "---"
-	log_cmd "egrep '^Active|^Proto|\:8140' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN'"
+	log_cmd "egrep '^Active|^Proto|\:8140' $base_dir/sos_commands/networking/netstat_-W_-neopa | sed -n '/^Active/,/^Active/p' | sed '$ d' | egrep '^Active|^Proto|LISTEN|tcp|udp'"
 	log "---"
 	log
 
