@@ -67,34 +67,67 @@ main()
 
 	  base_dir=""
 	  last_arg=$(echo $@ | awk '{print $NF}')
+	  if [ "$(echo $last_arg | egrep '/$')" == "" ]; then last_arg="$last_arg/"; fi
 	  sos_subdir=`ls -d $last_arg/sosreport-* $last_arg/foreman-debug-* $last_arg/spacewalk-debug $last_arg/soscleaner* 2>/dev/null | grep . | head -1`
 
 	  if [ -d "$sos_subdir" ]; then
-		touch $sos_subdir/version.txt;
-	  elif [ -d "$last_arg" ]; then 
-		touch $last_arg/version.txt;
+		  if [ -d $sos_subdir/conf ] || [ -d $sos_subdir/sos_commands ] || [ -e $sos_subdir/version.txt ] || [ -e $sos_subdir/hammer-ping ] || [ "$FORCE_GENERATE" == "TRUE" ]; then
+
+			base_dir="$sos_subdir"
+			touch $sos_subdir/version.txt;
+
+		  else
+
+			echo "This is not a sosreport directory.  Please provide the path to a correct sosreport directory."
+			exit 1
+
+		  fi
+
+	  elif [ -d "$last_arg" ]; then
+		  if [ -d $last_arg/conf ] || [ -d $last_arg/sos_commands ] || [ -e $last_arg/version.txt ] || [ -e $last_arg/hammer-ping ] || [ "$FORCE_GENERATE" == "TRUE" ]; then
+
+			base_dir="$last_arg"
+			touch $last_arg/version.txt;
+
+		  else
+
+			echo "This is not a sosreport directory.  Please provide the path to a correct sosreport directory."
+			exit 1
+
+		  fi
+
 	  else
-		touch version.txt;
+		  if [ -d conf ] || [ -d sos_commands ] || [ -e version.txt ] || [ -f hammer-ping ] || [ "$FORCE_GENERATE" == "TRUE" ]; then
+
+			base_dir="$(pwd)"
+			touch version.txt;
+
+		  else
+
+			echo "This is not a sosreport directory.  Please provide the path to a correct sosreport directory."
+			exit 1
+
+		  fi
 	  fi;
 
-	  if [ -d conf ] || [ -d sos_commands ] || [ -e version.txt ] || [ -f hammer-ping ]; then
-
-		base_dir=`pwd`
-
-	  elif [ -d $last_arg/conf ] || [ -d $last_arg/sos_commands ] || [ -e $last_arg/version.txt ] || [ -e $last_arg/hammer-ping ]; then
-
-		base_dir="$last_arg"
-
-	  elif [ -d $sos_subdir/conf ] || [ -d $sos_subdir/sos_commands ] || [ -e $sos_subdir/version.txt ] || [ -e $sos_subdir/hammer-ping ]; then
-
-		base_dir="$sos_subdir"
-
-	  else
-
-		echo "This is not a sosreport directory.  Please provide the path to a correct sosreport directory."
-		exit 1
-
-	  fi
+#	  if [ -d conf ] || [ -d sos_commands ] || [ -e version.txt ] || [ -f hammer-ping ]; then
+#
+#		base_dir=`pwd`
+#
+#	  elif [ -d $last_arg/conf ] || [ -d $last_arg/sos_commands ] || [ -e $last_arg/version.txt ] || [ -e $last_arg/hammer-ping ]; then
+#
+#		base_dir="$last_arg"
+#
+#	  elif [ -d $sos_subdir/conf ] || [ -d $sos_subdir/sos_commands ] || [ -e $sos_subdir/version.txt ] || [ -e $sos_subdir/hammer-ping ]; then
+#
+#		base_dir="$sos_subdir"
+#
+#	  else
+#
+#		echo "This is not a sosreport directory.  Please provide the path to a correct sosreport directory."
+#		exit 1
+#
+#	  fi
 
 
 	  sos_path=$base_dir
@@ -983,8 +1016,10 @@ sos_version=$3
 HOSTNAME=""
 if [ "$(jq '.\"network.hostname\"' $base_dir/var/lib/rhsm/facts/facts.json 2>/dev/null)" != '' ]; then
 	HOSTNAME=$(jq '."network.hostname"' $base_dir/var/lib/rhsm/facts/facts.json | tr -d '"')
-elif [ "$(cat $base_dir/sos_commands/host/hostnamectl_status 2>/dev/null | egrep -v ^Failed)" != '' ]; then
+elif [ "$(cat $base_dir/sos_commands/host/hostnamectl_status 2>/dev/null | egrep '^Failed|Static hostname: \(unset\)')" == '' ]; then
 	HOSTNAME=$(cat $base_dir/sos_commands/host/hostnamectl_status | egrep 'Static hostname:' | awk '{print $NF}')
+elif [ "$(cat $base_dir/sos_commands/host/hostnamectl_status 2>/dev/null | egrep '^Failed|Transient hostname: \(unset\)')" == '' ]; then
+	HOSTNAME=$(cat $base_dir/sos_commands/host/hostnamectl_status | egrep 'Transient hostname:' | awk '{print $NF}')
 elif [ "$(cat $base_dir/hostname 2>/dev/null)" != '' ]; then 
 	HOSTNAME=$(cat $base_dir/hostname); 
 fi
@@ -1461,7 +1496,7 @@ log "---"
 log
 
 log "// memory usage"
-log "cat /free"
+log "output of command 'free'"
 log "---"
 log_cmd "cat $base_dir/free"
 log " "
@@ -2368,11 +2403,11 @@ log
 log "// installed certificates"
 log "cat /etc/pki/consumer/cert.pem | openssl x509 -noout -text | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm'"
 log "---"
-log_cmd "cat $base_dir/etc/pki/consumer/cert.pem | openssl x509 -noout -text | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|sha1W'"
+log_cmd "cat $base_dir/etc/pki/consumer/cert.pem | openssl x509 -noout -text | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|before|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|sha1W'"
 log "---"
-log "cat /etc/rhsm/ca/katello-server-ca.pem | openssl x509 -noout -text | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm'"
+log "cat /etc/rhsm/ca/katello-server-ca.pem | openssl x509 -noout -text | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|before|bit\)|othername|after|Signature Algorithm'"
 log "---"
-log_cmd "cat $base_dir/etc/rhsm/ca/katello-server-ca.pem | openssl x509 -noout -text | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|sha1W'"
+log_cmd "cat $base_dir/etc/rhsm/ca/katello-server-ca.pem | openssl x509 -noout -text | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|before|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|sha1W'"
 log "---"
 log
 
@@ -2587,8 +2622,8 @@ log "// packages provided by 3rd party vendors"
 
 log "show third-party packages from package-data and/or 3rd_party files"
 log "---"
-log_cmd "egrep -hv 'Red Hat|^$HOSTNAME|^gpg\-pubkey\-' $base_dir/sos_commands/rpm/package-data | cut -f1,4 | sort -k2 | egrep -v '^localhost-tomcat' | egrep -i --color=always '^|$SATPACKAGES|curl|Fedora|Kojii|CentOS|syslog-ng|katello-ca-consumer-$HOSTNAME'"
-log_cmd "cat $base_dir/3rd_party 2>/dev/null | sort -k2 | egrep -v '^localhost-tomcat' | egrep -i --color=always '^|$SATPACKAGES|curl|Fedora|Kojii|CentOS|syslog-ng|katello-ca-consumer-$HOSTNAME'"
+log_cmd "egrep -hv 'Red Hat|^$HOSTNAME|^gpg\-pubkey\-' $base_dir/sos_commands/rpm/package-data | cut -f1,4 | sort -k2 | egrep -v '^localhost-tomcat' | egrep -i --color=always '^|$SATPACKAGES|curl|Fedora|Koji|CentOS|syslog-ng|katello-ca-consumer-$HOSTNAME'"
+log_cmd "cat $base_dir/3rd_party 2>/dev/null | sort -k2 | egrep -v '^localhost-tomcat' | egrep -i --color=always '^|$SATPACKAGES|curl|Fedora|Koji|CentOS|syslog-ng|katello-ca-consumer-$HOSTNAME'"
 log "---"
 log
 
@@ -2597,8 +2632,8 @@ log
 
 log "// selected incompatible packages"
 log "---"
-log_cmd "egrep -hv 'Red Hat|^$HOSTNAME|^gpg\-pubkey\-' $base_dir/sos_commands/rpm/package-data | cut -f1,4 | sort -k2 | egrep -i --color=always 'rubygem-foreman_leapp|rubygem-rgen|rubygem-abrt' | egrep -i --color=always '^|Fedora|Kojii|CentOS'"
-log_cmd "cat $base_dir/3rd_party 2>/dev/null | sort -k2 | egrep -i --color=always 'rubygem-foreman_leapp|rubygem-rgen|rubygem-abrt' | egrep -i --color=always '^|Fedora|Kojii|CentOS'"
+log_cmd "egrep -hv 'Red Hat|^$HOSTNAME|^gpg\-pubkey\-' $base_dir/sos_commands/rpm/package-data | cut -f1,4 | sort -k2 | egrep -i --color=always 'rubygem-foreman_leapp|rubygem-rgen|rubygem-abrt' | egrep -i --color=always '^|Fedora|Koji|CentOS'"
+log_cmd "cat $base_dir/3rd_party 2>/dev/null | sort -k2 | egrep -i --color=always 'rubygem-foreman_leapp|rubygem-rgen|rubygem-abrt' | egrep -i --color=always '^|Fedora|Koji|CentOS'"
 log
 log_cmd "cat $base_dir/sos_commands/ruby/gem_list 2>/dev/null | egrep -i --color=always 'abrt|foreman_leapp|rgen'"
 log "---"
@@ -2729,7 +2764,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log "// upgrade lines with exit codes"
 	log "lines from /var/log/foreman-maintain/foreman-maintain.log\* and /var/log/foreman-installer/{satellite\*,capsule\*}"
 	log "---"
-	log_cmd "echo -e \"$(egrep -hir '\-\-target-version|Exit with status|upgrade|update|' $base_dir/var/log/foreman-maintain/foreman-maintain.log*)\n\" \"$(egrep -hir 'Exit with status code' $base_dir/var/log/foreman-installer/{satellite*,capsule*})\n\" | sed s'/I\, \[//'g | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | sort -h | egrep upgrade -A 1 | tail -50"
+	log_cmd "echo -e \"$(egrep -hir '\-\-target-version|Exit with status|upgrade|update' $base_dir/var/log/foreman-maintain/foreman-maintain.log* $base_dir/var/log/foreman-installer/{satellite*,capsule*})\n\" | sed s'/I\, \[//'g | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | sort -h | egrep upgrade -A 1 | tail -50"
 	log "---"
 	log
 
@@ -3875,12 +3910,30 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 		log "---"
 		log
 
-		log "// puma performance settings"
+		log "// puma worker and thread settings"
 		log "grep -i puma /etc/systemd/system/foreman.service.d/installer.conf"
 		log "---"
 		log_cmd "grep -i puma $base_dir/etc/systemd/system/foreman.service.d/installer.conf"
 		log "---"
 		log
+
+		log "// foreman service limits"
+		log "egrep 'dropin|satellite_performance_limits|unit:|content:|Service|LimitNOFILE' /etc/foreman-installer/custom-hiera.yaml"
+		log "egrep LimitNOFILE /etc/systemd/system/foreman.service.d/satellite_performance_limits.conf"
+		log "---"
+		log_cmd "egrep 'dropin|satellite_performance_limits|unit:|content:|Service|LimitNOFILE' $base_dir/etc/foreman-installer/custom-hiera.yaml"
+		log "---"
+		log_cmd "egrep LimitNOFILE $base_dir/etc/systemd/system/foreman.service.d/satellite_performance_limits.conf"
+		log "---"
+		log
+		log "  Note:  The following values are recommended for Satellite 6.18 servers:"
+		log
+		log "    [Service]"
+		log "    LimitNOFILE=524288"
+		log "    LimitNOFILESoft=65536"
+		log
+
+
 
 	fi
 fi
@@ -5893,14 +5946,6 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log "---"
 		log
 
-		log "// is mosquitto configured?"
-		log "egrep 'mqtt|mode' /etc/foreman-proxy/settings.d/remote_execution_ssh.yml"
-		log "---"
-		log_cmd "egrep 'mqtt|mode' $base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml | egrep --color=always '^|$HOSTNAME' | GREP_COLORS='ms=01;33' egrep --color=always 'pull-mqtt'"
-		log "---"
-		log
-
-
 		log "// mosquitto limits"
 		log "cat /etc/systemd/system/mosquitto.service.d/limits.conf"
 		log "---"
@@ -5911,6 +5956,13 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log
 
 	fi
+
+	log "// is mosquitto configured?"
+	log "egrep 'mqtt|mode' /etc/foreman-proxy/settings.d/remote_execution_ssh.yml"
+	log "---"
+	log_cmd "egrep 'mqtt|mode' $base_dir/etc/foreman-proxy/settings.d/remote_execution_ssh.yml | egrep --color=always '^|$HOSTNAME' | GREP_COLORS='ms=01;33' egrep --color=always 'pull-mqtt'"
+	log "---"
+	log
 fi
 
 
