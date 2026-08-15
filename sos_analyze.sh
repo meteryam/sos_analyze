@@ -984,7 +984,7 @@ main()
 
 	touch "$base_dir/sysmgmt/services.txt"
 	if [ -f "$base_dir/sos_commands/systemd/systemctl_status_--all" ]; then
-		cat $base_dir/sos_commands/systemd/systemctl_status_--all | sed -n '/service -/,/timer -/p' | sed -n '/service -/,/target -/p' | sed -n '/service -/,/swap -/p' | sed -n '/service -/,/socket -/p' | sed -n '/service -/,/slice -/p' | sed s'/\●/\*/'g | egrep '^\* ntpd|^\* chronyd|^\* systemd-timedatectl|^\* cockpit|^\* goferd|^\* elasticsearch|^\* named|^\* dhcpd|^\* osbuild|^\* postgres|^\* httpd|^\* light|^\* puppet|^\* redis|^\* squid|^\* foreman|^\* tomcat|^\* virt-who|^\* qpidd|^\* qdrouterd|^\* mongod|^\* rh-mongodb34-mongod|^\* celery|^\* pulp|^\* dynflow|^\* smart_proxy_dynflow_core|^\* mosquitto|^\* yggdrasild|tftp.service -' -A 20 | egrep -v 'displaying |\|-' &> $base_dir/sysmgmt/services.txt
+		cat $base_dir/sos_commands/systemd/systemctl_status_--all | sed -n '/service -/,/timer -/p' | sed -n '/service -/,/target -/p' | sed -n '/service -/,/swap -/p' | sed -n '/service -/,/socket -/p' | sed -n '/service -/,/slice -/p' | sed s'/\●/\*/'g | egrep 'ntpd.service -|chronyd.service -|systemd-timedatectl.service -|cockpit.service -|goferd.service -|elasticsearch.service -|named.service -|dhcpd.service -|osbuild.service -|postgres*.service -|httpd.service -|light*.service -|puppet*.service -|redis.service -|squid.service -|foreman*.service -|tomcat.service -|virt-who.service -|qpidd.service -|qdrouterd.service -|mongod*.service -|celery.service -|pulp*.service -|dynflow*.service -|mosquitto.service -|yggdrasild.service -|tftp.service -|clad.service -|insights-client.service -' -A 20 | egrep -v 'displaying |\|-' &> $base_dir/sysmgmt/services.txt
 	fi
 
 
@@ -999,7 +999,7 @@ main()
 	# this is a list of red hat packages installed from the satellite repositories.
 	# we'll use it later to highlight conflicting third-party packages.
 
-	SATPACKAGES="ansible|apache-commons-|avalon-framework-|avalon-logkit-|boost-|candlepin|copy-jdk-configs-|createrepo|cyrus-sasl-|deltarpm-|dwz-|dynflow|ecj-|efivar-libs62-|facter-|flac-libs-|foreman|geronimo-jms-|geronimo-jta-|giflib-|gperftools-libs-|gsm-|hammer-|hiera-|httpd|ipmitool-|ipxe-bootimgs0180825-|jabber|katello|kobo-|liquibase-|log4j-|maven|mod_ssl|mod_wsgi-|mod_xsendfile-|mokutil51-|mongodb|oracle-config-|oracle-instantclient-basic0-|oracle-instantclient-selinux0-|oracle-nofcontext-selinux-|pcre-devel-|pcsc-lite-libs-|perl-Carp-|perl-Compress-Raw-Bzip2-|perl-Compress-Raw-Zlib-|perl-constant-|perl-Data-Dumper-|perl-DBI-|perl-Digest-|perl-Digest-MD5-|perl-Encode-|perl-Error-|perl-Exporter-|perl-File-Path-|perl-File-Temp-|perl-Filter-|perl-Getopt-Long-|perl-Git-|perl-HTTP-Tiny-|perl-IO-Compress-|perl-libs-|perl-macros-|perl-Net-Daemon-|perl-parent-|perl-PathTools-|perl-PlRPC-|perl-Pod-Escapes-|perl-podlators-|perl-Pod-Perldoc-|perl-Pod-Simple-|perl-Pod-Usage-|perl-Scalar-List-Utils-|perl-Socket-|perl-srpm-macros-|perl-Storable-|perl-TermReadKey-|perl-Text-ParseWords-|perl-Thread-Queue-|perl-threads-|perl-threads-shared-|perl-Time-HiRes-|perl-Time-Local-|perl-XML-NamespaceSupport-|postgresql|psmisc2-|pulp|puppet|qpid|redhat-rpm-config-|repoview|rh-nodejs4-runtime-|rh-nodejs6-runtime-|rpm-build-|ruby-augeas-|rubygem-actioncable-|rubygem-actionmailbox-|rubygem-actionmailer-|rubygem-actionpack-|rubygem-actiontext-|rubygem-actionview-|rubygem-activejob-|rubygem-activemodel-|rubygem-activerecord-|rubygem-activerecord-import-|rubygem-activerecord-session_store-|rubygem-activestorage-|rubygem-activesupport-|rubygem-acts_as_list-|rubygem-addressable-|rubygem-algebrick-|rubygem-amazing_print-|rubygem-ancestry-|rubygem-anemone-|rubygem-angular-rails-templates-|rubygem-ansi-|rubygem-apipie-bindings-|rubygem-apipie-dsl-|rubygem-apipie-params-|rubygem-apipie-rails-|rubygem-arel-|rubygem-audited-|rubygem-audited-activerecord-|rubygem-autoparse-|rubygem-awesome_print-|rubygem-azure_mgmt_compute-|rubygem-azure_mgmt_network-|rubygem-azure_mgmt_resources-|rubygem-azure_mgmt_storage-|rubygem-azure_mgmt_subscriptions-|rubygem-bastion-|rubygem-bcrypt-|rubygem-bcrypt_pbkdf-|rubygem-bigdecimal-|rubygem-builder-|rubygem-bundler-|rubygem-bundler_ext-|rubygem-clamp-|rubygem-coffee-rails-|rubygem-coffee-script-|rubygem-coffee-script-source-|rubygem-colorize-|rubygem-concurrent-ruby-|rubygem-concurrent-ruby-edge-|rubygem-connection_pool-|rubygem-crass-|rubygem-css_parser-|rubygem-daemons-|rubygem-dalli-|rubygem-deacon-|rubygem-declarative-|rubygem-declarative-option-|rubygem-deep_cloneable-|rubygem-deface-|rubygem-did_you_mean-|rubygem-diffy-|rubygem-docker-api-|rubygem-domain_name-|rubygem-ed25519-|rubygem-erubi-|rubygem-erubis-|rubygem-ethon-|rubygem-excon-|rubygem-execjs-|rubygem-extlib-|rubygem-facter-|rubygem-faraday-|rubygem-faraday-cookie_jar-|rubygem-fast_gettext-|rubygem-ffi-|rubygem-fog-|rubygem-fog-aws-|rubygem-fog-core-|rubygem-fog-digitalocean-|rubygem-fog-google-|rubygem-fog-json-|rubygem-fog-libvirt-|rubygem-fog-openstack-|rubygem-fog-ovirt-|rubygem-fog-rackspace-|rubygem-fog-vsphere-|rubygem-fog-xenserver-|rubygem-fog-xml-|rubygem-foreigner-|rubygem-formatador-|rubygem-friendly_id-|rubygem-fx-|rubygem-get_process_mem-|rubygem-gettext-|rubygem-gettext_i18n_rails-|rubygem-git-|rubygem-gitlab-sidekiq-fetcher-|rubygem-globalid-|rubygem-google-api-client-|rubygem-googleauth-|rubygem-google-cloud-env-|rubygem-graphql-|rubygem-graphql-batch-|rubygem-gssapi-|rubygem-hashie-|rubygem-highline-|rubygem-hike-|rubygem-hocon-|rubygem-httpclient-|rubygem-http-cookie-|rubygem-i18n-|rubygem-io-console-|rubygem-ipaddress-|rubygem-irb-|rubygem-jquery-ui-rails-|rubygem-json-|rubygem-jwt-|rubygem-kafo-|rubygem-kafo_parsers-|rubygem-kafo_wizards-|rubygem-launchy-|rubygem-ldap_fluff-|rubygem-little-plugger-|rubygem-locale-|rubygem-logging-|rubygem-loofah-|rubygem-mail-|rubygem-marcel-|rubygem-memoist-|rubygem-method_source-|rubygem-mimemagic-|rubygem-mime-types-|rubygem-mime-types-data-|rubygem-mini_mime-|rubygem-mini_portile2-|rubygem-minitest-|rubygem-mqtt-|rubygem-msgpack-|rubygem-ms_rest-|rubygem-ms_rest_azure-|rubygem-multi_json-|rubygem-multipart-post-|rubygem-mustermann-|rubygem-net-http-persistent-|rubygem-net_http_unix-|rubygem-net-ldap-|rubygem-net-ping-|rubygem-netrc-|rubygem-net-scp-|rubygem-net-ssh-|rubygem-nio4r-|rubygem-nokogiri-|rubygem-oauth-|rubygem-openscap-|rubygem-openscap_parser-|rubygem-openssl-|rubygem-optimist-|rubygem-os-|rubygem-ovirt-engine-sdk-|rubygem-parallel-|rubygem-parse-cron-|passenger-|rubygem-pg-|rubygem-polyglot-|rubygem-powerbar-|rubygem-promise-|rubygem-protected_attributes-|rubygem-psych-|rubygem-public_suffix-|puma-|rubygem-rabl-|rubygem-racc-|rubygem-rack-|rubygem-rack-cors-|rubygem-rack-jsonp-|rubygem-rack-protection-|rubygem-rack-test-|rubygem-rails-|rubygem-rails-deprecated_sanitizer-|rubygem-rails-dom-testing-|rubygem-rails-html-sanitizer-|rubygem-rails-i18n-|rubygem-rails-observers-|rubygem-railties-|rubygem-rainbow-|rubygem-rake-|rubygem-rake0-|rubygem-rake2-|rubygem-rake3-|rubygem-rb-inotify-|rubygem-rbnacl-|rubygem-rbovirt-|rubygem-rbvmomi-|rubygem-rchardet-|rubygem-rdoc-|rubygem-record_tag_helper-|rubygem-redfish_client-|rubygem-redhat_access_lib-|rubygem-redis-|rubygem-representable-|rubygem-responders-|rubygem-rest-client-|rubygem-retriable-|rubygem-rkerberos-|rubygem-roadie-|rubygem-roadie-rails-|rubygem-robotex-|rubygem-rsec-|rubygem-ruby2_keywords-|rubygem-ruby2ruby-|rubygem-rubyipmi-|rubygem-ruby-libvirt-|rubygem-ruby_parser-|rubygem-runcible-|rubygems-|rubygem-safemode-|rubygem-scoped_search-|rubygem-sd_notify-|rubygem-secure_headers-|rubygem-sequel-|rubygem-server_sent_events-|rubygem-sexp_processor-|rubygem-sidekiq-|rubygem-signet-|rubygem-sinatra-|rubygem-sprockets-|rubygem-sprockets-rails-|rubygem-sqlite3-|rubygem-sshkey-|rubygem-statsd-instrument-|rubygem-stomp-|rubygem-table_print-|rubygem-text-|rubygem-thor-|rubygem-thread_safe-|rubygem-tilt-|rubygem-timeliness-|rubygem-treetop-|rubygem-trollop-|rubygem-turbolinks-|rubygem-typhoeus-|rubygem-tzinfo-|rubygem-uber-|rubygem-unf-|rubygem-unf_ext-|rubygem-unicode-|rubygem-unicode-display_width-|rubygem-useragent-|rubygem-validates_lengths_from_database-|rubygem-webpack-rails-|rubygem-websocket-driver-|rubygem-websocket-extensions-|rubygem-wicked-|rubygem-will_paginate-|rubygem-x-editable-rails-|rubygem-xmlrpc-|rubygem-zeitwerk-|rubygem-zest-|ruby-irb-|ruby-libs-|ruby-rgen-|ruby-shadow-|satellite|capsule|SOAPpy-|spacecmd|spacewalk|squid|syslinux-|syslinux-tftpboot-|tfm-runtime-|tomcat|tprdsatel1-|ttmkfdir-|v8-|v8314-runtime-|virt-who-|xalan-j2-|xerces-j2-|xml-commons-apis-|xml-commons-resolver-|yajl-|yaml-cpp-|rubygem-smart_proxy|pulpcore|proton-|yggdrasil|mosquitto|host0"
+	SATPACKAGES="ansible|apache-commons-|avalon-framework-|avalon-logkit-|boost-|candlepin|copy-jdk-configs-|createrepo|cyrus-sasl-|deltarpm-|dwz-|dynflow|ecj-|efivar-libs62-|facter-|flac-libs-|foreman|geronimo-jms-|geronimo-jta-|giflib-|gperftools-libs-|gsm-|hammer-|hiera-|httpd|ipmitool-|ipxe-bootimgs0180825-|jabber|katello|kobo-|liquibase-|log4j-|maven|mod_ssl|mod_wsgi-|mod_xsendfile-|mokutil51-|mongodb|oracle-config-|oracle-instantclient-basic0-|oracle-instantclient-selinux0-|oracle-nofcontext-selinux-|pcre-devel-|pcsc-lite-libs-|perl-Carp-|perl-Compress-Raw-Bzip2-|perl-Compress-Raw-Zlib-|perl-constant-|perl-Data-Dumper-|perl-DBI-|perl-Digest-|perl-Digest-MD5-|perl-Encode-|perl-Error-|perl-Exporter-|perl-File-Path-|perl-File-Temp-|perl-Filter-|perl-Getopt-Long-|perl-Git-|perl-HTTP-Tiny-|perl-IO-Compress-|perl-libs-|perl-macros-|perl-Net-Daemon-|perl-parent-|perl-PathTools-|perl-PlRPC-|perl-Pod-Escapes-|perl-podlators-|perl-Pod-Perldoc-|perl-Pod-Simple-|perl-Pod-Usage-|perl-Scalar-List-Utils-|perl-Socket-|perl-srpm-macros-|perl-Storable-|perl-TermReadKey-|perl-Text-ParseWords-|perl-Thread-Queue-|perl-threads-|perl-threads-shared-|perl-Time-HiRes-|perl-Time-Local-|perl-XML-NamespaceSupport-|postgresql|psmisc2-|pulp|puppet|qpid|redhat-rpm-config-|repoview|rh-nodejs4-runtime-|rh-nodejs6-runtime-|rpm-build-|ruby-augeas-|rubygem-actioncable-|rubygem-actionmailbox-|rubygem-actionmailer-|rubygem-actionpack-|rubygem-actiontext-|rubygem-actionview-|rubygem-activejob-|rubygem-activemodel-|rubygem-activerecord-|rubygem-activerecord-import-|rubygem-activerecord-session_store-|rubygem-activestorage-|rubygem-activesupport-|rubygem-acts_as_list-|rubygem-addressable-|rubygem-algebrick-|rubygem-amazing_print-|rubygem-ancestry-|rubygem-anemone-|rubygem-angular-rails-templates-|rubygem-ansi-|rubygem-apipie-bindings-|rubygem-apipie-dsl-|rubygem-apipie-params-|rubygem-apipie-rails-|rubygem-arel-|rubygem-audited-|rubygem-audited-activerecord-|rubygem-autoparse-|rubygem-awesome_print-|rubygem-azure_mgmt_compute-|rubygem-azure_mgmt_network-|rubygem-azure_mgmt_resources-|rubygem-azure_mgmt_storage-|rubygem-azure_mgmt_subscriptions-|rubygem-bastion-|rubygem-bcrypt-|rubygem-bcrypt_pbkdf-|rubygem-bigdecimal-|rubygem-builder-|rubygem-bundler-|rubygem-bundler_ext-|rubygem-clamp-|rubygem-coffee-rails-|rubygem-coffee-script-|rubygem-coffee-script-source-|rubygem-colorize-|rubygem-concurrent-ruby-|rubygem-concurrent-ruby-edge-|rubygem-connection_pool-|rubygem-crass-|rubygem-css_parser-|rubygem-daemons-|rubygem-dalli-|rubygem-deacon-|rubygem-declarative-|rubygem-declarative-option-|rubygem-deep_cloneable-|rubygem-deface-|rubygem-did_you_mean-|rubygem-diffy-|rubygem-docker-api-|rubygem-domain_name-|rubygem-ed25519-|rubygem-erubi-|rubygem-erubis-|rubygem-ethon-|rubygem-excon-|rubygem-execjs-|rubygem-extlib-|rubygem-facter-|rubygem-faraday-|rubygem-faraday-cookie_jar-|rubygem-fast_gettext-|rubygem-ffi-|rubygem-fog-|rubygem-fog-aws-|rubygem-fog-core-|rubygem-fog-digitalocean-|rubygem-fog-google-|rubygem-fog-json-|rubygem-fog-libvirt-|rubygem-fog-openstack-|rubygem-fog-ovirt-|rubygem-fog-rackspace-|rubygem-fog-vsphere-|rubygem-fog-xenserver-|rubygem-fog-xml-|rubygem-foreigner-|rubygem-formatador-|rubygem-friendly_id-|rubygem-fx-|rubygem-get_process_mem-|rubygem-gettext-|rubygem-gettext_i18n_rails-|rubygem-git-|rubygem-gitlab-sidekiq-fetcher-|rubygem-globalid-|rubygem-google-api-client-|rubygem-googleauth-|rubygem-google-cloud-env-|rubygem-graphql-|rubygem-graphql-batch-|rubygem-gssapi-|rubygem-hashie-|rubygem-highline-|rubygem-hike-|rubygem-hocon-|rubygem-httpclient-|rubygem-http-cookie-|rubygem-i18n-|rubygem-io-console-|rubygem-ipaddress-|rubygem-irb-|rubygem-jquery-ui-rails-|rubygem-json-|rubygem-jwt-|rubygem-kafo-|rubygem-kafo_parsers-|rubygem-kafo_wizards-|rubygem-launchy-|rubygem-ldap_fluff-|rubygem-little-plugger-|rubygem-locale-|rubygem-logging-|rubygem-loofah-|rubygem-mail-|rubygem-marcel-|rubygem-memoist-|rubygem-method_source-|rubygem-mimemagic-|rubygem-mime-types-|rubygem-mime-types-data-|rubygem-mini_mime-|rubygem-mini_portile2-|rubygem-minitest-|rubygem-mqtt-|rubygem-msgpack-|rubygem-ms_rest-|rubygem-ms_rest_azure-|rubygem-multi_json-|rubygem-multipart-post-|rubygem-mustermann-|rubygem-net-http-persistent-|rubygem-net_http_unix-|rubygem-net-ldap-|rubygem-net-ping-|rubygem-netrc-|rubygem-net-scp-|rubygem-net-ssh-|rubygem-nio4r-|rubygem-nokogiri-|rubygem-oauth-|rubygem-openscap-|rubygem-openscap_parser-|rubygem-openssl-|rubygem-optimist-|rubygem-os-|rubygem-ovirt-engine-sdk-|rubygem-parallel-|rubygem-parse-cron-|passenger-|rubygem-pg-|rubygem-polyglot-|rubygem-powerbar-|rubygem-promise-|rubygem-protected_attributes-|rubygem-psych-|rubygem-public_suffix-|puma-|rubygem-rabl-|rubygem-racc-|rubygem-rack-|rubygem-rack-cors-|rubygem-rack-jsonp-|rubygem-rack-protection-|rubygem-rack-test-|rubygem-rails-|rubygem-rails-deprecated_sanitizer-|rubygem-rails-dom-testing-|rubygem-rails-html-sanitizer-|rubygem-rails-i18n-|rubygem-rails-observers-|rubygem-railties-|rubygem-rainbow-|rubygem-rake-|rubygem-rake0-|rubygem-rake2-|rubygem-rake3-|rubygem-rb-inotify-|rubygem-rbnacl-|rubygem-rbovirt-|rubygem-rbvmomi-|rubygem-rchardet-|rubygem-rdoc-|rubygem-record_tag_helper-|rubygem-redfish_client-|rubygem-redhat_access_lib-|rubygem-redis-|rubygem-representable-|rubygem-responders-|rubygem-rest-client-|rubygem-retriable-|rubygem-rkerberos-|rubygem-roadie-|rubygem-roadie-rails-|rubygem-robotex-|rubygem-rsec-|rubygem-ruby2_keywords-|rubygem-ruby2ruby-|rubygem-rubyipmi-|rubygem-ruby-libvirt-|rubygem-ruby_parser-|rubygem-runcible-|rubygems-|rubygem-safemode-|rubygem-scoped_search-|rubygem-sd_notify-|rubygem-secure_headers-|rubygem-sequel-|rubygem-server_sent_events-|rubygem-sexp_processor-|rubygem-sidekiq-|rubygem-signet-|rubygem-sinatra-|rubygem-sprockets-|rubygem-sprockets-rails-|rubygem-sqlite3-|rubygem-sshkey-|rubygem-statsd-instrument-|rubygem-stomp-|rubygem-table_print-|rubygem-text-|rubygem-thor-|rubygem-thread_safe-|rubygem-tilt-|rubygem-timeliness-|rubygem-treetop-|rubygem-trollop-|rubygem-turbolinks-|rubygem-typhoeus-|rubygem-tzinfo-|rubygem-uber-|rubygem-unf-|rubygem-unf_ext-|rubygem-unicode-|rubygem-unicode-display_width-|rubygem-useragent-|rubygem-validates_lengths_from_database-|rubygem-webpack-rails-|rubygem-websocket-driver-|rubygem-websocket-extensions-|rubygem-wicked-|rubygem-will_paginate-|rubygem-x-editable-rails-|rubygem-xmlrpc-|rubygem-zeitwerk-|rubygem-zest-|ruby-irb-|ruby-libs-|ruby-rgen-|ruby-shadow-|satellite|capsule|SOAPpy-|spacecmd|spacewalk|squid|syslinux-|syslinux-tftpboot-|tfm-runtime-|tomcat|tprdsatel1-|ttmkfdir-|v8-|v8314-runtime-|virt-who-|xalan-j2-|xerces-j2-|xml-commons-apis-|xml-commons-resolver-|yajl-|yaml-cpp-|rubygem-smart_proxy|pulpcore|proton-|yggdrasil|mosquitto|host0|katello-ca-consumer"
 
 
 report()
@@ -1211,9 +1211,9 @@ log_cmd "cat $base_dir/etc/sysconfig/network | GREP_COLORS='ms=01;33' egrep --co
 if [ -f "`find $base_dir/etc/foreman-proxy -type f | egrep -v key | egrep -i 'certificate|\.pem$|\.crt$' | egrep . | head -1`" ]; then
 	log
 	log "foreman certificates:"
-	log "openssl x509 -in /etc/foreman-proxy/ssl_cert.pem -noout -text | egrep -i '\$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm'"
+	log "openssl x509 -in /etc/foreman-proxy/ssl_cert.pem -noout -text | egrep -i '\$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|before|bit\)|othername|after|Signature Algorithm'"
 	log
-	log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | sed 's/$/\$/' | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|sha1W'"
+	log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | sed 's/$/\$/' | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|before|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|sha1W'"
 	log
 
 	log "check certificates in /etc/foreman-proxy/ for beginning and ending dates"
@@ -1259,9 +1259,9 @@ fi
 if [ -f "`find $base_dir/etc/foreman-proxy -type f | egrep -v key | egrep -i '\.pem.text|\.crt.text' | egrep . | head -1`" ]; then
 	log
 	log "foreman certificates:"
-	log "openssl x509 -in /etc/foreman-proxy/ssl_cert.pem -noout -text | egrep -i '\$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm'"
+	log "openssl x509 -in /etc/foreman-proxy/ssl_cert.pem -noout -text | egrep -i '\$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|before|bit\)|othername|after|Signature Algorithm'"
 	log
-	log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | sed 's/$/\$/' | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|after|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|sha1W'"
+	log_cmd "openssl x509 -in $base_dir/etc/foreman-proxy/ssl_cert.pem -noout -text | sed 's/$/\$/' | egrep -i '$HOSTNAME|CN=|DNS|Issuer|Subject Alternative Name|before|bit\)|othername|after|Signature Algorithm' | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME|sha1W'"
 	log
 
 	log "check certificates in /etc/foreman-proxy/ for beginning and ending dates"
@@ -1366,7 +1366,7 @@ if [ -f "$base_dir/etc/foreman-proxy/ssl_cert.pem" ] && [ -f "$base_dir/etc/fore
 	PROXY_CA=`openssl x509 -in $base_dir/etc/foreman/proxy_ca.pem -text -noout |& grep -A 1 'Subject Key Identifier' | tail -1 | awk '{print $1}'`
 	log "$SSL_CERT"
 	log "$PROXY_CA"
-	diff <(echo $SSL_CERT) <(echo $PROXY_CA) &>/dev/null;if [ "$?" -eq 0 ]; then log "certificates match"; else log "certificates differ | egrep --color=always '.'"; fi
+	diff <(echo $SSL_CERT) <(echo $PROXY_CA) &>/dev/null;if [ "$?" -eq 0 ]; then log "certificates match"; else log_cmd "echo certificates differ | egrep --color=always '.'"; fi
 	log "---"
 	log
 fi
@@ -1467,6 +1467,9 @@ log_cmd "egrep 'Chassis:|Virtualization:|Hardware' $base_dir/sos_commands/host/h
 log "---"
 log
 
+
+
+
 log_tee "## memory"
 log
 
@@ -1516,6 +1519,13 @@ log "// number of CPUs"
 log "egrep -hc processor /proc/cpuinfo"
 log "---"
 log_cmd "if [ -f $base_dir/sos_commands/processor/lscpu ]; then egrep '^CPU\(s\):' $base_dir/sos_commands/processor/lscpu; elif [ -f $base_dir/proc/cpuinfo ]; then egrep -hc processor $base_dir/proc/cpuinfo; elif [ -f $base_dir/procs ]; then cat $base_dir/procs; fi"
+log "---"
+log
+
+log "// Processes running for a while (TOP 5 per time)"
+log "cat $base_dir/ps | sort -nr -k10 | head -n5"
+log "---"
+log_cmd "cat $base_dir/ps | sort -nr -k10 | head -n5"
 log "---"
 log
 
@@ -1603,6 +1613,13 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log
 fi
 
+log "// Analyzing '/var/log/sa/sa' files and checking for values with low time"
+log "for b in \$(ls \$base_dir/var/log/sa/sa[0-9]*); do echo - \$b;sar -f \$b | grep -E '(CPU|all)' | grep -E '( [0-9].[0-9]2\$)'; done"
+log "---"
+log_cmd "for b in \$(ls \$base_dir/var/log/sa/sa[0-9]*); do echo - \$b;sar -f \$b | grep -E '(CPU|all)' | grep -E '( [0-9].[0-9]2\$)'; done"
+log "---"
+log
+
 if [ -f "$base_dir/etc/sysconfig/dynflowd" ]; then
 
 	log "// dynflow optimizations (only used before 6.8)"
@@ -1640,14 +1657,12 @@ log
 log "// maximum open files by service"
 log "egrep -ir LimitNOFILE /etc/systemd/system/ | egrep -v \#"
 log "---"
-log_cmd "egrep -ir --color=always LimitNOFILE $base_dir/etc/systemd/system/ | egrep -v \#"
+log_cmd "GREP_COLORS='ms=01;33' egrep -ir --color=always LimitNOFILE $base_dir/etc/systemd/system/ | egrep -v \#"
 log "---"
 log "  Note:  To change this, edit the service or a file within the service's directory, run 'systemctl daemon-reload' and then restart the service(s)."
 log "  Alternatively, KCS https://access.redhat.com/solutions/7143419 describes how to make these changes permanent for some services through the custom hiera file."
 log "---"
 log
-
-
 
 log_tee "## Storage"
 log
@@ -1794,12 +1809,49 @@ log "---"
 log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 log
 if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
-	log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
-	SERVICE_NAME='chronyd'
-	log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
-	SERVICE_NAME='systemd-timedatectl'
-	log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+#	log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+#	SERVICE_NAME='chronyd'
+#	log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+#	SERVICE_NAME='systemd-timedatectl'
+#	log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+#	log
+
+	SERVICE_NAME='ntpd'
+	log "// $SERVICE_NAME service status"
+	log "---"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
+		log_cmd "egrep \"$SERVICE_NAME*.service -\" $base_dir/sos_commands/systemd/systemctl_status_--all -A 20 | sed -n \"/$SERVICE_NAME/,/ - /p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+	log "---"
+	log
+
+	SERVICE_NAME='systemd-timedatectl'
+	log "// $SERVICE_NAME service status"
+	log "---"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
+	log
+		log_cmd "egrep \"$SERVICE_NAME*.service -\" $base_dir/sos_commands/systemd/systemctl_status_--all -A 20 | sed -n \"/$SERVICE_NAME/,/ - /p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+	log "---"
+	log
+
+	SERVICE_NAME='chronyd'
+	log "// $SERVICE_NAME service status"
+	log "---"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
+	log
+		log_cmd "egrep \"$SERVICE_NAME*.service -\" $base_dir/sos_commands/systemd/systemctl_status_--all -A 20 | sed -n \"/$SERVICE_NAME/,/ - /p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+	log "---"
+	log
+
+	SERVICE_NAME='systemd-timedatectl'
+	log "// $SERVICE_NAME service status"
+	log "---"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
+	log
+		log_cmd "egrep \"$SERVICE_NAME*.service -\" $base_dir/sos_commands/systemd/systemctl_status_--all -A 20 | sed -n \"/$SERVICE_NAME/,/ - /p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+	log "---"
+	log
+
 	log "chrony.conf:"
 	log_cmd "egrep '^server|^pool' $base_dir/etc/chrony.conf 2>/dev/null | grep -v :\# | awk -F\"/\" '{print $NF}'"
 else
@@ -1814,6 +1866,7 @@ if [ -e $base_dir/etc/ntp.conf ]; then
 	log
 fi
 
+	
 
 
 log "// ntp errors"
@@ -1822,7 +1875,7 @@ log "egrep 'ntpd|chrony|sntp|timesync' /sysmgmt/messages | egrep -v 'various jun
 log "egrep -i 'skew|RES equals failed' /var/log/* | egrep -v anaconda"
 log "---"
 #log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/var/log/messages* | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.' | egrep '^|offline|mongod'"
-log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/sysmgmt/messages | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.|setroubleshoot|Started /usr/bin/rpm|systemd-timesyncd'"
+log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/sysmgmt/messages | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.|setroubleshoot|Started /usr/bin/rpm|systemd-timesyncd|Started \/bin\/rpm' | GREP_COLORS='ms=01;33' egrep --color=always '^|online' | egrep --color=always '^|offline'"
 log
 log_cmd "egrep -i 'skew|RES equals failed' $base_dir/var/log/* | egrep -v 'BEGIN CERTIFICATE|^Binary|anaconda' | egrep -v 'HTTP\/1.1|mongod'"
 log "---"
@@ -1888,10 +1941,17 @@ if [ -f $base_dir/bash_proxy ]; then
 	log
 fi
 
+log "// Insights Proxy"
+log "grep proxy /etc/insights-client/insights-client.conf"
+log "---"
+log_cmd "grep proxy $base_dir/etc/insights-client/insights-client.conf"
+log "---"
+log
+
 log "// yggdrasil Proxy"
 log "grep PROXY /etc/systemd/system/rhcd.service.d/proxy.conf | grep -v ^#"
 log "---"
-log_cmd "grep PROXY /etc/systemd/system/rhcd.service.d/proxy.conf | grep -v ^#"
+log_cmd "grep PROXY $base_dir/etc/systemd/system/rhcd.service.d/proxy.conf | grep -v ^#"
 log "---"
 log
 
@@ -1913,17 +1973,6 @@ log_cmd "sort $base_dir/ip_addr | egrep --color=always '^|$IPADDRLIST'"
 export GREP_COLORS='ms=01;31'
 log "---"
 log
-
-if [ ! "$(egrep 'DEVICE|BOOTPROTO|ONBOOT' $base_dir/etc/sysconfig/network-scripts/ifcfg* 2>/dev/null)" == "" ]; then
-	log "// ifcfg profiles NetworkManager controlled?"
-	log "egrep -v '  \-\-' /sos_commands/networkmanager/nmcli_con"
-	log "---"
-	log_cmd "egrep -i 'NM_CONTROLLED=no' $base_dir/etc/sysconfig/network-scripts/ifcfg* | egrep --color=always -i '^|no$'"
-	log "---"
-	log "Note:  If an ifcfg network connection isn't controlled by NetworkManager, the migration scripts for it (including those built into the leapp tools) will fail."
-	log "---"
-	log
-fi
 
 log "// nmcli connections"
 log "egrep -v '  \-\-' /sos_commands/networkmanager/nmcli_con"
@@ -2469,7 +2518,7 @@ log
 log "// RHSM errors and warnings"
 log "egrep 'ERROR|WARNING' /var/log/rhsm/rhsm.log"
 log "---"
-log_cmd "egrep 'ERROR|WARNING' $base_dir/var/log/rhsm/rhsm.log | egrep -v 'virt-who|logging already initialized' | tail -100"
+log_cmd "egrep 'ERROR|WARNING' $base_dir/var/log/rhsm/rhsm.log | egrep -v 'virt-who|logging already initialized|Web service reported a SOAP processing fault using an unexpected HTTP status code 200' | tail -100"
 log "---"
 log
 
@@ -2548,14 +2597,7 @@ else
 	log
 fi
 
-if [ "$(egrep ^leapp-upgrade $base_dir/installed-rpms)" != "" ]; then
-	log "// rhel 8 repository overrides (for leapp upgrades)"
-	log "jq '.[] | select(.contentLabel |contains("rhel-8")) ' //var/lib/rhsm/cache/content_overrides.json"
-	log "---"
-	log_cmd "jq '.[] | select(.contentLabel |contains("rhel-8")) ' $base_dir//var/lib/rhsm/cache/content_overrides.json"
-	log "---"
-	log
-fi
+
 
 log "// release version (for version locking)"
 log "cat /etc/yum/vars/releasever 2>/dev/null"
@@ -2764,7 +2806,35 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log "// upgrade lines with exit codes"
 	log "lines from /var/log/foreman-maintain/foreman-maintain.log\* and /var/log/foreman-installer/{satellite\*,capsule\*}"
 	log "---"
-	log_cmd "echo -e \"$(egrep -hir '\-\-target-version|Exit with status|upgrade|update' $base_dir/var/log/foreman-maintain/foreman-maintain.log* $base_dir/var/log/foreman-installer/{satellite*,capsule*})\n\" | sed s'/I\, \[//'g | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | sort -h | egrep upgrade -A 1 | tail -50"
+	log_cmd "echo -e \"$(egrep -hir '\-\-target-version|Exit with status|upgrade|update' $base_dir/var/log/foreman-maintain/foreman-maintain.log* $base_dir/var/log/foreman-installer/{satellite*,capsule*})\n\" | sed s'/I\, \[//'g | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | egrep -v 'Actions::Katello::|Dynflow::' | sort -h | egrep upgrade -A 1 | tail -50"
+	log "---"
+	log
+
+	log "// All the flags used with satellite-installer"
+
+	if [ "$sos_version" == "old" ];then
+		cmd="egrep 'Running installer with args|Exit with status' $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-installer/satellite.* | sort -rk3 | cut -d: -f2-"
+	else
+		cmd="egrep 'Running installer with args|Exit with status' $base_dir/var/log/foreman-installer/satellite.* | sort -rk3 | cut -d: -f2-"
+	fi
+	log "$cmd"
+	log "---"
+	log_cmd "$cmd"
+	log "---"
+	log
+
+	log "// Upgrade Completed? (6.4 or greater)"
+
+	if [ "$sos_version" == "old" ];then
+		#cmd="grep \"Upgrade completed\" $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-installer/satellite.log | wc -l"
+		cmd="egrep 'Upgrade completed' $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-installer/satellite.log -c"
+	else
+		#cmd="grep \"Upgrade completed\" $base_dir/var/log/foreman-installer/satellite.log | wc -l"
+		cmd="egrep 'Upgrade completed' $base_dir/var/log/foreman-installer/satellite.log -c"
+	fi
+	log "$cmd"
+	log "---"
+	log_cmd "$cmd"
 	log "---"
 	log
 
@@ -2776,14 +2846,13 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	#cmd_output_timestamps=$(egrep -ir -h "Exit with status code|command with arguments|with args|Upgrade completed|target-version|capsule-certs-generate|Prepare content|additional free space|migration statistics|" $base_dir/sysmgmt/{capsule.log,foreman-maintain.log,production.log,satellite.log} 2>/dev/null | egrep '\-' | sed s'/\[  INFO //'g | sed s'/\[ INFO //'g | sed s'/\[DEBUG //'g | sed s'/^., \[//'g | sort -n | tail -60)
 
 	cmd_output_timestamps=$(egrep -ir -h "Exit with status code|command with arguments|with args|Upgrade completed|target-version|capsule-certs-generate|upgrade run|update run" $base_dir/sysmgmt/{capsule.log,foreman-maintain.log,production.log,satellite.log} 2>/dev/null | egrep "\-" | sed s'/\[  INFO //'g | sed s'/\[ INFO //'g | sed s'/\[DEBUG //'g | sed s'/^., \[//'g | sed s'/T0/ 0/'g | sed s'/T1/ 1/'g | sed s'/T2/ 2/'g | sort -n | egrep -v service | tail -100)
-
-	cmd_output_migration_stats=$(egrep -hi 'Migration Summary|^Migrated|^Estimated migration time|^You will need|additional free space' $base_dir/sysmgmt/foreman-maintain.log 2>/dev/null | egrep 'Migration Summary' -A 10 | tail -14 | sed -n '/Migration Summary/,/^$/p')
-
 	log "$cmd_output_timestamps"
 	log
-	log "$cmd_output_migration_stats"
-	export GREP_COLORS='ms=01;31'
 
+	cmd_output_migration_stats=$(egrep -hi 'Migration Summary|^Migrated|^Estimated migration time|^You will need|additional free space' $base_dir/sysmgmt/foreman-maintain.log 2>/dev/null | egrep 'Migration Summary' -A 10 | tail -14 | sed -n '/Migration Summary/,/^$/p')
+	log "$cmd_output_migration_stats"
+
+	export GREP_COLORS='ms=01;31'
 	log "---"
 	log
 
@@ -2835,8 +2904,98 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log
 fi
 
+log_tee "## leapp"
+log
+
+if [ -e "$base_dir/var/log/leapp/leapp-report.txt" ]; then
+	sed -i s'/\\n/\n/'g "$base_dir/var/log/leapp/leapp-report.txt"
+	ln -s "$base_dir/var/log/leapp/leapp-report.txt" leapp-report.txt
+fi
+
+log "// Checking for leapp package"
+log "egrep ^leapp $base_dir/installed-rpms | sort"
+log "---"
+log_cmd "egrep ^leapp $base_dir/installed-rpms | sort"
+log "---"
+log "NOTE. You need version 0.16.0 or later of the leapp package and version 0.19.0 or later of the leapp-repository package, which contains the leapp-upgrade-el7toel8 RPM package."
+log
+
+log "// Checking for grub package"
+log "grep grub $base_dir/installed-rpms | sort"
+log "---"
+log_cmd "grep grub $base_dir/installed-rpms | sort"
+log "---"
+log
+
+log "// Checking for grub/grub2 folders"
+log "ls -l $base_dir/boot/"
+log "---"
+log_cmd "ls -l $base_dir/boot/"
+log "---"
+log
+
+log "// Checking the current default grub content"
+log "cat $base_dir/etc/default/grub"
+log "---"
+log_cmd "cat $base_dir/etc/default/grub"
+log "---"
+log
+
+log "// Checking the upgrade entry on grub2 menu"
+log "grep upgrade $base_dir/boot/grub2/grub.cfg"
+log "---"
+log_cmd "grep upgrade $base_dir/boot/grub2/grub.cfg"
+log "---"
+log
+
+log "// Unsupported LEAPP?"
+log "grep -o LEAPP_UNSUPPORTED.* $base_dir/var/log/leapp/leapp-upgrade.log | awk '{print \$1}' | sort -u | sed \"s/',//g\""
+log "---"
+log_cmd "grep -o LEAPP_UNSUPPORTED.* $base_dir/var/log/leapp/leapp-upgrade.log | awk '{print \$1}' | sort -u | sed \"s/',//g\""
+log "---"
+log
+
+log "// overlay filesystem"
+log "grep overlay $base_dir/mount"
+log "---"
+log_cmd "grep overlay $base_dir/mount"
+log "---"
+log
+
+log "// Target Version - Supported 8.6, 8.8 and 8.9"
+log "grep -o LEAPP_UPGRADE_PATH_TARGET_RELEASE.* $base_dir/var/log/leapp/leapp-upgrade.log | awk '{print \$1}' | sort -u | sed \"s/',//g\""
+log "---"
+log_cmd "grep -o LEAPP_UPGRADE_PATH_TARGET_RELEASE.* $base_dir/var/log/leapp/leapp-upgrade.log | awk '{print \$1}' | sort -u | sed \"s/',//g\""
+log "---"
+log
 
 
+if [ ! "$(egrep 'DEVICE|BOOTPROTO|ONBOOT' $base_dir/etc/sysconfig/network-scripts/ifcfg* 2>/dev/null)" == "" ]; then
+	log "// ifcfg profiles NetworkManager controlled?"
+	log "egrep -v '  \-\-' /sos_commands/networkmanager/nmcli_con"
+	log "---"
+	log_cmd "egrep -i 'NM_CONTROLLED=no' $base_dir/etc/sysconfig/network-scripts/ifcfg* | egrep --color=always -i '^|no$'"
+	log "---"
+	log "Note:  If an ifcfg network connection isn't controlled by NetworkManager, the migration scripts for it (including those built into the leapp tools) will fail."
+	log "---"
+	log
+fi
+
+if [ "$(egrep ^leapp-upgrade $base_dir/installed-rpms)" != "" ]; then
+	log "// rhel 8 repository overrides (for leapp upgrades)"
+	log "jq '.[] | select(.contentLabel |contains("rhel-8")) ' //var/lib/rhsm/cache/content_overrides.json"
+	log "---"
+	log_cmd "jq '.[] | select(.contentLabel |contains("rhel-8")) ' $base_dir//var/lib/rhsm/cache/content_overrides.json"
+	log "---"
+	log
+fi
+
+log "// Last lines of leapp-upgrade.log"
+log "tail -n 40 $base_dir/var/log/leapp/leapp-upgrade.log"
+log "---"
+log_cmd "tail -n 40 $base_dir/var/log/leapp/leapp-upgrade.log"
+log "---"
+log
 
 
 
@@ -3405,11 +3564,11 @@ else
 		log "// top foreman tables consumption"
 		log "head -n30 /sos_commands/katello/db_table_size"
 		log "---"
-		log_cmd "head -n30 $base_dir/sos_commands/katello/db_table_size 2>/dev/null"
+		log_cmd "head -n30 $base_dir/sos_commands/katello/db_table_size 2>/dev/null | egrep '^| GB'"
 		log "---"
 		log
 
-	elif [ -f "$base_dir/sos_commands/foreman/foreman_db_tables_sizes" ] || [ -f "$base_dir/sos_commands/candlepin/candlepin_db_tables_sizes" ]; then
+	elif [ -f "$base_dir/sos_commands/foreman/foreman_db_tables_sizes" ] || [ -f "$base_dir/sos_commands/candlepin/candlepin_db_tables_sizes" ] || [ -f "$base_dir/sos_commands/pulpcore/pulpcore_db_tables_sizes" ]; then
 
 		log "// top foreman tables consumption"
 		log "head -n30 /sos_commands/foreman/foreman_db_tables_sizes"
@@ -3424,6 +3583,14 @@ else
 		log_cmd "head -n30 $base_dir/sos_commands/candlepin/candlepin_db_tables_sizes 2>/dev/null"
 		log "---"
 		log
+
+		log "// top pulpcore tables consumption"
+		log "head -n30 /sos_commands/pulpcore/pulpcore_db_tables_sizes"
+		log "---"
+		log_cmd "head -n30 $base_dir/sos_commands/pulpcore/pulpcore_db_tables_sizes 2>/dev/null"
+		log "---"
+		log
+
 
 	fi
 
@@ -3643,7 +3810,7 @@ else
 	log "// are apache conf directories polluted?"
 	log "ls /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.modules.d/[01]* | egrep '^|welcome.conf'"
 	log "---"
-	log_cmd "ls $base_dir/etc/httpd/conf.d/welcome.conf $base_dir/etc/httpd/conf.modules.d/[01]* | egrep '^|welcome.conf'"
+	log_cmd "ls $base_dir/etc/httpd/conf.d/welcome.conf $base_dir/etc/httpd/conf.modules.d/[01]* | egrep --color=always '^|welcome.conf|\/[01]-'"
 	log "---"
 	log
 	log "NOTE:  If http was updated manually through yum or dnf, then the conf.d and conf.modules.d directories may contain files from the default installation of httpd, which can break Red Hat Satellite."
@@ -4058,8 +4225,10 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ]; the
 fi
 
 if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
-	log_tee "## foreman"
-	log
+	export GREP_COLORS='ms=01;32'
+	log_cmd "echo '## foreman' | grep --color=always \#"
+	echo '## foreman' | grep --color=always \#
+	export GREP_COLORS='ms=01;31'
 
 
 	if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep foreman`" ] && [ ! "`egrep -i foreman $base_dir/chkconfig $base_dir/installed-rpms $base_dir/ps $base_dir/sysmgmt/production.log 2>/dev/null | head -1`" ] && [ ! -d "$base_dir/var/log/foreman-proxy" ] && [ ! -d "$base_dir/var/log/foreman" ] && [ ! -d "$base_dir/var/log/foreman-installer" ] && [ ! -d "$base_dir/var/log/foreman-maintain" ] && [ ! -d "$base_dir/var/log/katello-installer" ]; then
@@ -4481,16 +4650,16 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 
 
 		log "// redis_url setting:"
-		log "egrep databases /etc/redis/redis.conf"
+		log "egrep -B 1 redis_url /etc/foreman/settings.yaml"
 		log "---"
-		log_cmd "egrep databases $base_foreman/etc/redis/redis.conf"
+		log_cmd "egrep -B 1 redis_url $base_foreman/etc/foreman/settings.yaml"
 		log "---"
 		log
 
 		log "// are 16 redis databases configured?"
-		log "egrep -B 1 redis_url /etc/foreman/settings.yaml"
+		log "egrep databases /etc/redis/redis.conf"
 		log "---"
-		log_cmd "egrep -B 1 redis_url $base_foreman/etc/foreman/settings.yaml"
+		log_cmd "GREP_COLORS='ms=01;33' egrep --color=always 'databases' $base_dir/etc/redis/redis.conf | egrep --color=always '^databases'"
 		log "---"
 		log
 
@@ -4769,15 +4938,17 @@ if [ -e "$base_dir/etc/foreman-installer/scenarios.d/satellite-answers.yaml" ] |
 fi
 
 
+export GREP_COLORS='ms=01;32'
+log_cmd "echo '## named (bind)' | grep --color=always \#"
+echo '## named (bind)' | grep --color=always \#
+export GREP_COLORS='ms=01;31'
+
 if [ ! "`egrep '^\* named' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status`" ] && [ ! -f "$base_dir/etc/zones.conf" ] && [ ! -f "$base_dir/etc/named.conf" ] && [ "`egrep ^named $base_dir/chkconfig`" == '' ]; then
 
 
 	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
 
-		log_tee "## named (bind)"
-		log
-
-		log "bind not found"
+		log "named/bind not found"
 		log
 
 	fi
@@ -4785,10 +4956,7 @@ if [ ! "`egrep '^\* named' $base_dir/sysmgmt/services.txt $base_dir/sos_commands
 
 else
 
-	log_tee "## named (bind)"
-	log
-
-	log "The bind package installs the named DNS service, which Satellite uses for network (PXEBoot) provisioning."
+	log "The bind package installs the named DNS service (named), which Satellite uses for network (PXEBoot) provisioning."
 	log
 
 	if [ "$(egrep systemd-resolved $base_dir/sos_commands/systemd/systemctl_list-unit-files)" ]; then
@@ -4843,14 +5011,14 @@ else
 
 fi
 
-
+export GREP_COLORS='ms=01;32'
+log_cmd "echo '## dhcpd' | grep --color=always \#"
+echo '## dhcpd' | grep --color=always \#
+export GREP_COLORS='ms=01;31'
 
 if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep dhcpd`" ] && [ ! -f "$base_dir/etc/dhcp/dhcpd.conf" ] && [ "`egrep ^dhcpd $base_dir/chkconfig`" == '' ]; then
 
 	if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$SPACEWALK_INSTALLED" == "TRUE" ]; then
-
-		log_tee "## dhcpd"
-		log
 
 		log "dhcpd not found"
 		log
@@ -4858,9 +5026,6 @@ if [ ! "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/forem
 	fi
 
 else
-
-	log_tee "## dhcpd"
-	log
 
 	log "The dhcp package installs the dhcpd service, which Satellite uses for network (PXEBoot) provisioning."
 	log
@@ -4911,7 +5076,50 @@ fi
 
 
 #if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
-	log_tee "## Insights"
+	export GREP_COLORS='ms=01;32'
+	log_cmd "echo '## Insights / Lightspeed' | grep --color=always \#"
+	echo '## Insights / Lightspeed' | grep --color=always \#
+	export GREP_COLORS='ms=01;31'
+
+	SERVICE_NAME='insights-client'
+	log "// $SERVICE_NAME service status"
+	log "---"
+	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
+	log
+	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
+		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+	else
+		log
+		log_cmd "egrep $SERVICE_NAME $base_dir/ps"
+	fi
+	log "---"
+	log
+
+	if [ "$(egrep clad.service $base_dir/sos_commands/systemd/systemctl_list-unit-files)" != ""  ] || [ "$(egrep 'command-line-assistant' $base_dir/installed-rpms)" != ""  ]; then
+
+		SERVICE_NAME='clad'
+		log "// $SERVICE_NAME service status"
+		log "---"
+		log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
+		log
+		if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
+			log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+		else
+			log
+			log_cmd "egrep $SERVICE_NAME $base_dir/ps"
+		fi
+		log "---"
+		log "Note:  The command line assistant is part of the Lightspeed/Insights ecosystem.  It's a command line-driven AI agent, and it can connect through either Red Hat Satellite or directly to Red Hat."
+		log "---"
+		log
+
+	fi
+
+	log "// Insights Proxy"
+	log "grep proxy /etc/insights-client/insights-client.conf"
+	log "---"
+	log_cmd "grep proxy $base_dir/etc/insights-client/insights-client.conf"
+	log "---"
 	log
 
 	log "// insights client facts"
@@ -4953,7 +5161,7 @@ fi
 		log "// last 20 inventory upload tasks"
 		log "---"
 		#log_cmd "egrep -i 'inventory|upload' $base_dir/sos_commands/foreman/foreman_tasks_tasks | tr ',' '|' | sort -t \"|\" -k 4 | awk -F\"|\" '{print $1 \"|\" $4 \"|\" $6 \"|\" $7 \"|\" $12 }' | sed 's/^[ \t]*//;s/[ \t]*$//' | tail -20 | egrep --color=always '^|error|warning'"
-		inventory_tasks=$(egrep -i 'inventory|upload' $base_dir/sos_commands/foreman/foreman_tasks_tasks | tr ',' '|' | sort -t '|' -k 10 | awk -F'|' '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused' | tail -20 | egrep --color=always '^|error|warning')
+		inventory_tasks=$(egrep -i 'inventory|upload|lightspeed' $base_dir/sos_commands/foreman/foreman_tasks_tasks | egrep -i sync | tr ',' '|' | sort -t '|' -k 10 | awk -F'|' '{print $1, "|", $4, "|", $6, "|", $7, "|", $12}' | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep --color=always '^|error|warning|paused' | tail -20 | egrep --color=always '^|error|warning')
 		log "$inventory_tasks"
 		log "---"
 		log
@@ -4966,16 +5174,38 @@ fi
 	log_cmd "cat $base_dir/sos_commands/insights/insights-client_--test-connection_--net-debug"
 	log "---"
 	log
+
+
+
 #fi
 
 
-log_tee "## virt-who"
-log
+
+export GREP_COLORS='ms=01;32'
+log_cmd "echo '## virt-who' | grep --color=always \#"
+echo '## virt-who' | grep --color=always \#
+export GREP_COLORS='ms=01;31'
 
 log "The virt-who agent interrogates the hypervisor infrastructure and provides the host/guest mapping to the subscription service. It uses read-only commands to gather the host/guest associations for the subscription services. This way, the guest subscriptions offered by a subscription can be unlocked and available for the guests to use."
 log
 
 if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman/foreman-maintain_service_status | egrep virt-who`" ] || [ "`egrep -i 'virt-who' $base_dir/chkconfig $base_dir/installed-rpms $base_dir/ps $base_dir/var/log/rhsm/rhsm.log 2>/dev/null | head -1`" ] || [ -f "$base_dir/etc/sysconfig/virt-who" ] || [ -d "$base_dir/etc/virt-who.d" ] || [ "$(ls $base_dir/var/log/httpd/foreman-ssl_access_ssl.log &>/dev/null && egrep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log 2>/dev/null | head -1)" ]; then
+
+    SERVICE_NAME='virt-who'
+    log "// $SERVICE_NAME service status"
+    log "---"
+    log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
+    log
+    #if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
+    #if [ -e "$base_dir/sos_commands/systemd/systemctl_status_--all" ]; then
+            #log_cmd "egrep -v '\|-' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep '^\* $SERVICE_NAME*.service -' -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+            log_cmd "egrep \"$SERVICE_NAME*.service -\" $base_dir/sos_commands/systemd/systemctl_status_--all -A 20 | sed -n \"/$SERVICE_NAME/,/ - /p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+    #else
+    #       log
+    #       log_cmd "egrep $SERVICE_NAME $base_dir/ps"
+    #fi
+    log "---"
+    log
 
 	log "// virt-who update sources"
 	log "grep cmd=virt-who /var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u"
@@ -4983,20 +5213,6 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	export GREP_COLORS='ms=01;33'   # temporarily change hilight color to yellow
 	log_cmd "grep cmd=virt-who $base_dir/var/log/httpd/foreman-ssl_access_ssl.log | awk '{print \$1}' | sort -u | egrep --color=always '^|$IPADDRLIST'"
 	export GREP_COLORS='ms=01;31'
-	log "---"
-	log
-
-	SERVICE_NAME='virt-who'
-	log "// $SERVICE_NAME service status"
-	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
-	log
-	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
-		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
-	else
-		log
-		log_cmd "egrep $SERVICE_NAME $base_dir/ps"
-	fi
 	log "---"
 	log
 
@@ -5049,33 +5265,12 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	log "---"
 	log
 
-	log "// duplicated server entries on virt-who configuration"
-	log "grep -h ^server /etc/virt-who.d/*.conf | sort | uniq -c"
+	log "// virt-who configuration content files (showing hidden characters)"
+	log "for b in \$(ls -1 /etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat -vet \$b; echo \"===\"; done"
 	log "---"
-	log_cmd "grep -h ^server $base_dir/etc/virt-who.d/*.conf | sort | uniq -c"
-	log "---"
-	log
-
-	log "// RHSM Warnings - virt-who"
-	log "grep WARNING /var/log/rhsm/rhsm.log"
-	log "---"
-	log_cmd "grep WARNING $base_dir/var/log/rhsm/rhsm.log | egrep 'virt-who' | tail -100"
+	log_cmd "for b in \$(ls -1 $base_dir/etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat -vet \$b; echo \"===\"; done"
 	log "---"
 	log
-
-	log "// virt-who errors in messages log and journalctl"
-	log "---"
-	log_cmd "egrep -hi virt-who $base_dir/sysmgmt/{journal.log,messages} | egrep -i 'fail|error| fault'"
-	log "---"
-	log
-
-	log "// Latest 30 hypervisors tasks"
-	log "grep -E '(^                  id|Hypervisors)' /sos_commands/foreman/foreman_tasks_tasks | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7"
-	log "---"
-	log_cmd "grep -E '(^                  id|Hypervisors)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7 | egrep -i --color=always \"^|warning\""
-	log "---"
-	log
-
 
 	if [ "`file $base_dir/etc/virt-who.d/*.conf | grep ASCII | grep CRLF | head -1`" ]; then
 		log "// virt-who files with DOS line endings"
@@ -5086,12 +5281,50 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 		log
 	fi
 
-	log "// virt-who configuration content files (showing hidden characters)"
-	log "for b in \$(ls -1 /etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat -vet \$b; echo \"===\"; done"
+	log "// duplicate server entries on virt-who configuration"
+	log "grep -h ^server /etc/virt-who.d/*.conf | sort | uniq -c"
 	log "---"
-	log_cmd "for b in \$(ls -1 $base_dir/etc/virt-who.d/*.conf); do echo; echo \$b; echo \"===\"; cat -vet \$b; echo \"===\"; done"
+	log_cmd "grep -h ^server $base_dir/etc/virt-who.d/*.conf | sort | uniq -c"
 	log "---"
 	log
+
+	log "// virt-who errors in virt-who_-dop output"
+	log "---"
+	log_cmd "egrep -i \"config|error|fail|not|doesn't\" $base_dir/sos_commands/virtwho/virt-who_-dop | egrep -v '\":' | uniq -f 9 | tail -50"
+	log "---"
+	log
+
+	log "// virt-who errors in messages log and journalctl"
+	log "---"
+	log_cmd "egrep -hi virt-who $base_dir/sysmgmt/{journal.log,messages} | egrep -i 'fail|error| fault'"
+	log "---"
+	log
+
+	log "// RHSM Warnings - virt-who"
+	log "grep WARNING /var/log/rhsm/rhsm.log"
+	log "---"
+	log_cmd "grep WARNING $base_dir/var/log/rhsm/rhsm.log | egrep 'virt-who' | tail -100"
+	log "---"
+	log
+
+	log "// Spurious HTTP 200 SOAP faults in rhsm.conf"
+	log "grep WARNING /var/log/rhsm/rhsm.log"
+	log "---"
+	log_cmd "egrep 'Web service reported a SOAP processing fault using an unexpected HTTP status code 200' $base_dir/var/log/rhsm/rhsm.log | tail -10"
+	log "---"
+	log
+	log "Note:  These errors can be ignored.  See this KCS:  https://access.redhat.com/solutions/7041515"
+	log
+
+	log "// Latest 30 hypervisors tasks"
+	log "grep -E '(^                  id|Hypervisors)' /sos_commands/foreman/foreman_tasks_tasks | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7"
+	log "---"
+	log_cmd "grep -E '(^                  id|Hypervisors)' $base_dir/sos_commands/foreman/foreman_tasks_tasks | sed -e 's/,/ /g' | sort -rk6 | head -n 30 | cut -d\| -f3,4,5,6,7 | egrep -i --color=always \"^|warning\""
+	log "---"
+	log
+
+
+
 
 elif [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 
@@ -5228,8 +5461,10 @@ fi
 
 if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 
-	log_tee "## candlepin"
-	log
+	export GREP_COLORS='ms=01;32'
+	log_cmd "echo '## candlepin' | grep --color=always \#"
+	echo '## candlepin' | grep --color=always \#
+	export GREP_COLORS='ms=01;31'
 
 	if [ ! "`egrep -i candlepin \"$base_dir/sos_commands/foreman/hammer_ping\" \"$base_dir/installed-rpms\" \"$base_dir/ps\" 2>/dev/null | head -1`" ] && [ ! -d $base_dir/sos_commands/candlepin ]; then
 
@@ -6175,15 +6410,18 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	log "The Satellite server uses Puppet to manage its configuration files whenever the satellite-installer or satellite-maintain commands are called.  Prior to version 6.8 it was also Satellite's default software configuration tool and fact collection tool for hosts.  Now we primarily recommend remote execution, with or without Ansible.  We officially support the functionality of remote execution, but not the necessary step of scripting remote execution.  This is an outstanding flaw in our strategy, because most Unix/Linux admins are not equipped to script their own remote execution needs on their own."
 	log
 
+	log "Note:  The openvox-client and openvox-server components replaced puppet in Satellite version 6.19.  As a legacy alternative, Puppet agent also remains compatible with Satellite for Puppet integration."
+	log
 
-	if [ "$(egrep '^puppet' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME')" ]; then
+
+	if [ "$(egrep '^puppet|^openvox' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME')" ]; then
 		log "// puppet packages"
-		log "egrep '^puppet' /sos_commands/yum/yum_list_installed"
-		log "egrep '^puppet' /sos_commands/rpm/package-data"
+		log "egrep '^puppet|^openvox' /sos_commands/yum/yum_list_installed"
+		log "egrep '^puppet|^openvox' /sos_commands/rpm/package-data"
 		log "---"
-		log_cmd "egrep '^puppet' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME'"
+		log_cmd "egrep '^puppet|^openvox' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME'"
 		log
-		log_cmd "egrep '^puppet' $base_dir/sos_commands/rpm/package-data | awk '{print $1, $8, $9}'"
+		log_cmd "egrep '^puppet|^openvox' $base_dir/sos_commands/rpm/package-data | awk '{print $1, $8, $9}'"
 		log "---"
 		log
 	fi
@@ -6666,10 +6904,10 @@ if [ "$OPEN_IN_EDITOR_TMP_DIR" == "true" ]; then
    $EDITOR /tmp/report_${USER}_$final_name.log
 fi
 
-if [ -e "$base_dir/var/log/leapp/leapp-report.txt" ]; then
-	sed -i s'/\\n/\n/'g "$base_dir/var/log/leapp/leapp-report.txt"
-    ln -s "$base_dir/var/log/leapp/leapp-report.txt" leapp-report.txt
-fi
+# if [ -e "$base_dir/var/log/leapp/leapp-report.txt" ]; then
+#	sed -i s'/\\n/\n/'g "$base_dir/var/log/leapp/leapp-report.txt"
+#    ln -s "$base_dir/var/log/leapp/leapp-report.txt" leapp-report.txt
+# fi
 
 if [ -e "$base_dir/sos_commands/abrt/abrt-cli_list" ]; then
     ln -s "$base_dir/sos_commands/abrt/abrt-cli_list" abrt-cli_list
