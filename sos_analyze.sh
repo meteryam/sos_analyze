@@ -2806,7 +2806,8 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log "// upgrade lines with exit codes"
 	log "lines from /var/log/foreman-maintain/foreman-maintain.log\* and /var/log/foreman-installer/{satellite\*,capsule\*}"
 	log "---"
-	log_cmd "echo -e \"$(egrep -hir '\-\-target-version|Exit with status|upgrade|update' $base_dir/var/log/foreman-maintain/foreman-maintain.log* $base_dir/var/log/foreman-installer/{satellite*,capsule*})\n\" | sed s'/I\, \[//'g | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | egrep -v 'Actions::Katello::|Dynflow::' | sort -h | egrep upgrade -A 1 | tail -50"
+	#log_cmd "echo -e \"$(egrep -hir '\-\-target-version|Exit with status|upgrade|update' $base_dir/var/log/foreman-maintain/foreman-maintain.log* $base_dir/var/log/foreman-installer/{satellite*,capsule*})\n\" | egrep -v '\{|\}' | sed s'/I\, \[//'g | sed 's/^[ \t]*//;s/[ \t]*$//' | egrep . | egrep -v 'Actions::Katello::|Dynflow::' | sort -h | egrep upgrade -A 1 | tail -50"
+	log_cmd "egrep -hvr '\{|\}|Actions::Katello::|Dynflow::' $base_dir/var/log/foreman-maintain/foreman-maintain.log* $base_dir/var/log/foreman-installer/{satellite*,capsule*} | egrep -i '\-\-target-version|Exit with status' | sed s'/I\, \[//'g | sort | egrep 'upgrade|update|with status code' | egrep 'with arguments' -A 1"
 	log "---"
 	log
 
@@ -3082,9 +3083,10 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log "// condensed satellite service status"
 		log "grepping files foreman-maintain_service_status and systemctl_status_--all"
 		log "---"
-		log "egrep '\.service -|Loaded:|Active:|^$' /sos_commands/systemd/systemctl_status_--all | egrep '\.service -' -A 2 | egrep -A 2 '\* httpd.service|\* pulp|\* qdrouterd|\* qpidd|\* mosquitto|\* squid|\* redis|\* virt-who|\* smart|\* puppet|\* postgres|\* rh-postgres|\* tomcat|\* foreman|\* gofer|\* mongo|\* dynflow|\* osbuild-|\* elasticsearch|\* oracle'"
+		log "egrep '\.service -|Loaded:|Active:' /sos_commands/systemd/systemctl_status_--all | egrep '\.service -' -A 2 | egrep -A 2 '\* httpd.service|\* pulp|\* qdrouterd|\* qpidd|\* mosquitto|\* squid|\* redis|\* virt-who|\* smart|\* puppet|\* postgres|\* rh-postgres|\* tomcat|\* foreman|\* gofer|\* mongo|\* dynflow|\* osbuild-|\* elasticsearch|\* oracle'"
 		log
-		log_cmd "egrep '\.service -|Loaded:|Active:|^$' $base_dir/sysmgmt/services.txt | egrep '\.service -' -A 2 | egrep -A 2 '\* httpd.service|\* pulp|\* qdrouterd|\* qpidd|\* mosquitto|\* squid|\* redis|\* virt-who|\* puppet|\* postgres|\* rh-postgres|\* tomcat|\* foreman|\* gofer|\* mongo|\* rh-mongodb34-mongod|\* dynflow|\* osbuild-|\* elasticsearch|\* oracle' | egrep --color=always '^|failed|inactive|activating|deactivating|masked'"
+#		log_cmd "egrep '\.service -|Loaded:|Active:|^$' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep '\.service -' -A 2 | egrep -A 2 '\* httpd.service|\* pulp|\* qdrouterd|\* qpidd|\* mosquitto|\* squid|\* redis|\* virt-who|\* puppet|\* postgres|\* rh-postgres|\* tomcat|\* foreman|\* gofer|\* mongo|\* rh-mongodb34-mongod|\* dynflow|\* osbuild-|\* elasticsearch|\* oracle' | egrep --color=always '^|failed|inactive|activating|deactivating|masked'"
+		log_cmd "egrep '\.service -' $base_dir/sos_commands/systemd/systemctl_status_--all -A 5 -B 1 | egrep '\.service -|Loaded:|Active:|^$' | uniq | egrep -A 2 ' httpd.service -| pulp| qdrouterd.service -| qpidd.service -| mosquitto.service -| squid.service -| redis.service -| virt-who.service -| puppet|postgres| tomcat.service -| foreman| gofer.service -|mongo| dynflow| osbuild| elasticsearch.service -| oracle' | egrep --color=always '^|failed|inactive|activating|deactivating|masked'"
 		log "---"
 		log
 	elif [ -e $base_dir/chkconfig ]; then
@@ -6819,14 +6821,15 @@ fi
 
 
 
-
-if [ "$ANSI_COLOR_CODES" == "false" ]; then
-	# cat $FOREMAN_REPORT | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' > ./report_${USER}_$final_name.log
-	rm -f $FOREMAN_REPORT 2>/dev/null
-else
-	mv -f $FOREMAN_REPORT ./report_color_${USER}_$final_name.log
-	chmod 666 ./report_color_${USER}_$final_name.log
-	# cat ./report_color_${USER}_$final_name.log | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g' > ./report_${USER}_$final_name.log
+if [ -e "$FOREMAN_REPORT" ]; then
+	if [ "$ANSI_COLOR_CODES" == "false" ]; then
+		# cat $FOREMAN_REPORT | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' > ./report_${USER}_$final_name.log
+		rm -f $FOREMAN_REPORT 2>/dev/null
+	else
+		mv -f $FOREMAN_REPORT ./report_color_${USER}_$final_name.log
+		chmod 666 ./report_color_${USER}_$final_name.log
+		# cat ./report_color_${USER}_$final_name.log | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g' > ./report_${USER}_$final_name.log
+	fi
 fi
 
 chmod 666 ./report_${USER}_$final_name.log
