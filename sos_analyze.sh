@@ -2816,7 +2816,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	if [ "$sos_version" == "old" ];then
 		cmd="egrep 'Running installer with args|Exit with status' $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-installer/satellite.* | sort -rk3 | cut -d: -f2-"
 	else
-		cmd="egrep 'Running installer with args|Exit with status' $base_dir/var/log/foreman-installer/satellite.* | sort -rk3 | cut -d: -f2-"
+		cmd="egrep 'Running installer with args|Exit with status' $base_dir/var/log/foreman-installer/satellite.* | sort -rk3 | cut -d: -f2- | sort -h"
 	fi
 	log "$cmd"
 	log "---"
@@ -4658,10 +4658,17 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 		log "---"
 		log
 
+		log "// redis timeout value:"
+		log "egrep databases /etc/redis/redis.conf"
+		log "---"
+		log_cmd "GREP_COLORS='ms=01;33' egrep --color=always 'timeout' $base_dir/etc/redis/redis.conf"
+		log "---"
+		log
+
 		log "// are 16 redis databases configured?"
 		log "egrep databases /etc/redis/redis.conf"
 		log "---"
-		log_cmd "GREP_COLORS='ms=01;33' egrep --color=always 'databases' $base_dir/etc/redis/redis.conf | egrep --color=always '^databases'"
+		log_cmd "GREP_COLORS='ms=01;33' egrep --color=always 'database' $base_dir/etc/redis/redis.conf | egrep --color=always '^databases'"
 		log "---"
 		log
 
@@ -5130,6 +5137,24 @@ fi
 	log_cmd "python -m json.tool $base_dir/etc/rhsm/facts/insights-client.facts | GREP_COLORS='ms=01;33' egrep --color=always '^|$HOSTNAME'"
 	log "---"
 	log
+
+	log "// insights obfuscating facts?"
+	log "check subscription-manager_facts"
+	log "---"
+	log_cmd "egrep -ir 'obfuscate' $base_dir/sos_commands/subscription_manager/subscription-manager_facts | GREP_COLORS='ms=01;33' egrep --color=always -i '^|false' | egrep --color=always -i '^|true'"
+	log "---"
+	log
+
+	if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
+
+		log "// Satellite obfuscating facts?"
+		log "check foreman_settings_table"
+		log "---"
+		log_cmd "egrep -ir 'obfuscate|exclude_installed_packages' $base_dir/sos_commands/foreman/foreman_settings_table | GREP_COLORS='ms=01;33' egrep --color=always -i '^|false' | egrep --color=always -i '^|true'"
+		log "---"
+		log
+
+	fi
 
 	if [ ! -f "$base_dir/etc/foreman-installer/scenarios.d/satellite.migrations/*-add-inventory-upload.rb" ] && [ ! "`egrep \"rubygem-foreman_rh_cloud|tfm-rubygem-foreman_inventory_upload\" $base_dir/sos_commands/rpm/sh_-c_rpm_--nodigest_-qa_--qf_NAME_-_VERSION_-_RELEASE_._ARCH_INSTALLTIME_date_awk_-F_printf_-59s_s_n_1_2_sort_-V $base_dir/installed-rpms 2>/dev/null`" ]; then
 
@@ -6641,13 +6666,29 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	log "Composer Image Builder (previously known as Lorax Composer) helps customers create customized system images of RHEL."
 	log
 
+	if [ "$(egrep 'httpd' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME')" ]; then
+		log "// image-builder packages"
+		log "egrep 'image-builder|osbuild-composer|weldr-client' /sos_commands/yum/yum_list_installed"
+		log "---"
+		log_cmd "egrep 'image-builder|osbuild-composer|weldr-client' $base_dir/sos_commands/yum/yum_list_installed | egrep -v '$HOSTNAME'"
+		log "---"
+		log
+	else
+		log "// httpd packages"
+		log "egrep 'image-builder|osbuild-composer|weldr-client' /installed-rpms"
+		log "---"
+		log_cmd "egrep 'image-builder|osbuild-composer|weldr-client' $base_dir/installed-rpms | egrep -v '$HOSTNAME'"
+		log "---"
+		log
+	fi
+
 	SERVICE_NAME='osbuild'
 	log "// $SERVICE_NAME service status"
 	log "---"
-	log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
+	#log_cmd "egrep -h $SERVICE_NAME $base_dir/sos_commands/systemd/systemctl_list-unit-files $base_dir/chkconfig | egrep -v '\@|\-init|socket' | egrep --color=always '^|5:off'"
 	log
 	if [ -e $base_dir/sos_commands/systemd/systemctl_list-unit-files ]; then
-		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
+		log_cmd "egrep -v '\|-' $base_dir/sos_commands/systemd/systemctl_status_--all | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 		SERVICE_NAME='lorax'
 		log_cmd "egrep -v '\|-' $base_dir/sysmgmt/services.txt | egrep \"^\* $SERVICE_NAME\" -A 20 | sed -n \"/^\* $SERVICE_NAME/,/^\*/p\" | sed '$ d' | sed s'/^\*/\n\*/'g | egrep --color=always '^|failed|inactive|activating|deactivating|masked|plugin:demo\, DISABLED'"
 	else
@@ -6658,9 +6699,9 @@ if [ "`egrep '^\*' $base_dir/sysmgmt/services.txt $base_dir/sos_commands/foreman
 	log
 
 	log "// osbuild repos"
-	log "ls /etc/osbuild-composer/repositories"
+	log "ls /etc/osbuild-composer/repositories /usr/share/osbuild-composer/repositories"
 	log "---"
-	log_cmd "ls $base_dir/etc/osbuild-composer/repositories"
+	log_cmd "ls $base_dir/etc/osbuild-composer/repositories $base_dir/usr/share/osbuild-composer/repositories"
 	log "---"
 	log
 	log "Note:  Check KCS 5773421 for more info about osbuild repos."
