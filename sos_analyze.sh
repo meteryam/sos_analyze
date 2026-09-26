@@ -202,21 +202,21 @@ main()
 
 	CSVLINKS="sos_commands/block/blkid_-c_.dev.null,blkid
 	sos_commands/boot/efibootmgr_-v,efibootmgr
-	sos_commands/candlepin/du_-sh_.var.lib.candlepin,hornetq_disk_space
+	sos_commands/candlepin/du_-sh_.var.lib.candlepin,du_-hs_.var.lib.candlepin,hornetq_disk_space
 	sos_commands/cron/root_crontab,crontab_-l
 	sos_commands/date/date,timestamp
-	sos_commands/filesys/df_-ali_-x_autofs,df_-ali,df_-i
+	sos_commands/filesys/df_-aliT_-x_autofs,df_-ali_-x_autofs,df_-ali,df_-i
 	sos_commands/filesys/df_-al_-x_autofs,df_-al,df_-h
 	sos_commands/foreman/bundle_--local_--gemfile_.usr.share.foreman.Gemfile,bundle_list
 	sos_commands/foreman/foreman-selinux-relabel_-nv,foreman_filecontexts
-	sos_commands/foreman/ls_-lanR_.root.ssl-build,katello_ssl_build_dir
+	sos_commands/foreman/ls_-alZR_.root.ssl-build,ls_-lanR_.root.ssl-build,katello_ssl_build_dir
 	sos_commands/foreman/ls_-lanR_.usr.share.foreman.config.hooks,foreman_hooks_list
 	sos_commands/foreman/passenger-memory-stats,passenger_memory
 	sos_commands/foreman/passenger-status_--show_backtraces,passenger_status_backtraces
 	sos_commands/foreman/passenger-status_--show_pool,passenger_status_pool
 	sos_commands/foreman/passenger-status_--show_requests,passenger_status_requests
 	sos_commands/foreman/ping_-c1_-W1_localhost,ping_localhost
-	sos_commands/foreman/scl_enable_tfm_gem_list,gem_list_scl
+	sos_commands/foreman/gem_list,scl_enable_tfm_gem_list,gem_list_scl
 	sos_commands/kernel/modinfo_ALL_MODULES,modinfo_tpm_tpm_tis_libata_efivars_tcp_cubic_kernel_printk_kgdb_spurious_pstore_dynamic_debug_pcie_aspm_pci_hotplug_pciehp_acpiphp_intel_idle_acpi_pci_slot_processor_thermal_acpi_memhotplug_battery_keyboard_vt_8250_kgdboc_kgdbts_scsi_mod_pcmcia_core_pcmci,modinfo_nfsd_exportfs_auth_rpcgss_usb_storage_ipmi_devintf_ipmi_
 	sos_commands/kernel/uname_-a,uname
 	sos_commands/libraries/ldconfig_-p_-N_-X,ldconfig_-p
@@ -879,6 +879,8 @@ main()
            fi
 
 	   echo "CSVLINKS loop..."
+	   echo
+
 	   for MYENTRY in `echo -e "$CSVLINKS"`; do
 
 		# we're separating each comma-separated line into separate entries
@@ -897,24 +899,33 @@ main()
 		FIRSTENTRY="${MYARRAY[0]}"
 		FIRSTFILE=`basename "${MYARRAY[0]}"`
 		MYDIR=`dirname "${MYARRAY[0]}"`
+		FOUNDFILE='FALSE'
 
-		if [ ! -f "$base_dir/$FIRSTENTRY" ]; then
-		for i in "${MYARRAY[@]}"; do
-			#let count=$count+1
+		if [ ! -e "$base_dir/$FIRSTENTRY" ]; then
+			for i in "${MYARRAY[@]}"; do
+				#let count=$count+1
 
-			MYFILE=`basename $i`
+				MYFILE=`basename $i`
 
-			MATCH=`echo -e "$FINDRESULTS" | egrep "\/$MYFILE$"`
+				MATCH=`echo -e "$FINDRESULTS" | egrep "\/$MYFILE$"`
 
-			if [ -f "$MATCH" ] && [ ! -L "$MATCH" ]; then
-				mkdir -p "$base_dir/$MYDIR"
-				ln -s -r "$MATCH" "$base_dir/$MYDIR/$FIRSTFILE" 2>/dev/null
-				break
-			fi
-		done
+				if [ -f "$MATCH" ] && [ ! -L "$MATCH" ]; then
+					mkdir -p "$base_dir/$MYDIR"
+					ln -s -r "$MATCH" "$base_dir/$MYDIR/$FIRSTFILE" 2>/dev/null
+					FOUNDFILE='TRUE'
+					break
+				fi
+			done
+		else FOUNDFILE='TRUE'
 		fi
 
-	  done
+		if [ -e "$base_dir$MYDIR/$FIRSTFILE" ] && [ "$FOUNDFILE" == FALSE ]; then
+			echo "neither file $FIRSTENTRY nor its substitutions were found. skipping."
+		#elif [ ! -e "$base_dir$MYDIR/" ]; then
+		#	echo "directory "$base_dir$MYDIR/" missing. skipping."
+		fi
+
+	  done | uniq
 
 	# this section extracts the latest two versions of several frequently-queried log files
 	#echo 'decompressing and caching frequently used logs...'
@@ -1875,7 +1886,7 @@ log "egrep 'ntpd|chrony|sntp|timesync' /sysmgmt/messages | egrep -v 'various jun
 log "egrep -i 'skew|RES equals failed' /var/log/* | egrep -v anaconda"
 log "---"
 #log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/var/log/messages* | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.' | egrep '^|offline|mongod'"
-log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/sysmgmt/messages | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.|setroubleshoot|Started /usr/bin/rpm|systemd-timesyncd|Started \/bin\/rpm' | GREP_COLORS='ms=01;33' egrep --color=always '^|online' | egrep --color=always '^|offline'"
+log_cmd "egrep 'ntpd|chrony|sntp|timesync' $base_dir/sysmgmt/messages | egrep -v 'source|starting|Frequency|HTTP\/1.1|pulp_database.units_rpm|mongod\.|setroubleshoot|Started /usr/bin/rpm|systemd-timesyncd|Started \/bin\/rpm|pulpcore' | GREP_COLORS='ms=01;33' egrep --color=always '^|online' | egrep --color=always '^|offline'"
 log
 log_cmd "egrep -i 'skew|RES equals failed' $base_dir/var/log/* | egrep -v 'BEGIN CERTIFICATE|^Binary|anaconda' | egrep -v 'HTTP\/1.1|mongod'"
 log "---"
@@ -2814,7 +2825,7 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$CAPSULE_SERVER" == "TRUE" ]; then
 	log "// All the flags used with satellite-installer"
 
 	if [ "$sos_version" == "old" ];then
-		cmd="egrep 'Running installer with args|Exit with status' $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-installer/satellite.* | sort -rk3 | cut -d: -f2-"
+		cmd="egrep 'Running installer with args|Exit with status' $base_dir/sos_commands/foreman/foreman-debug/var/log/foreman-installer/satellite.* | sort -rk3 | cut -d: -f2- | sort -h"
 	else
 		cmd="egrep 'Running installer with args|Exit with status' $base_dir/var/log/foreman-installer/satellite.* | sort -rk3 | cut -d: -f2- | sort -h"
 	fi
@@ -5124,6 +5135,13 @@ fi
 
 	fi
 
+	log "// base_url defined in insights-client.conf file:"
+	log "grep base_url /etc/insights-client/insights-client.conf"
+	log "---"
+	log_cmd "grep base_url $base_dir/etc/insights-client/insights-client.conf"
+	log "---"
+	log
+
 	log "// Insights Proxy"
 	log "grep proxy /etc/insights-client/insights-client.conf"
 	log "---"
@@ -5138,16 +5156,16 @@ fi
 	log "---"
 	log
 
-	log "// insights obfuscating facts?"
-	log "check subscription-manager_facts"
+	log "// is insights obfuscating facts?"
+	log "check insights-client.conf and subscription-manager_facts"
 	log "---"
-	log_cmd "egrep -ir 'obfuscate' $base_dir/sos_commands/subscription_manager/subscription-manager_facts | GREP_COLORS='ms=01;33' egrep --color=always -i '^|false' | egrep --color=always -i '^|true'"
+	log_cmd "egrep -ir 'obfuscate' $base_dir/etc/insights-client/insights-client.conf $base_dir/sos_commands/subscription_manager/subscription-manager_facts | GREP_COLORS='ms=01;33' egrep --color=always -i '^|false' | egrep --color=always -i '^|true'"
 	log "---"
 	log
 
 	if [ "$SATELLITE_INSTALLED" == "TRUE" ]; then
 
-		log "// Satellite obfuscating facts?"
+		log "// is Satellite obfuscating facts?"
 		log "check foreman_settings_table"
 		log "---"
 		log_cmd "egrep -ir 'obfuscate|exclude_installed_packages' $base_dir/sos_commands/foreman/foreman_settings_table | GREP_COLORS='ms=01;33' egrep --color=always -i '^|false' | egrep --color=always -i '^|true'"
@@ -5597,13 +5615,16 @@ if [ "$SATELLITE_INSTALLED" == "TRUE" ] || [ "$EARLY_SATELLITE" == "TRUE" ] || [
 		log "---"
 		log
 
-		log "// cpdb"
-		gunzip $(find $base_foreman/var/log/candlepin | egrep cpdb.log | egrep gz$ | sort | head -1) 2>/dev/null
-		log "cat /var/log/candlepin/cpdb.log"
-		log "---"
-		log_cmd "cat $base_foreman/var/log/candlepin/cpdb.log | tail -100"
-		log "---"
-		log
+
+		if [ -e $base_foreman/var/log/candlepin/cpdb.log ]; then
+			log "// cpdb (before Satellite 6.10)"
+			gunzip $(find $base_foreman/var/log/candlepin | egrep cpdb.log | egrep gz$ | sort | head -1) 2>/dev/null
+			log "cat /var/log/candlepin/cpdb.log"
+			log "---"
+			log_cmd "cat $base_foreman/var/log/candlepin/cpdb.log | tail -100"
+			log "---"
+			log
+		fi
 
 	fi
 fi
